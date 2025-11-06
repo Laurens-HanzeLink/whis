@@ -4,6 +4,10 @@ Voice-to-text for terminal users. Record your voice, get instant transcription t
 
 Built for Linux terminal workflows with Claude Code, Cursor, Gemini CLI, and other AI coding tools. Think whisperflow.ai, but minimal and CLI-native.
 
+## Demo
+
+![Whispo Demo](demo.gif)
+
 ## Why Whispo?
 
 OpenAI's Whisper API delivers the most accurate transcriptions compared to local models or other providers. Whispo makes it dead simple to use from the terminal.
