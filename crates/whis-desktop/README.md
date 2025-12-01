@@ -22,10 +22,8 @@
 ## Quick Start
 
 ```bash
-flatpak install flathub ink.whis.desktop
+flatpak install flathub ink.whis.Whis
 ```
-
-> Pending review: [flathub/flathub#7247](https://github.com/flathub/flathub/pull/7247)
 
 ## Screenshot
 
@@ -44,7 +42,7 @@ flatpak install flathub ink.whis.desktop
 
 **Flatpak** (recommended):
 ```bash
-flatpak install flathub ink.whis.desktop
+flatpak install flathub ink.whis.Whis
 ```
 
 **AppImage**:

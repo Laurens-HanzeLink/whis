@@ -2,7 +2,7 @@
 Name=Whis
 Comment=Voice-to-text transcription with global shortcuts
 Exec=whis-desktop
-Icon=ink.whis.desktop
+Icon=ink.whis.Whis
 Terminal=false
 Type=Application
 Categories=Utility;Audio;

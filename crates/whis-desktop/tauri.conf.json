@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Whis",
-  "version": "0.5.1",
-  "identifier": "ink.whis.desktop",
+  "version": "0.5.2",
+  "identifier": "ink.whis.Whis",
   "build": {
     "beforeDevCommand": { "cwd": "ui", "script": "npm run dev" },
     "devUrl": "http://localhost:5173",

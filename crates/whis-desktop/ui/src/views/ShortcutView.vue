@@ -194,7 +194,7 @@ function stopRecording() {
               </div>
               <div class="command-row">
                 <span class="command-label">Command:</span>
-                <code>flatpak run ink.whis.desktop --toggle</code>
+                <code>flatpak run ink.whis.Whis --toggle</code>
               </div>
               <div class="command-row">
                 <span class="command-label">Shortcut:</span>
@@ -212,7 +212,7 @@ function stopRecording() {
             <div class="command-block">
               <div class="command-row">
                 <span class="command-label">Command:</span>
-                <code>flatpak run ink.whis.desktop --toggle</code>
+                <code>flatpak run ink.whis.Whis --toggle</code>
               </div>
             </div>
           </template>
@@ -221,7 +221,7 @@ function stopRecording() {
           <template v-else-if="backendInfo.compositor.toLowerCase().includes('sway')">
             <p class="hint">Add to <code>~/.config/sway/config</code>:</p>
             <div class="command">
-              <code>bindsym {{ currentShortcut.toLowerCase() }} exec flatpak run ink.whis.desktop --toggle</code>
+              <code>bindsym {{ currentShortcut.toLowerCase() }} exec flatpak run ink.whis.Whis --toggle</code>
             </div>
           </template>
 
@@ -229,7 +229,7 @@ function stopRecording() {
           <template v-else-if="backendInfo.compositor.toLowerCase().includes('hyprland')">
             <p class="hint">Add to <code>~/.config/hypr/hyprland.conf</code>:</p>
             <div class="command">
-              <code>bind = {{ currentShortcut.replace(/\+/g, ', ') }}, exec, flatpak run ink.whis.desktop --toggle</code>
+              <code>bind = {{ currentShortcut.replace(/\+/g, ', ') }}, exec, flatpak run ink.whis.Whis --toggle</code>
             </div>
           </template>
 
@@ -237,7 +237,7 @@ function stopRecording() {
           <template v-else>
             <p class="hint">Configure your compositor to run:</p>
             <div class="command">
-              <code>flatpak run ink.whis.desktop --toggle</code>
+              <code>flatpak run ink.whis.Whis --toggle</code>
             </div>
           </template>
         </div>
