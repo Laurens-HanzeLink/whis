@@ -20,10 +20,12 @@ pub struct AppState {
     pub portal_shortcut: Mutex<Option<String>>,
     /// Error message if portal shortcut binding failed
     pub portal_bind_error: Mutex<Option<String>>,
+    /// Whether system tray is available
+    pub tray_available: Mutex<bool>,
 }
 
 impl AppState {
-    pub fn new(settings: Settings) -> Self {
+    pub fn new(settings: Settings, tray_available: bool) -> Self {
         Self {
             state: Mutex::new(RecordingState::Idle),
             recorder: Mutex::new(None),
@@ -32,12 +34,13 @@ impl AppState {
             settings: Mutex::new(settings),
             portal_shortcut: Mutex::new(None),
             portal_bind_error: Mutex::new(None),
+            tray_available: Mutex::new(tray_available),
         }
     }
 }
 
 impl Default for AppState {
     fn default() -> Self {
-        Self::new(Settings::default())
+        Self::new(Settings::default(), false)
     }
 }

@@ -11,9 +11,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
-            // Load settings from disk FIRST, before initializing state
+            // Load settings from disk
             let loaded_settings = settings::Settings::load();
-            app.manage(state::AppState::new(loaded_settings));
 
             // Initialize system tray (optional - may fail on tray-less environments)
             let tray_available = match tray::setup_tray(app) {
@@ -23,6 +22,9 @@ pub fn run() {
                     false
                 }
             };
+
+            // Initialize state with tray availability
+            app.manage(state::AppState::new(loaded_settings, tray_available));
 
             // Setup global shortcuts (hybrid: Tauri plugin / Portal / CLI fallback)
             shortcuts::setup_shortcuts(app);
@@ -51,6 +53,7 @@ pub fn run() {
             commands::portal_bind_error,
             commands::get_toggle_command,
             commands::toggle_recording,
+            commands::can_reopen_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

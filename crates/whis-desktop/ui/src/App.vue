@@ -56,7 +56,18 @@ async function minimizeWindow() {
 }
 
 async function closeWindow() {
-  await getCurrentWindow().hide();
+  try {
+    const canReopen = await invoke<boolean>('can_reopen_window');
+    if (canReopen) {
+      await getCurrentWindow().hide();
+    } else {
+      // No way to reopen (no tray, no working shortcut) - actually quit
+      await getCurrentWindow().close();
+    }
+  } catch (e) {
+    // On error, safer to quit than leave user stranded
+    await getCurrentWindow().close();
+  }
 }
 
 onMounted(async () => {

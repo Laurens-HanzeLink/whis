@@ -166,3 +166,27 @@ pub fn get_toggle_command() -> String {
         "whis-desktop --toggle".to_string()
     }
 }
+
+/// Check if user can reopen the window after closing
+/// Returns true if tray is available OR a working shortcut exists
+#[tauri::command]
+pub fn can_reopen_window(state: State<'_, AppState>) -> bool {
+    // If tray is available, user can always reopen from there
+    if *state.tray_available.lock().unwrap() {
+        return true;
+    }
+
+    // Check shortcut backend - some always work, some need verification
+    let backend_info = crate::shortcuts::backend_info();
+    match backend_info.backend.as_str() {
+        "TauriPlugin" => true, // X11 shortcuts always work
+        "ManualSetup" => true, // IPC toggle always available
+        "PortalGlobalShortcuts" => {
+            // Portal needs a bound shortcut without errors
+            let has_shortcut = state.portal_shortcut.lock().unwrap().is_some();
+            let no_error = state.portal_bind_error.lock().unwrap().is_none();
+            has_shortcut && no_error
+        }
+        _ => false,
+    }
+}
