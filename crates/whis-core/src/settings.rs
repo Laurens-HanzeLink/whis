@@ -87,10 +87,10 @@ impl Settings {
     /// Load settings from disk
     pub fn load() -> Self {
         let path = Self::path();
-        if let Ok(content) = fs::read_to_string(&path) {
-            if let Ok(settings) = serde_json::from_str(&content) {
-                return settings;
-            }
+        if let Ok(content) = fs::read_to_string(&path)
+            && let Ok(settings) = serde_json::from_str(&content)
+        {
+            return settings;
         }
         Self::default()
     }

@@ -65,13 +65,13 @@ pub fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         })
         .on_tray_icon_event(|tray, event| {
             use tauri::tray::TrayIconEvent;
-            if let TrayIconEvent::Click { button, .. } = event {
-                if button == tauri::tray::MouseButton::Left {
-                    let app_handle = tray.app_handle().clone();
-                    tauri::async_runtime::spawn(async move {
-                        toggle_recording(app_handle);
-                    });
-                }
+            if let TrayIconEvent::Click { button, .. } = event
+                && button == tauri::tray::MouseButton::Left
+            {
+                let app_handle = tray.app_handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    toggle_recording(app_handle);
+                });
             }
         })
         .build(app)?;

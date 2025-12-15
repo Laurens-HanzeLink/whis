@@ -1,24 +1,51 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use std::io::{self, Write};
 use whis_core::{
-    AudioRecorder, OutputStyle, Polisher, RecordingOutput, Settings, copy_to_clipboard,
+    AudioRecorder, Polisher, Preset, RecordingOutput, Settings, copy_to_clipboard,
     parallel_transcribe, polish, transcribe_audio, DEFAULT_POLISH_PROMPT,
 };
 use crate::app;
 
-pub fn run(polish_flag: bool, style: Option<String>) -> Result<()> {
-    // Parse style if provided
-    let style: Option<OutputStyle> = if let Some(style_name) = style {
-        match style_name.parse() {
-            Ok(s) => Some(s),
-            Err(e) => {
-                eprintln!("{e}");
-                std::process::exit(1);
-            }
+/// Resolve which polisher to use based on priority:
+/// 1. Preset override (if specified and valid)
+/// 2. Settings polisher (if configured)
+/// 3. Transcription provider fallback
+fn resolve_polisher(
+    preset: &Option<Preset>,
+    settings: &Settings,
+    provider: &whis_core::TranscriptionProvider,
+) -> Polisher {
+    // 1. Preset override
+    if let Some(p) = preset
+        && let Some(polisher_str) = &p.polisher
+    {
+        match polisher_str.parse() {
+            Ok(polisher) => return polisher,
+            Err(_) => eprintln!("Warning: Invalid polisher '{}' in preset", polisher_str),
         }
+    }
+
+    // 2. Settings polisher
+    if settings.polisher != Polisher::None {
+        return settings.polisher.clone();
+    }
+
+    // 3. Transcription provider fallback
+    match provider {
+        whis_core::TranscriptionProvider::OpenAI => Polisher::OpenAI,
+        whis_core::TranscriptionProvider::Mistral => Polisher::Mistral,
+    }
+}
+
+pub fn run(polish_flag: bool, preset_name: Option<String>) -> Result<()> {
+    // Load preset if provided
+    let preset: Option<Preset> = if let Some(name) = preset_name {
+        let (p, _source) = Preset::load(&name).map_err(|e| anyhow!("{}", e))?;
+        Some(p)
     } else {
         None
     };
+
     // Create Tokio runtime for async operations
     let runtime = tokio::runtime::Runtime::new()?;
 
@@ -46,59 +73,34 @@ pub fn run(polish_flag: bool, style: Option<String>) -> Result<()> {
             print!("\rTranscribing...                        \n");
             io::stdout().flush()?;
 
-            match transcribe_audio(
+            transcribe_audio(
                 &config.provider,
                 &config.api_key,
                 config.language.as_deref(),
                 audio_data,
-            ) {
-                Ok(text) => text,
-                Err(e) => {
-                    eprintln!("Transcription error: {e}");
-                    std::process::exit(1);
-                }
-            }
+            )?
         }
         RecordingOutput::Chunked(chunks) => {
             // Large file - parallel transcription
             print!("\rTranscribing...                        \n");
             io::stdout().flush()?;
 
-            runtime.block_on(async {
-                match parallel_transcribe(
-                    &config.provider,
-                    &config.api_key,
-                    config.language.as_deref(),
-                    chunks,
-                    None,
-                )
-                .await
-                {
-                    Ok(text) => text,
-                    Err(e) => {
-                        eprintln!("Transcription error: {e}");
-                        std::process::exit(1);
-                    }
-                }
-            })
+            runtime.block_on(parallel_transcribe(
+                &config.provider,
+                &config.api_key,
+                config.language.as_deref(),
+                chunks,
+                None,
+            ))?
         }
     };
 
-    // Apply polishing if enabled (via flag, style, or settings)
+    // Apply polishing if enabled (via flag, preset, or settings)
     let settings = Settings::load();
-    let should_polish = polish_flag || style.is_some() || settings.polisher != Polisher::None;
+    let should_polish = polish_flag || preset.is_some() || settings.polisher != Polisher::None;
 
     let final_text = if should_polish {
-        // Determine which polisher to use
-        let polisher = if (polish_flag || style.is_some()) && settings.polisher == Polisher::None {
-            // Flag/style enabled but no polisher configured - use transcription provider
-            match config.provider {
-                whis_core::TranscriptionProvider::OpenAI => Polisher::OpenAI,
-                whis_core::TranscriptionProvider::Mistral => Polisher::Mistral,
-            }
-        } else {
-            settings.polisher.clone()
-        };
+        let polisher = resolve_polisher(&preset, &settings, &config.provider);
 
         // Get API key for polisher
         let api_key = match &polisher {
@@ -117,9 +119,9 @@ pub fn run(polish_flag: bool, style: Option<String>) -> Result<()> {
             print!("Polishing...");
             io::stdout().flush()?;
 
-            // Priority: style prompt > settings prompt > default
-            let prompt = if let Some(ref s) = style {
-                s.prompt()
+            // Priority: preset prompt > settings prompt > default
+            let prompt = if let Some(ref p) = preset {
+                p.prompt.as_str()
             } else {
                 settings
                     .polish_prompt
@@ -127,7 +129,8 @@ pub fn run(polish_flag: bool, style: Option<String>) -> Result<()> {
                     .unwrap_or(DEFAULT_POLISH_PROMPT)
             };
 
-            match runtime.block_on(polish(&transcription, &polisher, &api_key, prompt)) {
+            let model = preset.as_ref().and_then(|p| p.model.as_deref());
+            match runtime.block_on(polish(&transcription, &polisher, &api_key, prompt, model)) {
                 Ok(polished) => {
                     print!("\r              \r");
                     io::stdout().flush()?;

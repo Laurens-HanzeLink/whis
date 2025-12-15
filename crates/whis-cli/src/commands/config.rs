@@ -1,5 +1,5 @@
 use anyhow::Result;
-use whis_core::{OutputStyle, Polisher, Settings, TranscriptionProvider};
+use whis_core::{Polisher, Preset, Settings, TranscriptionProvider};
 
 pub fn run(
     openai_api_key: Option<String>,
@@ -140,7 +140,7 @@ pub fn run(
         } else {
             println!("Polish prompt: (default)");
         }
-        println!("Available --as styles: {}", OutputStyle::all().join(", "));
+        println!("Available --as presets: {}", Preset::all_names().join(", "));
 
         return Ok(());
     }

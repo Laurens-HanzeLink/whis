@@ -63,10 +63,10 @@ impl Service {
             }
 
             // Check for hotkey toggle signal (non-blocking)
-            if let Some(ref rx) = hotkey_rx {
-                if rx.try_recv().is_ok() {
-                    self.handle_toggle().await;
-                }
+            if let Some(ref rx) = hotkey_rx
+                && rx.try_recv().is_ok()
+            {
+                self.handle_toggle().await;
             }
 
             // Small sleep to prevent busy waiting
@@ -208,7 +208,7 @@ impl Service {
                     .as_deref()
                     .unwrap_or(DEFAULT_POLISH_PROMPT);
 
-                match polish(&transcription, &settings.polisher, &polisher_api_key, prompt).await {
+                match polish(&transcription, &settings.polisher, &polisher_api_key, prompt, None).await {
                     Ok(polished) => polished,
                     Err(_) => transcription, // Silently fallback in service mode
                 }

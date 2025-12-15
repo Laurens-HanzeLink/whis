@@ -32,6 +32,7 @@ fn main() -> Result<()> {
             polish_prompt,
             show,
         ),
-        None => commands::record_once::run(cli.polish, cli.style),
+        Some(args::Commands::Presets { action }) => commands::presets::run(action),
+        None => commands::record_once::run(cli.polish, cli.preset),
     }
 }

@@ -68,21 +68,30 @@ pub async fn polish(
     polisher: &Polisher,
     api_key: &str,
     prompt: &str,
+    model: Option<&str>,
 ) -> Result<String> {
     match polisher {
         Polisher::None => Ok(text.to_string()),
-        Polisher::OpenAI => polish_openai(text, api_key, prompt).await,
-        Polisher::Mistral => polish_mistral(text, api_key, prompt).await,
+        Polisher::OpenAI => polish_openai(text, api_key, prompt, model).await,
+        Polisher::Mistral => polish_mistral(text, api_key, prompt, model).await,
     }
 }
 
-async fn polish_openai(text: &str, api_key: &str, system_prompt: &str) -> Result<String> {
+const DEFAULT_OPENAI_MODEL: &str = "gpt-5-nano-2025-08-07";
+
+async fn polish_openai(
+    text: &str,
+    api_key: &str,
+    system_prompt: &str,
+    model: Option<&str>,
+) -> Result<String> {
+    let model = model.unwrap_or(DEFAULT_OPENAI_MODEL);
     let client = reqwest::Client::new();
     let response = client
         .post(OPENAI_CHAT_URL)
         .header("Authorization", format!("Bearer {}", api_key))
         .json(&serde_json::json!({
-            "model": "gpt-5-nano-2025-08-07",
+            "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}
@@ -105,13 +114,21 @@ async fn polish_openai(text: &str, api_key: &str, system_prompt: &str) -> Result
         .ok_or_else(|| anyhow!("No response from OpenAI"))
 }
 
-async fn polish_mistral(text: &str, api_key: &str, system_prompt: &str) -> Result<String> {
+const DEFAULT_MISTRAL_MODEL: &str = "mistral-small-latest";
+
+async fn polish_mistral(
+    text: &str,
+    api_key: &str,
+    system_prompt: &str,
+    model: Option<&str>,
+) -> Result<String> {
+    let model = model.unwrap_or(DEFAULT_MISTRAL_MODEL);
     let client = reqwest::Client::new();
     let response = client
         .post(MISTRAL_CHAT_URL)
         .header("Authorization", format!("Bearer {}", api_key))
         .json(&serde_json::json!({
-            "model": "mistral-small-latest",
+            "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}

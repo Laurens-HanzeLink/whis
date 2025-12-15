@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueHint};
 
 #[derive(Parser)]
 #[command(name = "whis")]
@@ -13,9 +13,9 @@ pub struct Cli {
     #[arg(long)]
     pub polish: bool,
 
-    /// Output style for transcript [possible values: ai-prompt, email, notes]
-    #[arg(long = "as", value_name = "STYLE")]
-    pub style: Option<String>,
+    /// Output preset for transcript (run 'whis presets' to see all)
+    #[arg(long = "as", value_name = "PRESET")]
+    pub preset: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -62,5 +62,31 @@ pub enum Commands {
         /// Show current configuration
         #[arg(long)]
         show: bool,
+    },
+
+    /// Manage output presets
+    Presets {
+        #[command(subcommand)]
+        action: Option<PresetsAction>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum PresetsAction {
+    /// List all available presets (default)
+    List,
+
+    /// Show details of a specific preset
+    Show {
+        /// Name of the preset to show
+        #[arg(value_hint = ValueHint::Other)]
+        name: String,
+    },
+
+    /// Print a JSON template for creating a new preset
+    New {
+        /// Name for the new preset
+        #[arg(value_hint = ValueHint::Other)]
+        name: String,
     },
 }

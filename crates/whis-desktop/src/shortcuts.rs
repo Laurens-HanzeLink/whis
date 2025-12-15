@@ -169,12 +169,12 @@ pub fn read_portal_shortcut_from_dconf() -> Option<String> {
     for line in dump.lines() {
         if line.contains("toggle-recording") && line.contains("shortcuts") {
             // Parse the GVariant format: <['<Control><Alt>m']>
-            if let Some(start) = line.find("<['") {
-                if let Some(end) = line[start..].find("']>") {
-                    let raw = &line[start + 3..start + end];
-                    // Convert <Control><Alt>m to Ctrl+Alt+M
-                    return Some(convert_gvariant_shortcut(raw));
-                }
+            if let Some(start) = line.find("<['")
+                && let Some(end) = line[start..].find("']>")
+            {
+                let raw = &line[start + 3..start + end];
+                // Convert <Control><Alt>m to Ctrl+Alt+M
+                return Some(convert_gvariant_shortcut(raw));
             }
         }
     }
@@ -228,24 +228,24 @@ where
     let session = shortcuts.create_session().await?;
 
     // Check for existing shortcuts first
-    if let Ok(list_request) = shortcuts.list_shortcuts(&session).await {
-        if let Ok(list_response) = list_request.response() {
-            let existing = list_response.shortcuts();
-            if let Some(s) = existing.iter().find(|s| s.id() == "toggle-recording") {
-                let trigger = s.trigger_description().to_string();
-                println!("Found existing portal shortcut in session: {trigger}");
-                let state = app_handle.state::<crate::state::AppState>();
-                *state.portal_shortcut.lock().unwrap() = Some(trigger);
-                // Skip binding, just listen for activations
-                let mut activated = shortcuts.receive_activated().await?;
-                while let Some(event) = activated.next().await {
-                    if event.shortcut_id() == "toggle-recording" {
-                        println!("Portal shortcut triggered!");
-                        on_toggle();
-                    }
+    if let Ok(list_request) = shortcuts.list_shortcuts(&session).await
+        && let Ok(list_response) = list_request.response()
+    {
+        let existing = list_response.shortcuts();
+        if let Some(s) = existing.iter().find(|s| s.id() == "toggle-recording") {
+            let trigger = s.trigger_description().to_string();
+            println!("Found existing portal shortcut in session: {trigger}");
+            let state = app_handle.state::<crate::state::AppState>();
+            *state.portal_shortcut.lock().unwrap() = Some(trigger);
+            // Skip binding, just listen for activations
+            let mut activated = shortcuts.receive_activated().await?;
+            while let Some(event) = activated.next().await {
+                if event.shortcut_id() == "toggle-recording" {
+                    println!("Portal shortcut triggered!");
+                    on_toggle();
                 }
-                return Ok(());
             }
+            return Ok(());
         }
     }
 
@@ -333,18 +333,18 @@ pub async fn bind_shortcut_with_trigger(
     let session = shortcuts.create_session().await?;
 
     // Check for existing shortcuts first (XDG spec: can only bind once per session)
-    if let Ok(list_request) = shortcuts.list_shortcuts(&session).await {
-        if let Ok(list_response) = list_request.response() {
-            let existing = list_response.shortcuts();
-            if !existing.is_empty() {
-                println!("Found {} existing shortcut(s) in session", existing.len());
-                if let Some(s) = existing.iter().find(|s| s.id() == "toggle-recording") {
-                    let trigger = s.trigger_description().to_string();
-                    println!("Using existing shortcut: {trigger}");
-                    let state = app_handle.state::<crate::state::AppState>();
-                    *state.portal_shortcut.lock().unwrap() = Some(trigger.clone());
-                    return Ok(Some(trigger));
-                }
+    if let Ok(list_request) = shortcuts.list_shortcuts(&session).await
+        && let Ok(list_response) = list_request.response()
+    {
+        let existing = list_response.shortcuts();
+        if !existing.is_empty() {
+            println!("Found {} existing shortcut(s) in session", existing.len());
+            if let Some(s) = existing.iter().find(|s| s.id() == "toggle-recording") {
+                let trigger = s.trigger_description().to_string();
+                println!("Using existing shortcut: {trigger}");
+                let state = app_handle.state::<crate::state::AppState>();
+                *state.portal_shortcut.lock().unwrap() = Some(trigger.clone());
+                return Ok(Some(trigger));
             }
         }
     }
@@ -380,20 +380,20 @@ pub async fn bind_shortcut_with_trigger(
                         let _ = shortcuts.configure_shortcuts(&session, None, None).await;
 
                         // Re-query after configure in case user changed it
-                        if let Ok(list_request) = shortcuts.list_shortcuts(&session).await {
-                            if let Ok(list_response) = list_request.response() {
-                                let updated_trigger = list_response
-                                    .shortcuts()
-                                    .iter()
-                                    .find(|s| s.id() == "toggle-recording")
-                                    .map(|s| s.trigger_description().to_string());
+                        if let Ok(list_request) = shortcuts.list_shortcuts(&session).await
+                            && let Ok(list_response) = list_request.response()
+                        {
+                            let updated_trigger = list_response
+                                .shortcuts()
+                                .iter()
+                                .find(|s| s.id() == "toggle-recording")
+                                .map(|s| s.trigger_description().to_string());
 
-                                if let Some(ref t) = updated_trigger {
-                                    let state = app_handle.state::<crate::state::AppState>();
-                                    *state.portal_shortcut.lock().unwrap() = Some(t.clone());
-                                    println!("Portal shortcut configured to: {t}");
-                                    return Ok(updated_trigger);
-                                }
+                            if let Some(ref t) = updated_trigger {
+                                let state = app_handle.state::<crate::state::AppState>();
+                                *state.portal_shortcut.lock().unwrap() = Some(t.clone());
+                                println!("Portal shortcut configured to: {t}");
+                                return Ok(updated_trigger);
                             }
                         }
                     }
