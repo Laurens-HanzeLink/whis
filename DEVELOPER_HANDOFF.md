@@ -3,7 +3,7 @@
 *Strategic context, competitive analysis, and implementation roadmap*
 
 **Last Updated:** December 2024
-**Status:** Ready for implementation
+**Status:** Phases 1-2 complete (Polish + Output Styles)
 **Fact-Checked:** December 2024
 
 ---
@@ -370,9 +370,10 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 | CLI Interface | ❌ | ❌ | ❌ | ✅ | Unique advantage |
 | Linux Native | ❌ | ❌ | ❌ | ✅ | Unique advantage |
 | Windows Support | ✅ | Beta | ❌ | Partial | In development |
-| LLM Post-Process | ✅ | ✅ | ✅ | ❌ | **Priority 1** |
-| Custom Modes | Limited | ✅ | ✅ | ❌ | Priority 2 |
-| Backtrack Detection | ✅ | Via prompt | Via prompt | ❌ | Priority 3 |
+| LLM Post-Process | ✅ | ✅ | ✅ | ✅ | **Done** |
+| Output Styles | Limited | ✅ | ✅ | ✅ | **Done** (`--as`) |
+| Custom Modes | Limited | ✅ | ✅ | ❌ | **Next** |
+| Backtrack Detection | ✅ | Via prompt | Via prompt | Via prompt | In default prompts |
 | BYOK | ❌ | ✅ | ✅ | ✅ | Already have |
 | Local Transcription | ❌ | ✅ | ✅ | ❌ | Future |
 
@@ -390,7 +391,17 @@ The existing multi-provider architecture (OpenAI + Mistral) means the foundation
 
 ## Implementation Plan: LLM Post-Processing Pipeline
 
-*Approved feature based on competitive analysis*
+**Status: ✅ COMPLETE**
+
+### What Was Implemented
+
+| Feature | Implementation |
+|---------|----------------|
+| **Core module** | `crates/whis-core/src/polish.rs` |
+| **Output styles** | `crates/whis-core/src/output_style.rs` |
+| **CLI flags** | `--polish`, `--as <STYLE>` |
+| **Config options** | `--polisher`, `--polish-prompt` |
+| **Models** | gpt-5-nano-2025-08-07, mistral-small-latest |
 
 ### Design Decisions
 
@@ -619,24 +630,23 @@ Same pattern in `stop_and_transcribe()` method.
 
 ---
 
-### CLI Usage After Implementation
+### CLI Usage (Current)
 
 ```bash
-# Configure polishing (one-time)
-whis config --polisher openai
-whis config --polish-prompt "Clean transcript for AI prompts"
+# Basic polishing
+whis --polish                    # Polish with configured/transcription provider
 
-# Use with flag (override for single recording)
-whis --polish                    # Uses configured polisher
+# Output styles (auto-enables polish)
+whis --as ai-prompt              # Structured for AI tools (lists, bold)
+whis --as email                  # Concise, tone-matching email
+whis --as notes                  # Light cleanup, natural voice
 
-# Or configure to always polish
-whis config --polisher openai    # Now all recordings are polished
-
-# Disable polishing
-whis config --polisher none
+# Configure persistent polishing
+whis config --polisher openai    # Always polish (none/openai/mistral)
+whis config --polish-prompt "Custom prompt here"
 
 # View config
-whis config --show
+whis config --show               # Shows polisher, prompt, available styles
 ```
 
 ---
@@ -658,14 +668,17 @@ whis config --show
 
 ### Testing Checklist
 
-- [ ] `whis` without flag → raw transcript (no change)
-- [ ] `whis --polish` → polished transcript
-- [ ] `whis config --polisher openai` persists
-- [ ] `whis config --polisher none` disables
-- [ ] Custom prompt works
-- [ ] API errors handled gracefully (fallback to raw transcript?)
-- [ ] Service mode respects settings
-- [ ] Desktop app respects settings
+- [x] `whis` without flag → raw transcript (no change)
+- [x] `whis --polish` → polished transcript
+- [x] `whis --as ai-prompt` → structured output with markdown
+- [x] `whis --as email` → concise, tone-matching
+- [x] `whis --as notes` → light cleanup
+- [x] `whis config --polisher openai` persists
+- [x] `whis config --polisher none` disables
+- [x] Custom prompt works
+- [x] API errors handled gracefully (fallback to raw transcript)
+- [ ] Service mode respects settings (needs verification)
+- [ ] Desktop app respects settings (not yet integrated)
 
 ---
 
@@ -715,9 +728,9 @@ whis config --polisher openai  # Enable by default
 
 ---
 
-## Future Roadmap (After Post-Processing)
+## Future Roadmap
 
-### Priority 2: Modes System (High Impact, Medium Effort)
+### Priority 1: Modes System (High Impact, Medium Effort) — NEXT
 
 **Why:** Superwhisper's killer feature. Different contexts need different polishing.
 
@@ -759,38 +772,30 @@ whis config --polisher openai  # Enable by default
 
 ---
 
-### Priority 3: Backtrack/Correction Handling (Medium Impact, Low Effort)
+### ~~Priority 3: Backtrack/Correction Handling~~ — DONE (via prompts)
 
-**Why:** Wispr Flow's "actually" detection is a UX win. Natural speech includes self-corrections.
+Backtrack detection is now handled in the default polish prompts. The `ai-prompt` style includes:
+> "If the speaker corrects themselves, keep only the correction."
 
-**Implementation:**
-
-Add to polish prompts:
-```
-When the speaker corrects themselves (e.g., "2 PM... actually 3 PM" or
-"the function foo... I mean bar"), output only the corrected version.
-```
-
-This requires no new architecture—just a well-crafted default prompt in the modes system.
+No separate implementation needed.
 
 ---
 
-### Priority 4: Context Flag for Quick Mode Selection (Low Effort, High UX)
+### ~~Priority 4: Output Styles~~ — DONE (`--as` flag)
 
-**Why:** Wispr Flow's context-awareness without the complexity.
+Implemented as `--as <STYLE>` instead of `--context`:
 
 ```bash
-whis --context slack      # Casual, emoji-friendly
-whis --context email      # Formal, professional
-whis --context code       # Preserve camelCase, technical terms
-whis --context claude     # Optimized for Claude prompts
+whis --as ai-prompt       # Structured for AI tools
+whis --as email           # Concise, professional
+whis --as notes           # Light cleanup, natural voice
 ```
 
-Maps to pre-defined modes, simpler than full mode system for quick use.
+See `output_style.rs` for implementation.
 
 ---
 
-### Priority 5: Output Format Options (Medium Impact, Low Effort)
+### Priority 2: Output Format Options (Medium Impact, Low Effort)
 
 **Why:** MacWhisper and Brain Dump apps emphasize Obsidian integration.
 
@@ -818,7 +823,7 @@ mode: braindump
 
 ---
 
-### Priority 6: Local Transcription Option (High Effort, Strategic)
+### Priority 3: Local Transcription Option (High Effort, Strategic)
 
 **Why:** Privacy-conscious users currently underserved. whisper.cpp integration.
 
@@ -834,50 +839,55 @@ mode: braindump
 
 ### Implementation Order Recommendation
 
-| Phase | Feature | Effort | Impact | Dependencies |
-|-------|---------|--------|--------|--------------|
-| **1** | LLM Post-Processing | Medium | High | None |
-| **2** | Context Flags | Low | High | Phase 1 |
-| **3** | Modes System | Medium | High | Phase 1 |
-| **4** | Backtrack Detection | Low | Medium | Phase 1 |
-| **5** | Output Formats | Low | Medium | None |
-| **6** | Local Transcription | High | Medium | None |
+| Phase | Feature | Effort | Impact | Status |
+|-------|---------|--------|--------|--------|
+| **1** | LLM Post-Processing | Medium | High | ✅ Done |
+| **2** | Output Styles (`--as`) | Low | High | ✅ Done |
+| **3** | Modes System | Medium | High | **Next** |
+| **4** | Output Formats | Low | Medium | Future |
+| **5** | Local Transcription | High | Medium | Future |
 
 ---
 
-### Quick Win: Immediate Value with Minimal Code
+### ✅ Quick Win: Achieved!
 
-If you want to ship something fast, **Priority 1 alone** (basic polishing with a single configurable prompt) delivers 80% of the value:
+The initial goal has been met. Whis now has:
 
 ```bash
-# User configures once
-whis config --polisher openai
-whis config --polish-prompt "Clean this transcript: fix grammar, remove filler words (um, uh, like), handle self-corrections, output clean text ready to paste into Claude."
+# One-time setup
+whis config --polisher mistral
 
-# Then every recording is automatically cleaned
-whis  # Records, transcribes, polishes, copies clean text
+# Daily usage
+whis --as ai-prompt    # Clean, structured prompts for AI tools
+whis --as email        # Quick emails from voice
+whis --as notes        # Meeting notes, thoughts
 ```
 
-This single feature would differentiate Whis from every other CLI transcription tool and match the core value prop of $81M-funded Wispr Flow.
+This differentiates Whis from every other CLI transcription tool and matches the core value prop of $81M-funded Wispr Flow—while remaining open-source, CLI-first, and Linux-native.
 
 ---
 
 ### Architecture Insight
 
-The existing codebase is well-positioned for this evolution:
+The pipeline has evolved:
 
 ```
-Current:  Audio → Transcribe → Clipboard
-Future:   Audio → Transcribe → [Post-Process] → [Format] → Clipboard
-                                    ↑              ↑
-                              Mode/Context     Output format
+Before:   Audio → Transcribe → Clipboard
+Now:      Audio → Transcribe → [Polish] → Clipboard
+                                   ↑
+                            --as style or
+                            --polisher config
+
+Future:   Audio → Transcribe → [Polish] → [Format] → Clipboard
+                                   ↑           ↑
+                               Mode file   --output format
 ```
 
-The multi-provider pattern (`TranscriptionProvider` enum) directly extends to `Polisher` enum. No architectural changes needed—just additive modules.
+The `Polisher` enum mirrors the `TranscriptionProvider` pattern. The `OutputStyle` enum provides predefined polish prompts.
 
 ---
 
-*Document updated with feature roadmap. Current as of version 0.5.9.*
+*Document updated December 2024. Phases 1-2 complete. Next: Modes System.*
 
 ---
 
