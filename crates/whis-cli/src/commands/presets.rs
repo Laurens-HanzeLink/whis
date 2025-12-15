@@ -8,6 +8,7 @@ pub fn run(action: Option<PresetsAction>) -> Result<()> {
         None | Some(PresetsAction::List) => list(),
         Some(PresetsAction::Show { name }) => show(&name),
         Some(PresetsAction::New { name }) => new(&name),
+        Some(PresetsAction::Edit { name }) => edit(&name),
     }
 }
 
@@ -94,5 +95,32 @@ fn new(name: &str) -> Result<()> {
         "Save to: {}",
         Preset::presets_dir().join(format!("{}.json", name)).display()
     );
+    Ok(())
+}
+
+fn edit(name: &str) -> Result<()> {
+    let editor = std::env::var("EDITOR")
+        .or_else(|_| std::env::var("VISUAL"))
+        .unwrap_or_else(|_| "nano".to_string());
+
+    let presets_dir = Preset::presets_dir();
+    let file_path = presets_dir.join(format!("{}.json", name));
+
+    // If file doesn't exist, create from template
+    if !file_path.exists() {
+        std::fs::create_dir_all(&presets_dir)?;
+        let template = Preset::template(name);
+        std::fs::write(&file_path, serde_json::to_string_pretty(&template)?)?;
+        println!("Created new preset: {}", file_path.display());
+    }
+
+    // Open in editor
+    let status = std::process::Command::new(&editor)
+        .arg(&file_path)
+        .status()?;
+
+    if status.success() {
+        println!("Preset saved: {}", file_path.display());
+    }
     Ok(())
 }

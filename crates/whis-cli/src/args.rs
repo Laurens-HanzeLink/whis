@@ -89,4 +89,11 @@ pub enum PresetsAction {
         #[arg(value_hint = ValueHint::Other)]
         name: String,
     },
+
+    /// Edit a preset in your editor ($EDITOR or $VISUAL)
+    Edit {
+        /// Name of the preset to edit (creates if doesn't exist)
+        #[arg(value_hint = ValueHint::Other)]
+        name: String,
+    },
 }

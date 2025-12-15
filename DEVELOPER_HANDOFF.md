@@ -3,7 +3,7 @@
 *Strategic context, competitive analysis, and implementation roadmap*
 
 **Last Updated:** December 2024
-**Status:** Phases 1-3 complete (Polish + Presets)
+**Status:** Phase 4 complete (CLI Polish)
 **Fact-Checked:** December 2024
 
 ---
@@ -652,6 +652,7 @@ whis config --show               # Shows polisher, prompt, available presets
 whis presets                     # List all presets
 whis presets show notes          # Show preset details
 whis presets new my-preset       # Print JSON template
+whis presets edit my-preset      # Edit preset in $EDITOR
 ```
 
 ---
@@ -682,8 +683,8 @@ whis presets new my-preset       # Print JSON template
 - [x] `whis config --polisher none` disables
 - [x] Custom prompt works
 - [x] API errors handled gracefully (fallback to raw transcript)
-- [ ] Service mode respects settings (needs verification)
-- [ ] Desktop app respects settings (not yet integrated)
+- [x] Service mode respects settings (verified - uses persistent config)
+- [ ] Desktop app respects settings (deferred - CLI focus first)
 
 ---
 
@@ -798,35 +799,7 @@ See `preset.rs` for implementation.
 
 ---
 
-### Priority 2: Output Format Options (Medium Impact, Low Effort)
-
-**Why:** MacWhisper and Brain Dump apps emphasize Obsidian integration.
-
-```bash
-whis --output markdown    # Add YAML frontmatter
-whis --output json        # Structured output
-whis --output plain       # Current behavior (default)
-```
-
-Markdown output example:
-```markdown
----
-date: 2024-01-15T10:30:00
-duration: 45s
-mode: braindump
----
-
-# Voice Note
-
-[Transcript content here]
-
-## Action Items
-- Item extracted by LLM
-```
-
----
-
-### Priority 3: Local Transcription Option (High Effort, Strategic)
+### Priority 2: Local Transcription Option (High Effort, Strategic)
 
 **Why:** Privacy-conscious users currently underserved. whisper.cpp integration.
 
@@ -847,8 +820,9 @@ mode: braindump
 | **1** | LLM Post-Processing | Medium | High | ✅ Done |
 | **2** | Output Styles (`--as`) | Low | High | ✅ Done |
 | **3** | Presets System | Medium | High | ✅ Done |
-| **4** | Output Formats | Low | Medium | Future |
-| **5** | Local Transcription | High | Medium | Future |
+| **4** | CLI Polish Complete | Low | - | ✅ Done |
+| **5** | Desktop Integration | Medium | High | Next |
+| **6** | Local Transcription | High | Medium | Future |
 
 ---
 
