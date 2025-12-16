@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -19,6 +19,7 @@ pub enum Polisher {
     None,
     OpenAI,
     Mistral,
+    Ollama,
 }
 
 impl fmt::Display for Polisher {
@@ -27,6 +28,7 @@ impl fmt::Display for Polisher {
             Polisher::None => write!(f, "none"),
             Polisher::OpenAI => write!(f, "openai"),
             Polisher::Mistral => write!(f, "mistral"),
+            Polisher::Ollama => write!(f, "ollama"),
         }
     }
 }
@@ -39,11 +41,19 @@ impl std::str::FromStr for Polisher {
             "none" => Ok(Polisher::None),
             "openai" => Ok(Polisher::OpenAI),
             "mistral" => Ok(Polisher::Mistral),
+            "ollama" => Ok(Polisher::Ollama),
             _ => Err(format!(
-                "Unknown polisher: {}. Use 'none', 'openai', or 'mistral'",
+                "Unknown polisher: {}. Use 'none', 'openai', 'mistral', or 'ollama'",
                 s
             )),
         }
+    }
+}
+
+impl Polisher {
+    /// Returns true if this polisher requires an API key (cloud providers)
+    pub fn requires_api_key(&self) -> bool {
+        matches!(self, Polisher::OpenAI | Polisher::Mistral)
     }
 }
 
@@ -63,17 +73,21 @@ struct Message {
 }
 
 /// Polish (clean up) a transcript using the specified LLM provider
+///
+/// For cloud providers (OpenAI, Mistral), `api_key_or_url` is the API key.
+/// For Ollama, `api_key_or_url` is the server URL (e.g., http://localhost:11434).
 pub async fn polish(
     text: &str,
     polisher: &Polisher,
-    api_key: &str,
+    api_key_or_url: &str,
     prompt: &str,
     model: Option<&str>,
 ) -> Result<String> {
     match polisher {
         Polisher::None => Ok(text.to_string()),
-        Polisher::OpenAI => polish_openai(text, api_key, prompt, model).await,
-        Polisher::Mistral => polish_mistral(text, api_key, prompt, model).await,
+        Polisher::OpenAI => polish_openai(text, api_key_or_url, prompt, model).await,
+        Polisher::Mistral => polish_mistral(text, api_key_or_url, prompt, model).await,
+        Polisher::Ollama => polish_ollama(text, api_key_or_url, prompt, model).await,
     }
 }
 
@@ -149,4 +163,66 @@ async fn polish_mistral(
         .first()
         .map(|c| c.message.content.clone())
         .ok_or_else(|| anyhow!("No response from Mistral"))
+}
+
+const DEFAULT_OLLAMA_MODEL: &str = "phi3";
+const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
+
+/// Ollama API response structure
+#[derive(Debug, Deserialize)]
+struct OllamaResponse {
+    message: OllamaMessage,
+}
+
+#[derive(Debug, Deserialize)]
+struct OllamaMessage {
+    content: String,
+}
+
+async fn polish_ollama(
+    text: &str,
+    server_url: &str,
+    system_prompt: &str,
+    model: Option<&str>,
+) -> Result<String> {
+    let model = model.unwrap_or(DEFAULT_OLLAMA_MODEL);
+    let base_url = if server_url.is_empty() {
+        DEFAULT_OLLAMA_URL
+    } else {
+        server_url
+    };
+    let url = format!("{}/api/chat", base_url.trim_end_matches('/'));
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(&url)
+        .json(&serde_json::json!({
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text}
+            ],
+            "stream": false
+        }))
+        .timeout(std::time::Duration::from_secs(120)) // Longer timeout for local LLM
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_connect() {
+                anyhow!(
+                    "Cannot connect to Ollama at {}. Is Ollama running? Start with: ollama serve",
+                    base_url
+                )
+            } else {
+                anyhow!("Ollama request failed: {}", e)
+            }
+        })?;
+
+    if !response.status().is_success() {
+        let error_text = response.text().await?;
+        return Err(anyhow!("Ollama polish failed: {}", error_text));
+    }
+
+    let ollama_response: OllamaResponse = response.json().await?;
+    Ok(ollama_response.message.content.trim().to_string())
 }

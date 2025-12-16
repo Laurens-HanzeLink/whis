@@ -19,6 +19,7 @@ pub struct Cli {
 }
 
 #[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)]
 pub enum Commands {
     /// Start the background service that listens for hotkey triggers
     Listen {
@@ -55,15 +56,31 @@ pub enum Commands {
         #[arg(long)]
         elevenlabs_api_key: Option<String>,
 
-        /// Set the transcription provider (openai, mistral, groq, deepgram, elevenlabs)
+        /// Set the transcription provider (openai, mistral, groq, deepgram, elevenlabs, local-whisper, remote-whisper)
         #[arg(long)]
         provider: Option<String>,
+
+        /// Path to whisper.cpp model file for local transcription (e.g., ~/.local/share/whis/models/ggml-small.bin)
+        #[arg(long)]
+        whisper_model_path: Option<String>,
+
+        /// Remote whisper server URL for self-hosted transcription (e.g., http://localhost:8765)
+        #[arg(long)]
+        remote_whisper_url: Option<String>,
+
+        /// Ollama server URL for local polishing (default: http://localhost:11434)
+        #[arg(long)]
+        ollama_url: Option<String>,
+
+        /// Ollama model name for local polishing (default: phi3)
+        #[arg(long)]
+        ollama_model: Option<String>,
 
         /// Set the language hint (ISO-639-1 code: en, de, fr, etc.) or "auto" for auto-detect
         #[arg(long)]
         language: Option<String>,
 
-        /// Set the polisher for transcript cleanup (none, openai, or mistral)
+        /// Set the polisher for transcript cleanup (none, openai, mistral, or ollama)
         #[arg(long)]
         polisher: Option<String>,
 
@@ -80,6 +97,28 @@ pub enum Commands {
     Presets {
         #[command(subcommand)]
         action: Option<PresetsAction>,
+    },
+
+    /// Quick setup wizard for different usage modes
+    Setup {
+        #[command(subcommand)]
+        mode: SetupMode,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum SetupMode {
+    /// Setup for cloud providers (OpenAI, Mistral, Groq, etc.)
+    Cloud,
+
+    /// Setup for fully local (on-device) transcription and polishing
+    Local,
+
+    /// Setup for self-hosted server (Docker)
+    SelfHosted {
+        /// URL of your self-hosted whisper server (e.g., http://myserver:8765)
+        #[arg(long)]
+        url: Option<String>,
     },
 }
 

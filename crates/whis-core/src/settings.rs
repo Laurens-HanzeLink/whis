@@ -25,6 +25,20 @@ pub struct Settings {
     /// Custom prompt for polishing (uses default if None)
     #[serde(default)]
     pub polish_prompt: Option<String>,
+    /// Path to whisper.cpp model file for local transcription
+    /// (e.g., ~/.local/share/whis/models/ggml-small.bin)
+    #[serde(default)]
+    pub whisper_model_path: Option<String>,
+    /// Ollama server URL for local LLM polishing (default: http://localhost:11434)
+    #[serde(default)]
+    pub ollama_url: Option<String>,
+    /// Ollama model name for polishing (default: phi3)
+    #[serde(default)]
+    pub ollama_model: Option<String>,
+    /// Remote whisper server URL for self-hosted transcription
+    /// (e.g., http://localhost:8765)
+    #[serde(default)]
+    pub remote_whisper_url: Option<String>,
 }
 
 impl Default for Settings {
@@ -36,6 +50,10 @@ impl Default for Settings {
             api_keys: HashMap::new(),
             polisher: Polisher::default(),
             polish_prompt: None,
+            whisper_model_path: None,
+            ollama_url: None,
+            ollama_model: None,
+            remote_whisper_url: None,
         }
     }
 }
@@ -82,12 +100,41 @@ impl Settings {
     }
 
     /// Get the API key for the polisher, falling back to environment variables
+    /// Returns None for local polisher (Ollama uses URL instead)
     pub fn get_polisher_api_key(&self) -> Option<String> {
         match &self.polisher {
-            Polisher::None => None,
+            Polisher::None | Polisher::Ollama => None,
             Polisher::OpenAI => self.get_api_key_for(&TranscriptionProvider::OpenAI),
             Polisher::Mistral => self.get_api_key_for(&TranscriptionProvider::Mistral),
         }
+    }
+
+    /// Get the whisper model path, falling back to environment variable
+    pub fn get_whisper_model_path(&self) -> Option<String> {
+        self.whisper_model_path
+            .clone()
+            .or_else(|| std::env::var("LOCAL_WHISPER_MODEL_PATH").ok())
+    }
+
+    /// Get the Ollama server URL, falling back to environment variable
+    pub fn get_ollama_url(&self) -> Option<String> {
+        self.ollama_url
+            .clone()
+            .or_else(|| std::env::var("OLLAMA_URL").ok())
+    }
+
+    /// Get the Ollama model name, falling back to environment variable
+    pub fn get_ollama_model(&self) -> Option<String> {
+        self.ollama_model
+            .clone()
+            .or_else(|| std::env::var("OLLAMA_MODEL").ok())
+    }
+
+    /// Get the remote whisper server URL, falling back to environment variable
+    pub fn get_remote_whisper_url(&self) -> Option<String> {
+        self.remote_whisper_url
+            .clone()
+            .or_else(|| std::env::var("REMOTE_WHISPER_URL").ok())
     }
 
     /// Load settings from disk
@@ -102,18 +149,34 @@ impl Settings {
     }
 
     /// Save settings to disk with 0600 permissions
+    ///
+    /// On Unix, creates the file with mode 0600 from the start to avoid
+    /// a race condition where the file might briefly be world-readable.
     pub fn save(&self) -> Result<()> {
+        use std::io::Write;
+
         let path = Self::path();
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
+
         let content = serde_json::to_string_pretty(self)?;
-        fs::write(&path, &content)?;
 
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+            use std::os::unix::fs::OpenOptionsExt;
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(&path)?;
+            file.write_all(content.as_bytes())?;
+        }
+
+        #[cfg(not(unix))]
+        {
+            fs::write(&path, &content)?;
         }
 
         Ok(())
