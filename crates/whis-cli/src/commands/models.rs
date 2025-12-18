@@ -80,12 +80,10 @@ struct OllamaModel {
 
 /// List available Ollama models from server
 fn list_ollama_models(url: Option<String>) -> Result<()> {
-    let url = url
-        .as_deref()
-        .unwrap_or(ollama::DEFAULT_OLLAMA_URL);
+    let url = url.as_deref().unwrap_or(ollama::DEFAULT_OLLAMA_URL);
 
     // Check if Ollama is running
-    if !ollama::is_ollama_running(url) {
+    if !ollama::is_ollama_running(url).unwrap_or(false) {
         println!("Ollama is not running at {}\n", url);
         println!("Start Ollama with: ollama serve");
         println!("Or specify a different URL: whis models ollama --url http://...");
@@ -108,9 +106,7 @@ fn list_ollama_models(url: Option<String>) -> Result<()> {
         anyhow::bail!("Ollama returned error: {}", response.status());
     }
 
-    let tags: TagsResponse = response
-        .json()
-        .context("Failed to parse Ollama response")?;
+    let tags: TagsResponse = response.json().context("Failed to parse Ollama response")?;
 
     if tags.models.is_empty() {
         println!("No models installed in Ollama at {}\n", url);

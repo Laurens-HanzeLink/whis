@@ -3,10 +3,15 @@ use crossterm::{
     event::{self, Event, KeyCode},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-use std::io::Write;
+use std::io::{IsTerminal, Write};
 use std::thread;
 use std::time::Duration;
 use whis_core::{Settings, TranscriptionProvider};
+
+/// Check if stdout is being piped (not a terminal)
+pub fn is_piped() -> bool {
+    !std::io::stdout().is_terminal()
+}
 
 /// Configuration for transcription, including provider, API key, and language
 pub struct TranscriptionConfig {
@@ -125,3 +130,4 @@ pub fn typewriter(text: &str, delay_ms: u64) {
         thread::sleep(Duration::from_millis(delay_ms));
     }
 }
+

@@ -1,9 +1,10 @@
 use anyhow::{Result, anyhow};
 use std::io::{self, Write};
+use std::path::PathBuf;
 use whis_core::{
     AudioRecorder, DEFAULT_POLISH_PROMPT, Polisher, Preset, RecordingOutput, Settings,
-    TranscriptionProvider, copy_to_clipboard, ollama, parallel_transcribe, polish,
-    transcribe_audio,
+    TranscriptionProvider, copy_to_clipboard, load_audio_file, load_audio_stdin, ollama,
+    parallel_transcribe, polish, transcribe_audio,
 };
 
 use crate::app;
@@ -63,7 +64,16 @@ fn resolve_polisher(
     }
 }
 
-pub fn run(polish_flag: bool, preset_name: Option<String>) -> Result<()> {
+pub fn run(
+    polish_flag: bool,
+    preset_name: Option<String>,
+    file_path: Option<PathBuf>,
+    stdin_mode: bool,
+    input_format: &str,
+) -> Result<()> {
+    // Detect if stdout is being piped (for clean output to other tools)
+    let piped = app::is_piped();
+
     // Load preset if provided
     let preset: Option<Preset> = if let Some(name) = preset_name {
         let (p, _source) = Preset::load(&name).map_err(|e| anyhow!("{}", e))?;
@@ -75,35 +85,54 @@ pub fn run(polish_flag: bool, preset_name: Option<String>) -> Result<()> {
     // Create Tokio runtime for async operations
     let runtime = tokio::runtime::Runtime::new()?;
 
-    // Check if FFmpeg is available
+    // Check if FFmpeg is available (needed for all input modes)
     app::ensure_ffmpeg_installed()?;
 
     // Load transcription configuration (provider + API key)
     let config = app::load_transcription_config()?;
 
-    // Create recorder and start recording
-    let mut recorder = AudioRecorder::new()?;
-    recorder.start_recording()?;
-
-    println!("Press Enter to stop recording");
-    print!("Recording...");
-    io::stdout().flush()?;
-    app::wait_for_enter()?;
-
-    // In verbose mode, print newline so verbose output appears cleanly
-    if whis_core::verbose::is_verbose() {
-        println!();
-    }
-
-    // Finalize recording and get output
-    let audio_result = recorder.finalize_recording()?;
-
-    // Transcribe based on output type
-    if whis_core::verbose::is_verbose() {
-        println!("Transcribing...");
+    // Determine audio source based on input mode
+    let audio_result = if let Some(path) = file_path {
+        // File input mode
+        if !piped {
+            println!("Loading audio file: {}", path.display());
+        }
+        load_audio_file(&path)?
+    } else if stdin_mode {
+        // Stdin input mode
+        if !piped {
+            println!("Reading audio from stdin ({} format)...", input_format);
+        }
+        load_audio_stdin(input_format)?
     } else {
-        // Continue on same line (raw mode doesn't echo newline)
-        app::typewriter(" Transcribing...", 25);
+        // Microphone recording mode (default)
+        let mut recorder = AudioRecorder::new()?;
+        recorder.start_recording()?;
+
+        // When piped: completely silent (user knows to press Enter)
+        // When TTY: show status messages
+        if !piped {
+            println!("Press Enter to stop recording");
+            print!("Recording...");
+            io::stdout().flush()?;
+        }
+        app::wait_for_enter()?;
+
+        // In verbose mode (TTY only), print newline so verbose output appears cleanly
+        if !piped && whis_core::verbose::is_verbose() {
+            println!();
+        }
+
+        recorder.finalize_recording()?
+    };
+
+    // Transcribe based on output type (silent when piped)
+    if !piped {
+        if whis_core::verbose::is_verbose() {
+            println!("Transcribing...");
+        } else {
+            app::typewriter(" Transcribing...", 25);
+        }
     }
     let transcription = match audio_result {
         RecordingOutput::Single(audio_data) => {
@@ -163,7 +192,10 @@ pub fn run(polish_flag: bool, preset_name: Option<String>) -> Result<()> {
         };
 
         if let Some(key_or_url) = api_key_or_url {
-            app::typewriter(" Polishing...", 25);
+            // Silent when piped
+            if !piped {
+                app::typewriter(" Polishing...", 25);
+            }
 
             // Priority: preset prompt > settings prompt > default
             let prompt = if let Some(ref p) = preset {
@@ -213,16 +245,27 @@ pub fn run(polish_flag: bool, preset_name: Option<String>) -> Result<()> {
         transcription
     };
 
-    // Copy to clipboard
-    copy_to_clipboard(&final_text, settings.clipboard_method.clone())?;
-
-    if whis_core::verbose::is_verbose() {
-        println!("Done");
+    // Output: piped mode sends to stdout (silent), TTY mode copies to clipboard
+    if piped {
+        // Only output the transcription - nothing else
+        // Use writeln! and ignore BrokenPipe (happens when piped to `head`, etc.)
+        if let Err(e) = writeln!(io::stdout(), "{}", final_text) {
+            if e.kind() != io::ErrorKind::BrokenPipe {
+                return Err(e.into());
+            }
+        }
     } else {
-        app::typewriter(" Done", 20);
-        println!(); // End the status line
+        // Copy to clipboard (normal TTY mode)
+        copy_to_clipboard(&final_text, settings.clipboard_method.clone())?;
+
+        if whis_core::verbose::is_verbose() {
+            println!("Done");
+        } else {
+            app::typewriter(" Done", 20);
+            println!(); // End the status line
+        }
+        println!("Copied to clipboard");
     }
-    println!("Copied to clipboard");
 
     Ok(())
 }

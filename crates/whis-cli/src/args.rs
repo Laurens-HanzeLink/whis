@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand, ValueHint};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "whis")]
@@ -20,6 +21,18 @@ pub struct Cli {
     /// Output preset for transcript (run 'whis presets' to see all)
     #[arg(long = "as", value_name = "PRESET")]
     pub preset: Option<String>,
+
+    /// Transcribe audio from file instead of recording
+    #[arg(short = 'f', long, value_hint = ValueHint::FilePath)]
+    pub file: Option<PathBuf>,
+
+    /// Read audio from stdin (use with pipes, e.g., `yt-dlp ... | whis --stdin`)
+    #[arg(long)]
+    pub stdin: bool,
+
+    /// Input audio format when using --stdin (default: mp3)
+    #[arg(long, default_value = "mp3")]
+    pub format: String,
 }
 
 #[derive(Subcommand)]

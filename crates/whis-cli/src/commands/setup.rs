@@ -271,7 +271,7 @@ fn setup_self_hosted(url_arg: Option<String>) -> Result<()> {
     print!("Testing Ollama at {}...", ollama_url);
     io::stdout().flush().ok();
 
-    if ollama::is_ollama_running(&ollama_url) {
+    if ollama::is_ollama_running(&ollama_url).unwrap_or(false) {
         println!(" OK");
     } else {
         println!(" FAILED");
