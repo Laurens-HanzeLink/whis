@@ -31,6 +31,7 @@ export interface Settings {
   ollama_model: string | null
   polish_prompt: string | null
   active_preset: string | null
+  microphone_device: string | null
 }
 
 // Shortcut backend information

@@ -782,3 +782,9 @@ fn capitalize(s: &str) -> String {
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
 }
+
+/// List available audio input devices
+#[tauri::command]
+pub fn list_audio_devices() -> Result<Vec<whis_core::AudioDeviceInfo>, String> {
+    whis_core::list_audio_devices().map_err(|e| e.to_string())
+}

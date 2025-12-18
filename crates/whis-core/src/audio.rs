@@ -63,14 +63,29 @@ impl AudioRecorder {
         })
     }
 
+    /// Start recording with an optional specific device name
+    /// If device_name is None, uses the system default input device
     pub fn start_recording(&mut self) -> Result<()> {
-        let host = cpal::default_host();
-        let device = host
-            .default_input_device()
-            .context("No input device available")?;
+        self.start_recording_with_device(None)
+    }
 
-        let device_name = device.name().unwrap_or_else(|_| "<unknown>".to_string());
-        crate::verbose!("Audio device: {}", device_name);
+    /// Start recording with a specific device name
+    pub fn start_recording_with_device(&mut self, device_name: Option<&str>) -> Result<()> {
+        let host = cpal::default_host();
+
+        let device = if let Some(name) = device_name {
+            // Try to find device by name
+            host.input_devices()?
+                .find(|d| d.name().map(|n| n == name).unwrap_or(false))
+                .with_context(|| format!("Audio device '{}' not found", name))?
+        } else {
+            // Use default device
+            host.default_input_device()
+                .context("No input device available")?
+        };
+
+        let actual_device_name = device.name().unwrap_or_else(|_| "<unknown>".to_string());
+        crate::verbose!("Audio device: {}", actual_device_name);
 
         let config = device
             .default_input_config()
@@ -576,4 +591,35 @@ fn convert_stdin_to_mp3(data: &[u8], format: &str) -> Result<Vec<u8>> {
     crate::verbose!("Converted to {:.1} KB MP3", mp3_data.len() as f64 / 1024.0);
 
     Ok(mp3_data)
+}
+
+/// Audio device information
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AudioDeviceInfo {
+    pub name: String,
+    pub is_default: bool,
+}
+
+/// List available audio input devices
+pub fn list_audio_devices() -> Result<Vec<AudioDeviceInfo>> {
+    let host = cpal::default_host();
+    let default_device_name = host
+        .default_input_device()
+        .and_then(|d| d.name().ok());
+
+    let mut devices = Vec::new();
+    for device in host.input_devices()? {
+        if let Ok(name) = device.name() {
+            devices.push(AudioDeviceInfo {
+                name: name.clone(),
+                is_default: default_device_name.as_ref() == Some(&name),
+            });
+        }
+    }
+
+    if devices.is_empty() {
+        anyhow::bail!("No audio input devices found");
+    }
+
+    Ok(devices)
 }

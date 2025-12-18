@@ -73,6 +73,7 @@ pub fn run() {
             commands::create_preset,
             commands::update_preset,
             commands::delete_preset,
+            commands::list_audio_devices,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -46,6 +46,9 @@ pub struct Settings {
     /// Clipboard method for copying text (auto, xclip, wl-copy, arboard)
     #[serde(default)]
     pub clipboard_method: ClipboardMethod,
+    /// Selected microphone device name (None = system default)
+    #[serde(default)]
+    pub microphone_device: Option<String>,
 }
 
 impl Default for Settings {
@@ -63,6 +66,7 @@ impl Default for Settings {
             remote_whisper_url: None,
             active_preset: None,
             clipboard_method: ClipboardMethod::default(),
+            microphone_device: None,
         }
     }
 }

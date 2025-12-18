@@ -24,6 +24,7 @@ const defaultSettings: Settings = {
   ollama_model: null,
   polish_prompt: null,
   active_preset: null,
+  microphone_device: null,
 }
 
 // Internal mutable state
@@ -56,6 +57,7 @@ const debouncedSave = debounce(async () => {
         ollama_model: state.ollama_model,
         polish_prompt: state.polish_prompt,
         active_preset: state.active_preset,
+        microphone_device: state.microphone_device,
       },
     })
   } catch (e) {
@@ -76,6 +78,7 @@ watch(
     state.ollama_model,
     state.polish_prompt,
     state.active_preset,
+    state.microphone_device,
   ],
   () => {
     if (state.loaded) debouncedSave()
@@ -98,6 +101,7 @@ async function load() {
     state.ollama_model = settings.ollama_model
     state.polish_prompt = settings.polish_prompt
     state.active_preset = settings.active_preset
+    state.microphone_device = settings.microphone_device
   } catch (e) {
     console.error('Failed to load settings:', e)
   }
@@ -118,6 +122,7 @@ async function save(): Promise<boolean> {
         ollama_model: state.ollama_model,
         polish_prompt: state.polish_prompt,
         active_preset: state.active_preset,
+        microphone_device: state.microphone_device,
       },
     })
     return result.needs_restart
@@ -192,6 +197,10 @@ function setPortalShortcut(value: string | null) {
   state.portalShortcut = value
 }
 
+function setMicrophoneDevice(value: string | null) {
+  state.microphone_device = value
+}
+
 // Export reactive state and actions
 export const settingsStore = {
   // Readonly state for reading (prevents accidental mutation)
@@ -217,4 +226,5 @@ export const settingsStore = {
   setPolishPrompt,
   setShortcut,
   setPortalShortcut,
+  setMicrophoneDevice,
 }

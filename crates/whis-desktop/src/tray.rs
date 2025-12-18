@@ -199,9 +199,12 @@ fn start_recording_sync(app: &AppHandle, state: &AppState) -> Result<(), String>
         }
     }
 
-    // Start recording
+    // Start recording with selected microphone device
     let mut recorder = AudioRecorder::new().map_err(|e| e.to_string())?;
-    recorder.start_recording().map_err(|e| e.to_string())?;
+    let device_name = state.settings.lock().unwrap().microphone_device.clone();
+    recorder
+        .start_recording_with_device(device_name.as_deref())
+        .map_err(|e| e.to_string())?;
 
     *state.recorder.lock().unwrap() = Some(recorder);
     *state.state.lock().unwrap() = RecordingState::Recording;

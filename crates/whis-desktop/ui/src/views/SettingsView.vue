@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { settingsStore } from '../stores/settings'
 import type { Provider, Polisher, SelectOption } from '../types'
 import {
@@ -11,6 +11,7 @@ import {
   AppSelect,
   type TranscriptionMode,
 } from '../components'
+import { invoke } from '@tauri-apps/api/core'
 
 const helpOpen = ref(false)
 const showOptions = ref(false)
@@ -114,6 +115,44 @@ function handleLocalModeChange(value: string | null) {
 function handleLanguageChange(value: string | null) {
   settingsStore.setLanguage(value)
 }
+
+// Audio devices
+interface AudioDevice {
+  name: string
+  is_default: boolean
+}
+
+const audioDevices = ref<AudioDevice[]>([])
+const microphoneDevice = computed(() => settingsStore.state.microphone_device)
+
+// Load available audio devices
+onMounted(async () => {
+  try {
+    audioDevices.value = await invoke<AudioDevice[]>('list_audio_devices')
+  } catch (error) {
+    console.error('Failed to load audio devices:', error)
+  }
+})
+
+// Convert audio devices to select options
+const microphoneOptions = computed<SelectOption[]>(() => {
+  const options: SelectOption[] = [
+    { value: null, label: 'System Default' }
+  ]
+
+  for (const device of audioDevices.value) {
+    options.push({
+      value: device.name,
+      label: device.is_default ? `${device.name} (default)` : device.name
+    })
+  }
+
+  return options
+})
+
+function handleMicrophoneChange(value: string | null) {
+  settingsStore.setMicrophoneDevice(value)
+}
 </script>
 
 <template>
@@ -190,6 +229,16 @@ function handleLanguageChange(value: string | null) {
             :model-value="language"
             :options="languageOptions"
             @update:model-value="handleLanguageChange"
+          />
+        </div>
+
+        <!-- Microphone Device -->
+        <div class="field-row">
+          <label>Microphone</label>
+          <AppSelect
+            :model-value="microphoneDevice"
+            :options="microphoneOptions"
+            @update:model-value="handleMicrophoneChange"
           />
         </div>
 
