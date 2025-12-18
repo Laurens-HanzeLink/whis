@@ -11,10 +11,6 @@
   },
   "app": {
     "withGlobalTauri": true,
-    "trayIcon": {
-      "iconPath": "icons/icon-idle.png",
-      "iconAsTemplate": false
-    },
     "windows": []
   },
   "bundle": {
@@ -27,6 +23,14 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "iOS": {
+      "infoPlist": "Info.plist"
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "entitlements": null,
+      "infoPlist": "Info.plist"
+    },
     "linux": {
       "appimage": {
         "bundleMediaFramework": false

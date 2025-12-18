@@ -45,12 +45,24 @@ pub fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .app_cache_dir()
         .expect("Failed to get app cache dir");
 
+    // On macOS, show menu on left-click (standard behavior)
+    // On Linux, use right-click for menu and left-click for quick record
+    #[cfg(target_os = "macos")]
+    let show_menu_on_left = true;
+    #[cfg(not(target_os = "macos"))]
+    let show_menu_on_left = false;
+
+    #[cfg(target_os = "macos")]
+    let tooltip = "Whis";
+    #[cfg(not(target_os = "macos"))]
+    let tooltip = "Whis - Click to record";
+
     let _tray = TrayIconBuilder::with_id(TRAY_ID)
         .icon(idle_icon)
         .temp_dir_path(cache_dir)
         .menu(&menu)
-        .show_menu_on_left_click(false)
-        .tooltip("Whis - Click to record")
+        .show_menu_on_left_click(show_menu_on_left)
+        .tooltip(tooltip)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "record" => {
                 let app_clone = app.clone();
@@ -67,14 +79,24 @@ pub fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
-            use tauri::tray::TrayIconEvent;
-            if let TrayIconEvent::Click { button, .. } = event
-                && button == tauri::tray::MouseButton::Left
+            // On Linux, left-click toggles recording (menu is on right-click)
+            // On macOS, menu shows on left-click so we don't need this handler
+            #[cfg(not(target_os = "macos"))]
             {
-                let app_handle = tray.app_handle().clone();
-                tauri::async_runtime::spawn(async move {
-                    toggle_recording(app_handle);
-                });
+                use tauri::tray::TrayIconEvent;
+                if let TrayIconEvent::Click { button, .. } = event
+                    && button == tauri::tray::MouseButton::Left
+                {
+                    let app_handle = tray.app_handle().clone();
+                    tauri::async_runtime::spawn(async move {
+                        toggle_recording(app_handle);
+                    });
+                }
+            }
+            #[cfg(target_os = "macos")]
+            {
+                // Suppress unused variable warning
+                let _ = (tray, event);
             }
         })
         .build(app)?;
@@ -95,7 +117,6 @@ fn open_settings_window(app: AppHandle) {
         .min_inner_size(400.0, 300.0)
         .resizable(true)
         .decorations(false)
-        .transparent(true)
         .build();
 
     // Fix Wayland window dragging by unsetting GTK titlebar
@@ -355,20 +376,64 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
 }
 
 fn update_tray(app: &AppHandle, new_state: RecordingState) {
-    // Update menu item text using stored reference
-    let app_state = app.state::<AppState>();
-    if let Some(ref menu_item) = *app_state.record_menu_item.lock().unwrap() {
-        let text = match new_state {
-            RecordingState::Idle => "Start Recording",
-            RecordingState::Recording => "Stop Recording",
-            RecordingState::Transcribing => "Transcribing...",
-        };
-        let _ = menu_item.set_text(text);
-        let _ = menu_item.set_enabled(new_state != RecordingState::Transcribing);
+    // Rebuild menu on macOS (workaround for menu item updates not reflecting)
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(tray) = app.tray_by_id(TRAY_ID) {
+            let text = match new_state {
+                RecordingState::Idle => "Start Recording",
+                RecordingState::Recording => "Stop Recording",
+                RecordingState::Transcribing => "Transcribing...",
+            };
+            let enabled = new_state != RecordingState::Transcribing;
+
+            // Rebuild menu with updated state
+            if let Ok(record) = MenuItem::with_id(app, "record", text, enabled, None::<&str>) {
+                if let Ok(settings) = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>) {
+                    if let Ok(sep) = PredefinedMenuItem::separator(app) {
+                        if let Ok(quit) = MenuItem::with_id(app, "quit", "Quit Whis", true, None::<&str>) {
+                            if let Ok(menu) = Menu::with_items(app, &[&record, &sep, &settings, &sep, &quit]) {
+                                let _ = tray.set_menu(Some(menu));
+                                println!("Rebuilt tray menu to: {}", text);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Update menu item text using stored reference (Linux)
+    #[cfg(not(target_os = "macos"))]
+    {
+        let app_state = app.state::<AppState>();
+        if let Some(ref menu_item) = *app_state.record_menu_item.lock().unwrap() {
+            let text = match new_state {
+                RecordingState::Idle => "Start Recording",
+                RecordingState::Recording => "Stop Recording",
+                RecordingState::Transcribing => "Transcribing...",
+            };
+            if let Err(e) = menu_item.set_text(text) {
+                eprintln!("Failed to update menu item text: {e}");
+            }
+            if let Err(e) = menu_item.set_enabled(new_state != RecordingState::Transcribing) {
+                eprintln!("Failed to update menu item enabled state: {e}");
+            }
+            println!("Updated tray menu to: {}", text);
+        } else {
+            eprintln!("Menu item not found in state");
+        }
     }
 
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
-        // Update tooltip
+        // Update tooltip (platform-specific behavior)
+        #[cfg(target_os = "macos")]
+        let tooltip = match new_state {
+            RecordingState::Idle => "Whis",
+            RecordingState::Recording => "Whis - Recording...",
+            RecordingState::Transcribing => "Whis - Transcribing...",
+        };
+        #[cfg(not(target_os = "macos"))]
         let tooltip = match new_state {
             RecordingState::Idle => "Whis - Click to record",
             RecordingState::Recording => "Whis - Recording... Click to stop",

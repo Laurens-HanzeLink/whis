@@ -1,0 +1,6 @@
+[env]
+# Set macOS deployment target to 10.15 for C++17 filesystem support
+MACOSX_DEPLOYMENT_TARGET = "10.15"
+# Additional flags for C++ compiler to support filesystem
+CXXFLAGS = "-mmacosx-version-min=10.15"
+CMAKE_OSX_DEPLOYMENT_TARGET = "10.15"

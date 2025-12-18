@@ -45,6 +45,14 @@ pub struct AudioRecorder {
     stream: Option<cpal::Stream>,
 }
 
+// SAFETY: AudioRecorder is always used behind a Mutex in AppState, ensuring
+// single-threaded access. The cpal::Stream on macOS contains non-Send types
+// (AudioObjectPropertyListener with FnMut), but we never move the AudioRecorder
+// between threads - it's created, used, and dropped on the same thread.
+// The Mutex only protects against concurrent access within the Tauri async runtime.
+#[cfg(target_os = "macos")]
+unsafe impl Send for AudioRecorder {}
+
 impl AudioRecorder {
     pub fn new() -> Result<Self> {
         Ok(AudioRecorder {
