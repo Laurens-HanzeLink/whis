@@ -18,7 +18,7 @@ pub async fn capture_all(driver: &TauriDriver, config: &CaptureConfig) -> Result
         config
             .view_filter
             .as_ref()
-            .map_or(true, |f| f == view || f == "all")
+            .is_none_or(|f| f == view || f == "all")
     };
 
     if should_capture("home") {

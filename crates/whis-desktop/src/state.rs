@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use tauri::menu::MenuItem;
-use whis_core::{AudioRecorder, Settings, TranscriptionProvider};
 pub use whis_core::RecordingState;
+use whis_core::{AudioRecorder, Settings, TranscriptionProvider};
 
 /// Cached transcription configuration (provider + API key + language)
 pub struct TranscriptionConfig {

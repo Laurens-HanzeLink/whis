@@ -247,10 +247,10 @@ pub fn run(
     if piped {
         // Only output the transcription - nothing else
         // Use writeln! and ignore BrokenPipe (happens when piped to `head`, etc.)
-        if let Err(e) = writeln!(io::stdout(), "{}", final_text) {
-            if e.kind() != io::ErrorKind::BrokenPipe {
-                return Err(e.into());
-            }
+        if let Err(e) = writeln!(io::stdout(), "{}", final_text)
+            && e.kind() != io::ErrorKind::BrokenPipe
+        {
+            return Err(e.into());
         }
     } else {
         // Copy to clipboard (normal TTY mode)

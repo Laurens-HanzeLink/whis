@@ -28,7 +28,7 @@ fn is_flatpak() -> bool {
 fn session_type() -> &'static str {
     // Cache the result since env vars don't change
     static SESSION_TYPE: std::sync::OnceLock<&'static str> = std::sync::OnceLock::new();
-    *SESSION_TYPE.get_or_init(|| {
+    SESSION_TYPE.get_or_init(|| {
         std::env::var("XDG_SESSION_TYPE")
             .map(|s| match s.to_lowercase().as_str() {
                 "x11" => "x11",

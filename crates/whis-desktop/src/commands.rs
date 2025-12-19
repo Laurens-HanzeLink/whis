@@ -1,7 +1,7 @@
 use crate::shortcuts::ShortcutBackendInfo;
 use crate::state::AppState;
-use whis_core::{RecordingState, Settings};
 use tauri::{AppHandle, State};
+use whis_core::{RecordingState, Settings};
 
 #[derive(serde::Serialize)]
 pub struct StatusResponse {
@@ -361,10 +361,10 @@ pub async fn apply_preset(name: String, state: State<'_, AppState>) -> Result<()
         settings.polish_prompt = Some(preset.prompt.clone());
 
         // Apply preset's polisher override if specified
-        if let Some(polisher_str) = &preset.polisher {
-            if let Ok(polisher) = polisher_str.parse() {
-                settings.polisher = polisher;
-            }
+        if let Some(polisher_str) = &preset.polisher
+            && let Ok(polisher) = polisher_str.parse()
+        {
+            settings.polisher = polisher;
         }
 
         // Set this preset as active
@@ -734,7 +734,7 @@ pub async fn check_config_readiness(
             None => (false, Some("Whisper model path not configured".to_string())),
         },
         provider => {
-            if api_keys.get(provider).map_or(true, |k| k.is_empty()) {
+            if api_keys.get(provider).is_none_or(|k| k.is_empty()) {
                 (
                     false,
                     Some(format!("{} API key not configured", capitalize(provider))),
@@ -763,7 +763,7 @@ pub async fn check_config_readiness(
             }
         }
         polisher => {
-            if api_keys.get(polisher).map_or(true, |k| k.is_empty()) {
+            if api_keys.get(polisher).is_none_or(|k| k.is_empty()) {
                 (
                     false,
                     Some(format!("{} API key not configured", capitalize(polisher))),

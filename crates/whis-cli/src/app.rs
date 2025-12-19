@@ -95,10 +95,10 @@ pub fn wait_for_enter() -> Result<()> {
 
     // Wait for Enter key
     loop {
-        if let Event::Key(key_event) = event::read()? {
-            if key_event.code == KeyCode::Enter {
-                break;
-            }
+        if let Event::Key(key_event) = event::read()?
+            && key_event.code == KeyCode::Enter
+        {
+            break;
         }
     }
 
