@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/whis-core", "crates/whis-cli", "crates/whis-desktop", "crates/whis-mobile"]
+members = ["crates/whis-core", "crates/whis-cli", "crates/whis-desktop", "crates/whis-mobile", "crates/whis-screenshots"]
 
 [workspace.package]
 version = "0.5.9"
