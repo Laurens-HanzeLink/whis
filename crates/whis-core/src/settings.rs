@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
+#[cfg(feature = "clipboard")]
 use crate::clipboard::ClipboardMethod;
 use crate::config::TranscriptionProvider;
 use crate::polish::Polisher;
@@ -40,6 +41,7 @@ pub struct Settings {
     #[serde(default)]
     pub active_preset: Option<String>,
     /// Clipboard method for copying text (auto, xclip, wl-copy, arboard)
+    #[cfg(feature = "clipboard")]
     #[serde(default)]
     pub clipboard_method: ClipboardMethod,
     /// Selected microphone device name (None = system default)
@@ -60,6 +62,7 @@ impl Default for Settings {
             ollama_url: None,
             ollama_model: None,
             active_preset: None,
+            #[cfg(feature = "clipboard")]
             clipboard_method: ClipboardMethod::default(),
             microphone_device: None,
         }

@@ -12,6 +12,7 @@ use std::sync::{Arc, OnceLock};
 mod deepgram;
 mod elevenlabs;
 mod groq;
+#[cfg(feature = "local-whisper")]
 mod local_whisper;
 mod mistral;
 mod openai;
@@ -22,6 +23,7 @@ pub const DEFAULT_TIMEOUT_SECS: u64 = 300;
 pub use deepgram::DeepgramProvider;
 pub use elevenlabs::ElevenLabsProvider;
 pub use groq::GroqProvider;
+#[cfg(feature = "local-whisper")]
 pub use local_whisper::LocalWhisperProvider;
 pub use mistral::MistralProvider;
 pub use openai::OpenAIProvider;
@@ -188,6 +190,7 @@ impl ProviderRegistry {
         providers.insert("groq", Arc::new(GroqProvider));
         providers.insert("deepgram", Arc::new(DeepgramProvider));
         providers.insert("elevenlabs", Arc::new(ElevenLabsProvider));
+        #[cfg(feature = "local-whisper")]
         providers.insert("local-whisper", Arc::new(LocalWhisperProvider));
 
         Self { providers }
