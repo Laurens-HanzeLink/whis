@@ -73,17 +73,13 @@ pub enum Commands {
         #[arg(long)]
         elevenlabs_api_key: Option<String>,
 
-        /// Set the transcription provider (openai, mistral, groq, deepgram, elevenlabs, local-whisper, remote-whisper)
+        /// Set the transcription provider (openai, mistral, groq, deepgram, elevenlabs, local-whisper)
         #[arg(long)]
         provider: Option<String>,
 
         /// Path to whisper.cpp model file for local transcription (e.g., ~/.local/share/whis/models/ggml-small.bin)
         #[arg(long)]
         whisper_model_path: Option<String>,
-
-        /// Remote whisper server URL for self-hosted transcription (e.g., http://localhost:8765)
-        #[arg(long)]
-        remote_whisper_url: Option<String>,
 
         /// Ollama server URL for local polishing (default: http://localhost:11434)
         #[arg(long)]
@@ -136,13 +132,6 @@ pub enum SetupMode {
 
     /// Setup for fully local (on-device) transcription and polishing
     Local,
-
-    /// Setup for self-hosted server (Docker)
-    SelfHosted {
-        /// URL of your self-hosted whisper server (e.g., http://myserver:8765)
-        #[arg(long)]
-        url: Option<String>,
-    },
 }
 
 #[derive(Subcommand)]

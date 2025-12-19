@@ -57,10 +57,8 @@ fn resolve_polisher(
                 Polisher::None
             }
         }
-        // Self-hosted transcription: default to Ollama (likely also self-hosted)
-        TranscriptionProvider::LocalWhisper | TranscriptionProvider::RemoteWhisper => {
-            Polisher::Ollama
-        }
+        // Local transcription: default to Ollama (local polishing)
+        TranscriptionProvider::LocalWhisper => Polisher::Ollama,
     }
 }
 

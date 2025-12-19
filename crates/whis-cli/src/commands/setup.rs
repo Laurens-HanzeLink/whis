@@ -3,7 +3,6 @@
 //! Provides a streamlined setup experience for:
 //! - Cloud users (API key setup)
 //! - Local users (on-device transcription)
-//! - Self-hosted users (Docker server setup)
 
 use anyhow::{Result, anyhow};
 use std::io::{self, Write};
@@ -15,7 +14,6 @@ pub fn run(mode: SetupMode) -> Result<()> {
     match mode {
         SetupMode::Cloud => setup_cloud(),
         SetupMode::Local => setup_local(),
-        SetupMode::SelfHosted { url } => setup_self_hosted(url),
     }
 }
 
@@ -204,110 +202,6 @@ fn setup_local() -> Result<()> {
     Ok(())
 }
 
-/// Setup for self-hosted server
-fn setup_self_hosted(url_arg: Option<String>) -> Result<()> {
-    println!("Self-Hosted Setup");
-    println!("=================");
-    println!();
-    println!("This configures whis to use your self-hosted server.");
-    println!();
-    println!("If you haven't started the server yet:");
-    println!("  cd docker && docker compose up -d");
-    println!(
-        "  docker exec -it whis-ollama ollama pull {}",
-        ollama::DEFAULT_OLLAMA_MODEL
-    );
-    println!();
-
-    // Get server URL
-    let whisper_url = if let Some(url) = url_arg {
-        url
-    } else {
-        prompt_string("Whisper server URL", "http://localhost:8765")?
-    };
-
-    // Test whisper server connectivity
-    print!("Testing whisper server at {}...", whisper_url);
-    io::stdout().flush().ok();
-
-    let health_url = format!("{}/health", whisper_url.trim_end_matches('/'));
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()?;
-
-    match client.get(&health_url).send() {
-        Ok(resp) if resp.status().is_success() => println!(" OK"),
-        Ok(resp) => {
-            println!(" FAILED (HTTP {})", resp.status());
-            return Err(anyhow!(
-                "Whisper server returned error. Is it running?\n\
-                 Start with: cd docker && docker compose up -d"
-            ));
-        }
-        Err(e) => {
-            println!(" FAILED");
-            return Err(anyhow!(
-                "Cannot connect to whisper server: {}\n\
-                 Start with: cd docker && docker compose up -d",
-                e
-            ));
-        }
-    }
-
-    // Test Ollama connectivity (assume same host, port 11434)
-    let ollama_url = if whisper_url.contains("localhost") || whisper_url.contains("127.0.0.1") {
-        ollama::DEFAULT_OLLAMA_URL.to_string()
-    } else {
-        // Extract host from whisper URL and use default Ollama port
-        let host = whisper_url
-            .trim_start_matches("http://")
-            .trim_start_matches("https://")
-            .split(':')
-            .next()
-            .unwrap_or("localhost");
-        format!("http://{}:11434", host)
-    };
-
-    print!("Testing Ollama at {}...", ollama_url);
-    io::stdout().flush().ok();
-
-    if ollama::is_ollama_running(&ollama_url).unwrap_or(false) {
-        println!(" OK");
-    } else {
-        println!(" FAILED");
-        println!();
-        println!("Warning: Ollama not reachable at {}", ollama_url);
-        println!("Polishing will not work. To enable:");
-        println!(
-            "  docker exec -it whis-ollama ollama pull {}",
-            ollama::DEFAULT_OLLAMA_MODEL
-        );
-    }
-
-    // Save configuration
-    let mut settings = Settings::load();
-    settings.provider = TranscriptionProvider::RemoteWhisper;
-    settings.remote_whisper_url = Some(whisper_url.clone());
-    settings.polisher = Polisher::Ollama;
-    settings.ollama_url = Some(ollama_url.clone());
-    settings.ollama_model = Some(ollama::DEFAULT_OLLAMA_MODEL.to_string());
-    settings.save()?;
-
-    println!();
-    println!("Setup complete!");
-    println!();
-    println!("Configuration:");
-    println!("  Transcription: Remote Whisper ({})", whisper_url);
-    println!("  Polishing:     Ollama ({})", ollama_url);
-    println!();
-    println!("Try it out:");
-    println!("  whis              # Record and transcribe");
-    println!("  whis --polish     # Record, transcribe, and polish");
-    println!();
-
-    Ok(())
-}
-
 // --- Helper functions ---
 
 fn prompt_choice(prompt: &str, min: usize, max: usize) -> Result<usize> {
@@ -333,19 +227,4 @@ fn prompt_secret(prompt: &str) -> Result<String> {
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
     Ok(input.trim().to_string())
-}
-
-fn prompt_string(prompt: &str, default: &str) -> Result<String> {
-    print!("{} [{}]: ", prompt, default);
-    io::stdout().flush()?;
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-
-    let trimmed = input.trim();
-    if trimmed.is_empty() {
-        Ok(default.to_string())
-    } else {
-        Ok(trimmed.to_string())
-    }
 }

@@ -13,8 +13,6 @@ pub enum TranscriptionProvider {
     ElevenLabs,
     #[serde(rename = "local-whisper")]
     LocalWhisper,
-    #[serde(rename = "remote-whisper")]
-    RemoteWhisper,
 }
 
 impl TranscriptionProvider {
@@ -27,7 +25,6 @@ impl TranscriptionProvider {
             TranscriptionProvider::Deepgram => "deepgram",
             TranscriptionProvider::ElevenLabs => "elevenlabs",
             TranscriptionProvider::LocalWhisper => "local-whisper",
-            TranscriptionProvider::RemoteWhisper => "remote-whisper",
         }
     }
 
@@ -40,7 +37,6 @@ impl TranscriptionProvider {
             TranscriptionProvider::Deepgram => "DEEPGRAM_API_KEY",
             TranscriptionProvider::ElevenLabs => "ELEVENLABS_API_KEY",
             TranscriptionProvider::LocalWhisper => "LOCAL_WHISPER_MODEL_PATH",
-            TranscriptionProvider::RemoteWhisper => "REMOTE_WHISPER_URL",
         }
     }
 
@@ -53,7 +49,6 @@ impl TranscriptionProvider {
             TranscriptionProvider::Deepgram,
             TranscriptionProvider::ElevenLabs,
             TranscriptionProvider::LocalWhisper,
-            TranscriptionProvider::RemoteWhisper,
         ]
     }
 
@@ -66,16 +61,12 @@ impl TranscriptionProvider {
             TranscriptionProvider::Deepgram => "Deepgram",
             TranscriptionProvider::ElevenLabs => "ElevenLabs",
             TranscriptionProvider::LocalWhisper => "Local Whisper",
-            TranscriptionProvider::RemoteWhisper => "Remote Whisper",
         }
     }
 
     /// Whether this provider requires an API key (vs path/URL for local/remote)
     pub fn requires_api_key(&self) -> bool {
-        !matches!(
-            self,
-            TranscriptionProvider::LocalWhisper | TranscriptionProvider::RemoteWhisper
-        )
+        !matches!(self, TranscriptionProvider::LocalWhisper)
     }
 }
 
@@ -96,9 +87,8 @@ impl std::str::FromStr for TranscriptionProvider {
             "deepgram" => Ok(TranscriptionProvider::Deepgram),
             "elevenlabs" => Ok(TranscriptionProvider::ElevenLabs),
             "local-whisper" | "localwhisper" | "whisper" => Ok(TranscriptionProvider::LocalWhisper),
-            "remote-whisper" | "remotewhisper" => Ok(TranscriptionProvider::RemoteWhisper),
             _ => Err(format!(
-                "Unknown provider: {}. Available: openai, mistral, groq, deepgram, elevenlabs, local-whisper, remote-whisper",
+                "Unknown provider: {}. Available: openai, mistral, groq, deepgram, elevenlabs, local-whisper",
                 s
             )),
         }

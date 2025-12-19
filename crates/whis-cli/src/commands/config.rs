@@ -10,7 +10,6 @@ pub fn run(
     elevenlabs_api_key: Option<String>,
     provider: Option<String>,
     whisper_model_path: Option<String>,
-    remote_whisper_url: Option<String>,
     ollama_url: Option<String>,
     ollama_model: Option<String>,
     language: Option<String>,
@@ -56,18 +55,6 @@ pub fn run(
         settings.whisper_model_path = Some(expanded_path.clone());
         changed = true;
         println!("Whisper model path set to: {}", expanded_path);
-    }
-
-    // Handle remote whisper server URL for self-hosted transcription
-    if let Some(url) = remote_whisper_url {
-        let url_trimmed = url.trim();
-        if url_trimmed.is_empty() {
-            eprintln!("Invalid remote whisper URL: cannot be empty");
-            std::process::exit(1);
-        }
-        settings.remote_whisper_url = Some(url_trimmed.to_string());
-        changed = true;
-        println!("Remote whisper URL set to: {}", url_trimmed);
     }
 
     // Handle Ollama URL for local polishing
@@ -234,13 +221,6 @@ pub fn run(
             println!("Whisper model path: (not set, using $LOCAL_WHISPER_MODEL_PATH)");
         }
 
-        // Remote whisper server settings
-        if let Some(url) = &settings.remote_whisper_url {
-            println!("Remote whisper URL: {}", url);
-        } else {
-            println!("Remote whisper URL: (not set, using $REMOTE_WHISPER_URL)");
-        }
-
         // Ollama settings for local polishing
         if let Some(url) = &settings.ollama_url {
             println!("Ollama URL: {}", url);
@@ -261,7 +241,7 @@ pub fn run(
     // No flags - show help
     eprintln!("Usage:");
     eprintln!(
-        "  whis config --provider <openai|mistral|groq|deepgram|elevenlabs|local-whisper|remote-whisper>"
+        "  whis config --provider <openai|mistral|groq|deepgram|elevenlabs|local-whisper>"
     );
     eprintln!("  whis config --language <en|de|fr|...|auto>");
     eprintln!("  whis config --openai-api-key <KEY>");
@@ -270,7 +250,6 @@ pub fn run(
     eprintln!("  whis config --deepgram-api-key <KEY>");
     eprintln!("  whis config --elevenlabs-api-key <KEY>");
     eprintln!("  whis config --whisper-model-path <PATH>       # For local-whisper provider");
-    eprintln!("  whis config --remote-whisper-url <URL>        # For remote-whisper provider");
     eprintln!("  whis config --polisher <none|openai|mistral|ollama>");
     eprintln!(
         "  whis config --ollama-url <URL>                # For ollama polisher (default: http://localhost:11434)"

@@ -104,8 +104,7 @@ pub async fn save_settings(
             current.provider != settings.provider
                 || current.api_keys != settings.api_keys
                 || current.language != settings.language
-                || current.whisper_model_path != settings.whisper_model_path
-                || current.remote_whisper_url != settings.remote_whisper_url,
+                || current.whisper_model_path != settings.whisper_model_path,
             current.shortcut != settings.shortcut,
         )
     };
@@ -288,46 +287,6 @@ pub async fn download_whisper_model(app: AppHandle, model_name: String) -> Resul
     })
     .await
     .map_err(|e| e.to_string())?
-}
-
-/// Test connection to a remote whisper server
-/// Returns true if the server is reachable
-#[tauri::command]
-pub async fn test_remote_whisper(url: String) -> Result<bool, String> {
-    // Validate URL format first
-    let url_trimmed = url.trim();
-    if !url_trimmed.starts_with("http://") && !url_trimmed.starts_with("https://") {
-        return Err("URL must start with http:// or https://".to_string());
-    }
-
-    // Try to reach the server's health endpoint or base URL
-    let test_url = format!("{}/v1/models", url_trimmed.trim_end_matches('/'));
-
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    match client.get(&test_url).send().await {
-        Ok(resp) => {
-            // Any response (even 404) means server is reachable
-            // 200 means it's a valid OpenAI-compatible endpoint
-            if resp.status().is_success() || resp.status().as_u16() == 404 {
-                Ok(true)
-            } else {
-                Err(format!("Server returned: {}", resp.status()))
-            }
-        }
-        Err(e) => {
-            if e.is_timeout() {
-                Err("Connection timed out".to_string())
-            } else if e.is_connect() {
-                Err("Could not connect to server".to_string())
-            } else {
-                Err(format!("Connection failed: {}", e))
-            }
-        }
-    }
 }
 
 /// Check if the configured whisper model path points to an existing file
@@ -654,12 +613,12 @@ pub async fn pull_ollama_model(
         url
     };
 
-    // Validate Ollama is running before attempting pull
-    // This gives a clear error if Ollama is not installed or not running
-    whis_core::ollama::ensure_ollama_running(&url).map_err(|e| e.to_string())?;
-
-    // Run blocking call in separate thread with progress callback
+    // Run blocking calls in separate thread to avoid tokio runtime conflicts
+    // (reqwest::blocking::Client creates its own runtime internally)
     tauri::async_runtime::spawn_blocking(move || {
+        // Validate Ollama is running before attempting pull
+        whis_core::ollama::ensure_ollama_running(&url).map_err(|e| e.to_string())?;
+
         whis_core::ollama::pull_model_with_progress(&url, &model, |downloaded, total| {
             let _ = app.emit(
                 "ollama-pull-progress",
@@ -670,6 +629,61 @@ pub async fn pull_ollama_model(
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// Ollama status check result
+#[derive(Clone, serde::Serialize)]
+pub struct OllamaStatus {
+    pub installed: bool,
+    pub running: bool,
+    pub error: Option<String>,
+}
+
+/// Check Ollama installation and running status
+/// Returns structured status without attempting to start Ollama
+#[tauri::command]
+pub async fn check_ollama_status(url: String) -> OllamaStatus {
+    let url = if url.trim().is_empty() {
+        whis_core::ollama::DEFAULT_OLLAMA_URL.to_string()
+    } else {
+        url
+    };
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let installed = whis_core::ollama::is_ollama_installed();
+
+        if !installed {
+            return OllamaStatus {
+                installed: false,
+                running: false,
+                error: Some("Ollama is not installed".to_string()),
+            };
+        }
+
+        match whis_core::ollama::is_ollama_running(&url) {
+            Ok(true) => OllamaStatus {
+                installed: true,
+                running: true,
+                error: None,
+            },
+            Ok(false) => OllamaStatus {
+                installed: true,
+                running: false,
+                error: Some("Ollama is not running".to_string()),
+            },
+            Err(e) => OllamaStatus {
+                installed: true,
+                running: false,
+                error: Some(e),
+            },
+        }
+    })
+    .await
+    .unwrap_or(OllamaStatus {
+        installed: false,
+        running: false,
+        error: Some("Failed to check status".to_string()),
+    })
 }
 
 /// Start Ollama server if not running
@@ -712,7 +726,6 @@ pub async fn check_config_readiness(
     polisher: String,
     api_keys: std::collections::HashMap<String, String>,
     whisper_model_path: Option<String>,
-    remote_whisper_url: Option<String>,
     ollama_url: Option<String>,
 ) -> ConfigReadiness {
     // Check transcription readiness
@@ -721,10 +734,6 @@ pub async fn check_config_readiness(
             Some(path) if std::path::Path::new(path).exists() => (true, None),
             Some(_) => (false, Some("Whisper model file not found".to_string())),
             None => (false, Some("Whisper model path not configured".to_string())),
-        },
-        "remote-whisper" => match remote_whisper_url {
-            Some(_) => (true, None),
-            None => (false, Some("Remote Whisper URL not configured".to_string())),
         },
         provider => {
             if api_keys.get(provider).map_or(true, |k| k.is_empty()) {

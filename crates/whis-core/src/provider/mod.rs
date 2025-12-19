@@ -15,7 +15,6 @@ mod groq;
 mod local_whisper;
 mod mistral;
 mod openai;
-mod remote_whisper;
 
 /// Default timeout for API requests (5 minutes)
 pub const DEFAULT_TIMEOUT_SECS: u64 = 300;
@@ -26,7 +25,6 @@ pub use groq::GroqProvider;
 pub use local_whisper::LocalWhisperProvider;
 pub use mistral::MistralProvider;
 pub use openai::OpenAIProvider;
-pub use remote_whisper::RemoteWhisperProvider;
 
 use crate::config::TranscriptionProvider;
 
@@ -190,7 +188,6 @@ impl ProviderRegistry {
         providers.insert("groq", Arc::new(GroqProvider));
         providers.insert("deepgram", Arc::new(DeepgramProvider));
         providers.insert("elevenlabs", Arc::new(ElevenLabsProvider));
-        providers.insert("remote-whisper", Arc::new(RemoteWhisperProvider));
         providers.insert("local-whisper", Arc::new(LocalWhisperProvider));
 
         Self { providers }

@@ -172,16 +172,11 @@ fn start_recording_sync(app: &AppHandle, state: &AppState) -> Result<(), String>
             let settings = state.settings.lock().unwrap();
             let provider = settings.provider.clone();
 
-            // Get API key/model path/URL based on provider type
+            // Get API key/model path based on provider type
             let api_key = match provider {
                 TranscriptionProvider::LocalWhisper => {
                     settings.get_whisper_model_path().ok_or_else(|| {
                         "Whisper model path not configured. Add it in Settings.".to_string()
-                    })?
-                }
-                TranscriptionProvider::RemoteWhisper => {
-                    settings.get_remote_whisper_url().ok_or_else(|| {
-                        "Remote Whisper URL not configured. Add it in Settings.".to_string()
                     })?
                 }
                 _ => settings.get_api_key().ok_or_else(|| {

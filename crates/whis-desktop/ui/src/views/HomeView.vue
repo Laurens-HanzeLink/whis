@@ -47,9 +47,6 @@ const configSummary = computed(() => {
   if (provider === 'local-whisper') {
     mode = 'Local'
     providerName = 'Whisper'
-  } else if (provider === 'remote-whisper') {
-    mode = 'Remote'
-    providerName = 'Whisper'
   } else {
     // Capitalize cloud provider names
     providerName = provider.charAt(0).toUpperCase() + provider.slice(1)
@@ -75,7 +72,7 @@ const canRecord = computed(() => {
 
 // Check configuration readiness (proactive check for better UX)
 async function checkConfigReadiness() {
-  const { provider, polisher, api_keys, whisper_model_path, remote_whisper_url, ollama_url } = settingsStore.state
+  const { provider, polisher, api_keys, whisper_model_path, ollama_url } = settingsStore.state
 
   configReadiness.value.checking = true
   try {
@@ -89,7 +86,6 @@ async function checkConfigReadiness() {
       polisher,
       apiKeys: api_keys,
       whisperModelPath: whisper_model_path,
-      remoteWhisperUrl: remote_whisper_url,
       ollamaUrl: ollama_url
     })
     configReadiness.value = {

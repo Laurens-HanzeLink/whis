@@ -36,10 +36,6 @@ pub struct Settings {
     /// Ollama model name for polishing (default: ministral-3:3b)
     #[serde(default)]
     pub ollama_model: Option<String>,
-    /// Remote whisper server URL for self-hosted transcription
-    /// (e.g., http://localhost:8765)
-    #[serde(default)]
-    pub remote_whisper_url: Option<String>,
     /// Currently active preset name (if any)
     #[serde(default)]
     pub active_preset: Option<String>,
@@ -63,7 +59,6 @@ impl Default for Settings {
             whisper_model_path: None,
             ollama_url: None,
             ollama_model: None,
-            remote_whisper_url: None,
             active_preset: None,
             clipboard_method: ClipboardMethod::default(),
             microphone_device: None,
@@ -116,14 +111,12 @@ impl Settings {
     ///
     /// For cloud providers: checks for API key
     /// For LocalWhisper: checks for model path AND that file exists
-    /// For RemoteWhisper: checks for server URL
     pub fn is_provider_configured(&self) -> bool {
         match self.provider {
             TranscriptionProvider::LocalWhisper => self
                 .get_whisper_model_path()
                 .map(|p| std::path::Path::new(&p).exists())
                 .unwrap_or(false),
-            TranscriptionProvider::RemoteWhisper => self.get_remote_whisper_url().is_some(),
             _ => self.has_api_key(),
         }
     }
@@ -157,13 +150,6 @@ impl Settings {
         self.ollama_model
             .clone()
             .or_else(|| std::env::var("OLLAMA_MODEL").ok())
-    }
-
-    /// Get the remote whisper server URL, falling back to environment variable
-    pub fn get_remote_whisper_url(&self) -> Option<String> {
-        self.remote_whisper_url
-            .clone()
-            .or_else(|| std::env::var("REMOTE_WHISPER_URL").ok())
     }
 
     /// Load settings from disk

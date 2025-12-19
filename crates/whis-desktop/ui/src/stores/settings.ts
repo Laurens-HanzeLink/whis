@@ -18,7 +18,6 @@ const defaultSettings: Settings = {
   language: null,
   api_keys: {},
   whisper_model_path: null,
-  remote_whisper_url: null,
   polisher: 'none',
   ollama_url: null,
   ollama_model: null,
@@ -51,7 +50,6 @@ const debouncedSave = debounce(async () => {
         language: state.language,
         api_keys: state.api_keys,
         whisper_model_path: state.whisper_model_path,
-        remote_whisper_url: state.remote_whisper_url,
         polisher: state.polisher,
         ollama_url: state.ollama_url,
         ollama_model: state.ollama_model,
@@ -72,7 +70,6 @@ watch(
     state.language,
     state.api_keys,
     state.whisper_model_path,
-    state.remote_whisper_url,
     state.polisher,
     state.ollama_url,
     state.ollama_model,
@@ -95,7 +92,6 @@ async function load() {
     state.language = settings.language
     state.api_keys = settings.api_keys || {}
     state.whisper_model_path = settings.whisper_model_path
-    state.remote_whisper_url = settings.remote_whisper_url
     state.polisher = settings.polisher || 'none'
     state.ollama_url = settings.ollama_url
     state.ollama_model = settings.ollama_model
@@ -116,7 +112,6 @@ async function save(): Promise<boolean> {
         language: state.language,
         api_keys: state.api_keys,
         whisper_model_path: state.whisper_model_path,
-        remote_whisper_url: state.remote_whisper_url,
         polisher: state.polisher,
         ollama_url: state.ollama_url,
         ollama_model: state.ollama_model,
@@ -169,10 +164,6 @@ function setWhisperModelPath(value: string | null) {
   state.whisper_model_path = value
 }
 
-function setRemoteWhisperUrl(value: string | null) {
-  state.remote_whisper_url = value
-}
-
 function setPolisher(value: Polisher) {
   state.polisher = value
 }
@@ -219,7 +210,6 @@ export const settingsStore = {
   setLanguage,
   setApiKey,
   setWhisperModelPath,
-  setRemoteWhisperUrl,
   setPolisher,
   setOllamaUrl,
   setOllamaModel,

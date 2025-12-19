@@ -6,7 +6,6 @@ import {
   ModeCards,
   CloudProviderConfig,
   LocalWhisperConfig,
-  RemoteWhisperConfig,
   PolishingConfig,
   AppSelect,
   type TranscriptionMode,
@@ -14,7 +13,6 @@ import {
 import { invoke } from '@tauri-apps/api/core'
 
 const helpOpen = ref(false)
-const showOptions = ref(false)
 
 // Settings from store
 const provider = computed(() => settingsStore.state.provider)
@@ -24,7 +22,7 @@ const polisher = computed(() => settingsStore.state.polisher)
 
 // Transcription mode: cloud vs local
 const transcriptionMode = ref<TranscriptionMode>(
-  ['local-whisper', 'remote-whisper'].includes(provider.value) ? 'local' : 'cloud'
+  provider.value === 'local-whisper' ? 'local' : 'cloud'
 )
 
 // Whisper model validation (for local provider)
@@ -41,12 +39,6 @@ watch(provider, async () => {
     }
   }
 }, { immediate: true })
-
-// Local mode options for dropdown
-const localModeOptions: SelectOption[] = [
-  { value: 'local-whisper', label: 'Local Whisper' },
-  { value: 'remote-whisper', label: 'Remote Whisper' },
-]
 
 // Cloud provider options for dropdown
 const cloudProviderOptions: SelectOption[] = [
@@ -78,7 +70,7 @@ function handleModeChange(mode: TranscriptionMode) {
   transcriptionMode.value = mode
   if (mode === 'cloud') {
     // Switch to default cloud provider if currently on local
-    if (['local-whisper', 'remote-whisper'].includes(provider.value)) {
+    if (provider.value === 'local-whisper') {
       settingsStore.setProvider('openai')
       // Auto-sync polisher to match (if user has cloud polisher enabled)
       if (polisher.value !== 'none' && polisher.value !== 'ollama') {
@@ -87,7 +79,7 @@ function handleModeChange(mode: TranscriptionMode) {
     }
   } else {
     // Switch to local-whisper if currently on cloud
-    if (!['local-whisper', 'remote-whisper'].includes(provider.value)) {
+    if (provider.value !== 'local-whisper') {
       settingsStore.setProvider('local-whisper')
     }
   }
@@ -106,10 +98,6 @@ function handleProviderUpdate(value: string | null) {
 
 function handleApiKeyUpdate(providerKey: string, value: string) {
   settingsStore.setApiKey(providerKey, value)
-}
-
-function handleLocalModeChange(value: string | null) {
-  if (value) settingsStore.setProvider(value as Provider)
 }
 
 function handleLanguageChange(value: string | null) {
@@ -162,7 +150,7 @@ function handleMicrophoneChange(value: string | null) {
         <h1>Settings</h1>
         <p>Configure transcription</p>
       </div>
-      <button class="help-btn" @click="helpOpen = !helpOpen" :aria-label="helpOpen ? 'Close help' : 'Open help'">{{ helpOpen ? '[x]' : '[i]' }}</button>
+      <button class="help-btn" @click="helpOpen = !helpOpen" :aria-label="helpOpen ? 'Close help' : 'Open help'">{{ helpOpen ? 'Close' : 'Help' }}</button>
     </header>
 
     <div class="settings-layout">
@@ -184,33 +172,13 @@ function handleMicrophoneChange(value: string | null) {
 
       <!-- Local Whisper Config -->
       <LocalWhisperConfig
-        v-if="transcriptionMode === 'local' && provider === 'local-whisper'"
+        v-if="transcriptionMode === 'local'"
         :show-config-card="true"
       />
 
-      <!-- Remote Whisper Config -->
-      <RemoteWhisperConfig
-        v-if="transcriptionMode === 'local' && provider === 'remote-whisper'"
-        :show-config-card="true"
-      />
-
-      <!-- Options Toggle -->
-      <button class="options-toggle" @click="showOptions = !showOptions" type="button">
-        <span class="toggle-indicator">{{ showOptions ? 'v' : '>' }}</span>
-        <span>Options</span>
-      </button>
-
-      <!-- Collapsible Options Section -->
-      <div v-if="showOptions" class="options-section">
-        <!-- Local Mode Selection (only in local mode) -->
-        <div v-if="transcriptionMode === 'local'" class="field-row">
-          <label>Mode</label>
-          <AppSelect
-            :model-value="provider"
-            :options="localModeOptions"
-            @update:model-value="handleLocalModeChange"
-          />
-        </div>
+      <!-- Transcription Section -->
+      <div class="settings-section">
+        <p class="section-label">transcription</p>
 
         <!-- Provider (only in cloud mode) -->
         <div v-if="transcriptionMode === 'cloud'" class="field-row">
@@ -241,8 +209,11 @@ function handleMicrophoneChange(value: string | null) {
             @update:model-value="handleMicrophoneChange"
           />
         </div>
+      </div>
 
-        <!-- Text Polishing -->
+      <!-- Post-Processing Section -->
+      <div class="settings-section">
+        <p class="section-label">post-processing</p>
         <PolishingConfig />
       </div>
     </div>
@@ -272,7 +243,6 @@ function handleMicrophoneChange(value: string | null) {
         <div class="help-section">
           <h3>local transcription</h3>
           <p><strong>Local Whisper:</strong> Run models on your device (75MB-3GB). Fully offline. Larger models = better accuracy, slower processing.</p>
-          <p><strong>Remote Whisper:</strong> Connect to a Whisper server on your network. Same quality as local, uses the server's hardware instead.</p>
         </div>
 
         <div class="help-section">
@@ -309,40 +279,21 @@ function handleMicrophoneChange(value: string | null) {
 </template>
 
 <style scoped>
-/* Options Toggle */
-.options-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 0;
-  background: none;
-  border: none;
-  color: var(--text-weak);
-  cursor: pointer;
-  font-family: var(--font);
-  font-size: 12px;
-  margin-top: 8px;
-}
-
-.options-toggle:hover {
-  color: var(--text);
-}
-
-.options-toggle .toggle-indicator {
-  font-size: 10px;
-  width: 10px;
-}
-
-/* Collapsible Options Section */
-.options-section {
-  padding: 16px;
-  background: var(--bg-weak);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+/* Settings Sections */
+.settings-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 8px;
+}
+
+.section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-weak);
+  letter-spacing: 0.05em;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
 
 .field-row {
@@ -352,7 +303,7 @@ function handleMicrophoneChange(value: string | null) {
 }
 
 .field-row > label {
-  width: 110px;
+  width: var(--field-label-width);
   flex-shrink: 0;
   font-size: 12px;
   color: var(--text-weak);

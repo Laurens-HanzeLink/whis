@@ -46,7 +46,6 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
     // Handle different provider types:
     // - Cloud providers: require API key
     // - LocalWhisper: requires model path
-    // - RemoteWhisper: requires server URL
     let api_key = match &provider {
         TranscriptionProvider::LocalWhisper => {
             // Local whisper: use model path
@@ -59,19 +58,6 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
                         "  whis config --whisper-model-path ~/.local/share/whis/models/ggml-small.bin\n"
                     );
                     eprintln!("Or set the LOCAL_WHISPER_MODEL_PATH environment variable.");
-                    std::process::exit(1);
-                }
-            }
-        }
-        TranscriptionProvider::RemoteWhisper => {
-            // Remote whisper: use server URL
-            match settings.get_remote_whisper_url() {
-                Some(url) => url,
-                None => {
-                    eprintln!("Error: No remote whisper server URL configured.");
-                    eprintln!("\nSet the server URL with:");
-                    eprintln!("  whis config --remote-whisper-url http://localhost:8765\n");
-                    eprintln!("Or set the REMOTE_WHISPER_URL environment variable.");
                     std::process::exit(1);
                 }
             }
@@ -96,7 +82,7 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
 
     Ok(TranscriptionConfig {
         provider,
-        api_key, // For local-whisper this is model path, for remote-whisper this is server URL
+        api_key, // For local-whisper this is model path
         language,
     })
 }

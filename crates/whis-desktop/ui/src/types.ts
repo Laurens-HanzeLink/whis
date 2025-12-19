@@ -13,7 +13,6 @@ export type Provider =
   | 'deepgram'
   | 'elevenlabs'
   | 'local-whisper'
-  | 'remote-whisper'
 
 // Text polishing providers
 export type Polisher = 'none' | 'openai' | 'mistral' | 'ollama'
@@ -25,7 +24,6 @@ export interface Settings {
   language: string | null
   api_keys: Record<string, string>
   whisper_model_path: string | null
-  remote_whisper_url: string | null
   polisher: Polisher
   ollama_url: string | null
   ollama_model: string | null
@@ -89,5 +87,5 @@ export interface CloudProviderInfo {
 
 // Helper to check if provider is local
 export function isLocalProvider(provider: Provider): boolean {
-  return provider === 'local-whisper' || provider === 'remote-whisper'
+  return provider === 'local-whisper'
 }
