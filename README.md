@@ -13,10 +13,16 @@
   <a href="https://github.com/frankdierolf/whis/releases">Releases</a>
 </p>
 
+<p align="center">
+  <a href="https://crates.io/crates/whis"><img src="https://img.shields.io/crates/v/whis" alt="crates.io"></a>
+  <a href="https://github.com/frankdierolf/whis/releases"><img src="https://img.shields.io/github/v/release/frankdierolf/whis" alt="GitHub release"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
+</p>
+
 ## Why?
 
 - **Built for AI workflows** — speak your prompt, paste to Claude/Copilot
-- **Cheap** — ~$0.006/minute via OpenAI Whisper or Mistral Voxtral (no local GPU)
+- **Cheap** — ~$0.006/minute via cloud providers (no local GPU required)
 - **Simple** — record → transcribe → clipboard
 - **Multi-provider** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
 
@@ -78,9 +84,9 @@ Or download binaries from [GitHub Releases](https://github.com/frankdierolf/whis
 
 ## Requirements
 
-- API key from [OpenAI](https://platform.openai.com/api-keys) or [Mistral](https://console.mistral.ai/api-keys)
+- API key from [OpenAI](https://platform.openai.com/api-keys), [Mistral](https://console.mistral.ai/api-keys), [Groq](https://console.groq.com/keys), [Deepgram](https://deepgram.com), or [ElevenLabs](https://elevenlabs.io) — or use local Whisper (no API key needed)
 - FFmpeg (`sudo apt install ffmpeg` or `brew install ffmpeg`)
-- Linux (X11/Wayland), macOS, or Windows
+- Linux (X11/Wayland) or macOS
 
 **For hotkey mode** (one-time setup on Linux):
 ```bash
@@ -93,6 +99,50 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 ## Desktop App
 
 Looking for a GUI with system tray? See [whis-desktop](./crates/whis-desktop/).
+
+## Building from Source
+
+```bash
+git clone https://github.com/frankdierolf/whis.git
+cd whis
+cargo build --release -p whis
+```
+
+The binary will be at `target/release/whis`.
+
+## Development
+
+This project uses [just](https://github.com/casey/just) for task automation:
+
+```bash
+just              # List all commands
+just build        # Build CLI
+just desktop-dev  # Run desktop app in dev mode
+just lint         # Run clippy
+just ci           # Pre-commit check (fmt + lint)
+```
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for full setup instructions.
+
+## Documentation
+
+- **[Book](./book/)** — Deep dive into the codebase architecture
+- **[API Docs](https://docs.rs/whis-core)** — Rust API documentation
+
+## For AI Agents
+
+When exploring this codebase, start with:
+
+```bash
+just --list          # See all available commands
+cat justfile         # Understand build/test/run workflow
+```
+
+Key facts:
+- Rust workspace with 5 crates: `whis-core` (library), `whis-cli`, `whis-desktop`, `whis-mobile`, `whis-screenshots` (dev utility)
+- Voice-to-text transcription using cloud providers (OpenAI, Mistral, Groq, Deepgram, ElevenLabs) or local Whisper
+- Desktop app: Tauri + Vue. CLI: clap.
+- Entry points: `crates/whis-cli/src/main.rs`, `crates/whis-desktop/src/main.rs`
 
 ## License
 

@@ -59,7 +59,7 @@ Here's what `~/.config/whis/settings.json` looks like:
   "polish_prompt": null,
   "whisper_model_path": null,
   "ollama_url": "http://localhost:11434",
-  "ollama_model": "ministral-3:3b",
+  "ollama_model": "qwen2.5:1.5b",
   "active_preset": "ai-prompt",
   "clipboard_method": "auto"
 }
@@ -291,7 +291,7 @@ pub ollama_model: Option<String>,
 |---------|-------------|---------|---------|
 | Model path | `--whisper-model-path` | `LOCAL_WHISPER_MODEL_PATH` | None |
 | Ollama URL | `--ollama-url` | `OLLAMA_URL` | `http://localhost:11434` |
-| Ollama model | `--ollama-model` | `OLLAMA_MODEL` | `ministral-3:3b` |
+| Ollama model | `--ollama-model` | `OLLAMA_MODEL` | `qwen2.5:1.5b` |
 
 See [Chapter 14b: Local Transcription](../part4-core-advanced/ch14b-local-transcription.md) for setup instructions.
 

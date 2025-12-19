@@ -16,7 +16,7 @@
 ## Why?
 
 - **Built for AI workflows** — speak your prompt, paste to Claude/Copilot
-- **Cheap** — ~$0.006/minute via OpenAI Whisper or Mistral Voxtral (no local GPU)
+- **Cheap** — ~$0.006/minute via cloud providers (no local GPU required)
 - **Simple** — record → transcribe → clipboard
 - **Multi-provider** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
 
@@ -61,7 +61,7 @@ sudo dpkg -i Whis_amd64.deb
 
 ## Requirements
 
-- API key from [OpenAI](https://platform.openai.com/api-keys) or [Mistral](https://console.mistral.ai/api-keys)
+- API key from [OpenAI](https://platform.openai.com/api-keys), [Mistral](https://console.mistral.ai/api-keys), [Groq](https://console.groq.com/keys), [Deepgram](https://deepgram.com), or [ElevenLabs](https://elevenlabs.io) — or use local Whisper (no API key needed)
 - Linux (X11/Wayland)
 
 ## Prefer the terminal?

@@ -86,7 +86,7 @@ cpal = "0.15"  # Cross-platform audio
 
 **Tech stack**:
 - **Backend**: Rust + Tauri (`src/main.rs`, `src/lib.rs`)
-- **Frontend**: Svelte (lives in `ui/`)
+- **Frontend**: Vue 3 (lives in `ui/`)
 - **IPC**: Tauri commands (`src/commands.rs`)
 
 **Why Tauri?**
@@ -230,7 +230,7 @@ With `whis-core`, we write it once and share it everywhere.
 
 ### Reason 2: Compilation Speed
 
-When you change `whis-desktop/ui/src/App.svelte` (the frontend), you don't need to recompile `whis-core`. Cargo only rebuilds `whis-desktop`.
+When you change `whis-desktop/ui/src/App.vue` (the frontend), you don't need to recompile `whis-core`. Cargo only rebuilds `whis-desktop`.
 
 If everything was in one crate, every change would trigger a full rebuild.
 

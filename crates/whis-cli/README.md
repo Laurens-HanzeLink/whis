@@ -16,15 +16,15 @@
 ## Why?
 
 - **Built for AI workflows** — speak your prompt, paste to Claude/Copilot
-- **Cheap** — ~$0.006/minute via OpenAI Whisper or Mistral Voxtral (no local GPU)
+- **Cheap** — ~$0.006/minute via cloud providers (no local GPU required)
 - **Simple** — record → transcribe → clipboard
-- **Multi-provider** — choose between OpenAI Whisper or Mistral Voxtral
+- **Multi-provider** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
 
 ## Quick Start
 
 ```bash
 cargo install whis
-whis config --openai-api-key sk-your-key-here  # or --mistral-api-key
+whis setup cloud   # or: whis setup local
 whis
 ```
 
@@ -33,6 +33,13 @@ whis
 **One-shot mode:**
 ```bash
 whis    # Recording starts, press Enter to stop
+```
+
+**From file or stdin:**
+```bash
+whis -f audio.mp3              # Transcribe audio file
+whis --stdin < audio.mp3       # Read from stdin
+yt-dlp -x ... | whis --stdin   # Pipe from other tools
 ```
 
 **Hotkey mode (background service):**
@@ -47,14 +54,34 @@ whis stop                      # Stop service
 ```bash
 whis config --openai-api-key sk-...   # Save OpenAI API key
 whis config --mistral-api-key ...     # Save Mistral API key
-whis config --provider mistral        # Switch to Mistral Voxtral
+whis config --groq-api-key ...        # Save Groq API key
+whis config --provider mistral        # Switch provider
 whis config --language en             # Set language hint (ISO-639-1)
 whis config --show                    # View current settings
 ```
 
+**Presets:**
+```bash
+whis presets              # List all presets
+whis presets show my-preset   # View preset details
+whis --as my-preset       # Use preset for transcription
+```
+
+**LLM Polishing:**
+```bash
+whis --polish             # Clean up transcription with Ollama
+whis config --ollama-model llama3.2   # Set Ollama model
+```
+
+**Model Management:**
+```bash
+whis models whisper       # List local Whisper models
+whis models ollama        # List Ollama models
+```
+
 ## Requirements
 
-- API key from [OpenAI](https://platform.openai.com/api-keys) or [Mistral](https://console.mistral.ai/api-keys)
+- API key from [OpenAI](https://platform.openai.com/api-keys), [Mistral](https://console.mistral.ai/api-keys), [Groq](https://console.groq.com/keys), [Deepgram](https://deepgram.com), or [ElevenLabs](https://elevenlabs.io) — or use local Whisper (no API key needed)
 - FFmpeg (`sudo apt install ffmpeg` or `brew install ffmpeg`)
 - Linux (X11/Wayland) or macOS
 

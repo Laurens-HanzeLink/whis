@@ -370,7 +370,7 @@ For polishing transcripts locally, Whis integrates with Ollama - a popular local
 
 ```rust
 pub const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
-pub const DEFAULT_OLLAMA_MODEL: &str = "ministral-3:3b";
+pub const DEFAULT_OLLAMA_MODEL: &str = "qwen2.5:1.5b";
 ```
 
 ### Checking Ollama Status

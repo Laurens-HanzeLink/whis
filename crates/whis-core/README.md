@@ -16,15 +16,19 @@
 ## Features
 
 - **Audio recording** — capture microphone input via cpal
-- **Multi-provider transcription** — OpenAI Whisper or Mistral Voxtral
-- **Parallel processing** — split long recordings into chunks
-- **Clipboard** — copy results to system clipboard
+- **Multi-provider transcription** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
+- **Parallel processing** — split long recordings into chunks for parallel transcription
+- **LLM polishing** — clean up transcriptions using Ollama
+- **Clipboard** — copy results to system clipboard (X11, Wayland, Flatpak)
 - **Config management** — persistent settings in `~/.config/whis/`
 
 ## Usage
 
 ```rust
-use whis_core::{AudioRecorder, TranscriptionProvider, transcribe_audio, copy_to_clipboard};
+use whis_core::{
+    AudioRecorder, TranscriptionProvider, RecordingOutput,
+    transcribe_audio, copy_to_clipboard, ClipboardMethod,
+};
 
 // Configure provider and API key
 let provider = TranscriptionProvider::OpenAI;
@@ -36,22 +40,47 @@ recorder.start_recording()?;
 // ... wait for user input ...
 let output = recorder.finalize_recording()?;
 
-// Transcribe (for single chunk)
+// Extract audio data from RecordingOutput
+let audio_data = match output {
+    RecordingOutput::Single(data) => data,
+    RecordingOutput::Chunked(chunks) => {
+        // For chunked audio, use parallel_transcribe instead
+        chunks.into_iter().next().unwrap().data
+    }
+};
+
+// Transcribe
 let text = transcribe_audio(&provider, &api_key, None, audio_data)?;
 
 // Copy to clipboard
-copy_to_clipboard(&text)?;
+copy_to_clipboard(&text, ClipboardMethod::Auto)?;
 ```
+
+## Feature Flags
+
+| Feature | Default | Description |
+|---------|---------|-------------|
+| `ffmpeg` | Yes | Desktop audio encoding via FFmpeg subprocess |
+| `clipboard` | Yes | Clipboard support via arboard/xclip/wl-copy |
+| `local-whisper` | Yes | Local whisper.cpp transcription (requires model) |
+| `embedded-encoder` | No | Mobile MP3 encoding via mp3lame (no FFmpeg) |
 
 ## Modules
 
 | Module | Description |
 |--------|-------------|
-| `audio` | `AudioRecorder`, `AudioChunk`, recording utilities |
-| `transcribe` | OpenAI Whisper and Mistral Voxtral API integration, parallel chunked transcription |
-| `clipboard` | System clipboard operations |
-| `config` | `TranscriptionProvider` enum |
+| `audio` | `AudioRecorder`, `AudioChunk`, `RecordingOutput`, recording utilities |
+| `transcribe` | Single-file and parallel chunked transcription |
+| `provider` | Provider registry and `TranscriptionBackend` trait |
+| `config` | `TranscriptionProvider` enum (OpenAI, Mistral, Groq, etc.) |
 | `settings` | User preferences (provider, API keys, language, hotkeys) |
+| `preset` | Named configuration presets |
+| `polish` | LLM-based transcription cleanup |
+| `ollama` | Ollama client for local LLM polishing |
+| `clipboard` | System clipboard operations with multiple backends |
+| `model` | Whisper model management |
+| `state` | Recording state machine |
+| `verbose` | Debug logging utilities |
 
 ## License
 

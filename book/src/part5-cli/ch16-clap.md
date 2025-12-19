@@ -478,7 +478,7 @@ Available Whisper models:
 # List Ollama models
 $ whis models ollama
 Available Ollama models:
-  - ministral-3:3b (default)
+  - qwen2.5:1.5b (default)
   - llama3.2:3b
   - mistral:latest
 

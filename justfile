@@ -1,6 +1,8 @@
 # Whis - Voice-to-Text Application
 # Run `just --list` to see all available commands
 
+set shell := ["bash", "-cu"]
+
 # ============================================================================
 # ENVIRONMENT CONFIGURATION
 # ============================================================================
@@ -13,6 +15,34 @@ export CMAKE_OSX_DEPLOYMENT_TARGET := "10.15"
 # Default recipe - show help
 default:
     @just --list
+
+# ============================================================================
+# PRIVATE HELPERS (tool availability checks)
+# ============================================================================
+
+[private]
+_require-npm:
+    @command -v npm >/dev/null 2>&1 || { echo "npm not found. Install Node.js: https://nodejs.org"; exit 1; }
+
+[private]
+_ensure-tauri:
+    @command -v cargo-tauri >/dev/null 2>&1 || cargo install tauri-cli
+
+[private]
+_ensure-cross:
+    @command -v cross >/dev/null 2>&1 || cargo install cross --git https://github.com/cross-rs/cross
+
+[private]
+_ensure-mdbook:
+    @command -v mdbook >/dev/null 2>&1 || cargo install mdbook
+
+[private]
+_ensure-audit:
+    @command -v cargo-audit >/dev/null 2>&1 || cargo install cargo-audit
+
+[private]
+_ensure-outdated:
+    @command -v cargo-outdated >/dev/null 2>&1 || cargo install cargo-outdated
 
 # ============================================================================
 # BUILD COMMANDS
@@ -39,19 +69,19 @@ build-core features="":
 # ============================================================================
 
 # Install desktop frontend dependencies
-desktop-deps:
+desktop-deps: _require-npm
     cd crates/whis-desktop/ui && npm ci --legacy-peer-deps
 
 # Build desktop frontend
-desktop-ui:
+desktop-ui: _require-npm
     cd crates/whis-desktop/ui && npm run build
 
 # Run desktop app in development mode
-desktop-dev: desktop-deps
+desktop-dev: desktop-deps _ensure-tauri
     cd crates/whis-desktop && cargo tauri dev
 
 # Build desktop app for release (AppImage, deb, rpm)
-desktop-build: desktop-deps desktop-ui
+desktop-build: desktop-deps desktop-ui _ensure-tauri
     cd crates/whis-desktop && cargo tauri build
 
 # ============================================================================
@@ -59,27 +89,27 @@ desktop-build: desktop-deps desktop-ui
 # ============================================================================
 
 # Initialize Android project (first time setup)
-android-init:
+android-init: _ensure-tauri
     cd crates/whis-mobile && cargo tauri android init
 
 # Install mobile frontend dependencies
-mobile-deps:
+mobile-deps: _require-npm
     cd crates/whis-mobile/ui && npm ci
 
 # Build mobile frontend
-mobile-ui:
+mobile-ui: _require-npm
     cd crates/whis-mobile/ui && npm run build
 
 # Run mobile app on Android emulator/device
-android-dev: mobile-deps
+android-dev: mobile-deps _ensure-tauri
     cd crates/whis-mobile && cargo tauri android dev
 
 # Build Android APK (debug)
-android-build: mobile-deps mobile-ui
+android-build: mobile-deps mobile-ui _ensure-tauri
     cd crates/whis-mobile && cargo tauri android build
 
 # Build Android APK (release)
-android-release: mobile-deps mobile-ui
+android-release: mobile-deps mobile-ui _ensure-tauri
     cd crates/whis-mobile && cargo tauri android build --release
 
 # ============================================================================
@@ -134,8 +164,8 @@ fmt-check:
 check:
     cargo check --workspace
 
-# Full CI check (format, lint, test)
-ci: fmt-check lint test
+# Local pre-commit check (format, lint)
+ci: fmt-check lint
 
 # ============================================================================
 # CLEANING
@@ -172,11 +202,11 @@ docs-open:
     cargo doc --all --no-deps --open
 
 # Build mdBook documentation
-book:
+book: _ensure-mdbook
     cd book && mdbook build
 
 # Serve mdBook documentation with live reload
-book-serve:
+book-serve: _ensure-mdbook
     cd book && mdbook serve --open
 
 # ============================================================================
@@ -187,12 +217,13 @@ book-serve:
 install:
     cargo install --path crates/whis-cli
 
-# Install development tools
+# Install development tools (skips already-installed)
 install-tools:
-    cargo install tauri-cli
-    cargo install cross --git https://github.com/cross-rs/cross
-    cargo install cargo-outdated
-    cargo install cargo-audit
+    @command -v cargo-tauri >/dev/null 2>&1 || cargo install tauri-cli
+    @command -v cross >/dev/null 2>&1 || cargo install cross --git https://github.com/cross-rs/cross
+    @command -v cargo-outdated >/dev/null 2>&1 || cargo install cargo-outdated
+    @command -v cargo-audit >/dev/null 2>&1 || cargo install cargo-audit
+    @command -v mdbook >/dev/null 2>&1 || cargo install mdbook
 
 # ============================================================================
 # PUBLISHING & RELEASE
@@ -223,15 +254,15 @@ update:
     cargo update
 
 # Check for outdated dependencies
-outdated:
+outdated: _ensure-outdated
     cargo outdated
 
 # Audit dependencies for security issues
-audit:
+audit: _ensure-audit
     cargo audit
 
 # Update npm dependencies
-update-npm:
+update-npm: _require-npm
     cd crates/whis-desktop/ui && npm update
     cd crates/whis-mobile/ui && npm update
 
@@ -239,8 +270,8 @@ update-npm:
 # CROSS-COMPILATION
 # ============================================================================
 
-# Build CLI for Linux ARM64 (requires cross)
-build-arm64:
+# Build CLI for Linux ARM64
+build-arm64: _ensure-cross
     cross build --release --target aarch64-unknown-linux-gnu -p whis
 
 # Build CLI for macOS Intel
