@@ -48,7 +48,7 @@ Here's what `~/.config/whis/settings.json` looks like:
 
 ```json
 {
-  "shortcut": "Ctrl+Shift+R",
+  "shortcut": "Ctrl+Alt+W",  // macOS users can use "cmd+option+w"
   "provider": "openai",
   "language": "en",
   "api_keys": {
@@ -85,7 +85,7 @@ When no config file exists, or fields are missing, Whis uses sensible defaults:
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            shortcut: "Ctrl+Shift+R".to_string(),
+            shortcut: "Ctrl+Alt+W".to_string(),
             provider: TranscriptionProvider::default(), // OpenAI
             language: None, // Auto-detect
             api_keys: HashMap::new(),
@@ -104,7 +104,7 @@ impl Default for Settings {
 **From `whis-core/src/settings.rs:51-67`**
 
 **Why these defaults?**
-- `"Ctrl+Shift+R"`: Unlikely to conflict with other apps
+- `"Ctrl+Alt+W"`: W for Whis, unlikely to conflict (macOS users: `"cmd+option+w"`)
 - `OpenAI`: Most popular and reliable provider
 - `None` for post-processor: Don't add latency/cost by default
 - Auto-detect language: Works for most users

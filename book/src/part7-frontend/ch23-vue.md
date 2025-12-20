@@ -217,9 +217,9 @@ import { reactive, readonly } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import type { Settings, BackendInfo, Provider, PostProcessor } from '../types'
 
-// Default settings values
+// Default settings values (macOS users: "cmd+option+w" also works)
 const defaultSettings: Settings = {
-  shortcut: 'Ctrl+Shift+R',
+  shortcut: 'Ctrl+Alt+W',  // Cross-platform format
   provider: 'openai',
   language: null,
   api_keys: {},
@@ -368,13 +368,14 @@ export function useKeyboardCapture(initialValue: string = '') {
 <script setup lang="ts">
 import { useKeyboardCapture } from '@/composables/useKeyboardCapture'
 
+// Initial shortcut value (displays with platform-aware key names)
 const {
   isRecording,
   shortcutKeys,
   handleKeyDown,
   startRecording,
   stopRecording,
-} = useKeyboardCapture('Ctrl+Shift+R')
+} = useKeyboardCapture('Ctrl+Alt+W')  // Shows as "Cmd+Option+W" on macOS
 </script>
 
 <template>
@@ -585,7 +586,7 @@ The generic `<Settings>` ensures type safety on the returned value.
 ```typescript
 await invoke<SaveResult>('save_settings', {
   settings: {
-    shortcut: 'Ctrl+Shift+R',
+    shortcut: 'Ctrl+Alt+W',  // or "cmd+option+w" on macOS
     provider: 'openai',
     // ...
   }

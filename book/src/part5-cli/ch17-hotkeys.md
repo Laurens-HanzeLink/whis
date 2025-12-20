@@ -1,6 +1,6 @@
 # Chapter 17: Global Hotkeys
 
-Global hotkeys let Whis listen for key combinations system-wide, even when the app isn't focused. Press `Ctrl+Shift+R` anywhere—browser, terminal, IDE—and start recording. This chapter explores how Whis implements cross-platform hotkeys using two different approaches: `rdev` for Linux and `global-hotkey` for Windows/macOS.
+Global hotkeys let Whis listen for key combinations system-wide, even when the app isn't focused. Press `Ctrl+Alt+W` anywhere—browser, terminal, IDE—and start recording. This chapter explores how Whis implements cross-platform hotkeys using two different approaches: `rdev` for Linux and `global-hotkey` for Windows/macOS.
 
 ## The Challenge
 
@@ -51,7 +51,7 @@ pub fn setup(hotkey_str: &str) -> Result<(Receiver<()>, HotkeyGuard)> {
 Both platforms share the same input format:
 
 ```
-"ctrl+shift+r"
+"ctrl+alt+w"
 "alt+f1"
 "super+space"
 "ctrl+alt+delete"
@@ -62,6 +62,15 @@ Both platforms share the same input format:
 - Main key: Letter, number, function key, or special key
 - Separator: `+`
 - Case-insensitive
+
+**Cross-platform key naming**:
+
+| Platform | Ctrl | Alt | Super Key |
+|----------|------|-----|-----------|
+| Linux/Windows | `ctrl` | `alt` | `super`, `win`, `meta` |
+| macOS | `ctrl` (Control ⌃) | `alt` (Option ⌥) | `cmd`, `super`, `meta` (Command ⌘) |
+
+All aliases work on all platforms. Example: `cmd+option+w` works the same as `super+alt+w`.
 
 ## Linux Implementation (rdev)
 
@@ -131,8 +140,8 @@ impl Hotkey {
 
 **Step-by-step**:
 
-1. **Lowercase**: `"Ctrl+Shift+R"` → `"ctrl+shift+r"`
-2. **Split**: `["ctrl", "shift", "r"]`
+1. **Lowercase**: `"Ctrl+Alt+W"` → `"ctrl+alt+w"`
+2. **Split**: `["ctrl", "alt", "w"]`
 3. **Classify**: Modifiers vs main key
 4. **Validate**: Must have at least one main key
 
@@ -411,7 +420,7 @@ pub fn setup(hotkey_str: &str) -> Result<(Receiver<()>, HotkeyGuard)> {
 **From `whis-cli/src/hotkey/non_linux.rs:13-46`**
 
 **Flow**:
-1. Convert format: `"ctrl+shift+r"` → `"Ctrl+Shift+KeyR"`
+1. Convert format: `"ctrl+alt+w"` → `"Ctrl+Alt+KeyW"`
 2. Parse into `HotKey` struct
 3. Create `GlobalHotKeyManager`
 4. Register hotkey
@@ -484,7 +493,7 @@ fn convert_to_global_hotkey_format(s: &str) -> Result<String> {
 
 **Examples**:
 ```rust
-convert("ctrl+shift+r")  // → "Ctrl+Shift+KeyR"
+convert("ctrl+alt+w")    // → "Ctrl+Alt+KeyW"
 convert("alt+5")         // → "Alt+Digit5"
 convert("super+f1")      // → "Super+F1"
 convert("ctrl+space")    // → "Ctrl+Space"
@@ -542,7 +551,7 @@ pub struct HotkeyGuard {
 **Usage**:
 ```rust
 {
-    let (_rx, guard) = setup("ctrl+shift+r")?;
+    let (_rx, guard) = setup("ctrl+alt+w")?;
     // Hotkey is registered
 } // guard drops here
 // Hotkey is now unregistered
@@ -618,8 +627,8 @@ Please grant accessibility permissions:
 ### Windows: Hotkey Already Registered
 
 ```
-$ whis listen --hotkey ctrl+shift+r
-Failed to register hotkey 'ctrl+shift+r': HotkeyAlreadyRegistered
+$ whis listen --hotkey ctrl+alt+w
+Failed to register hotkey 'ctrl+alt+w': HotkeyAlreadyRegistered
 
 This may mean the hotkey is already registered by another application.
 ```
@@ -636,8 +645,8 @@ mod tests {
     #[test]
     fn test_hotkey_format_conversion() {
         assert_eq!(
-            convert_to_global_hotkey_format("ctrl+shift+r").unwrap(),
-            "Ctrl+Shift+KeyR"
+            convert_to_global_hotkey_format("ctrl+alt+w").unwrap(),
+            "Ctrl+Alt+KeyW"
         );
         assert_eq!(
             convert_to_global_hotkey_format("alt+5").unwrap(),
@@ -679,7 +688,7 @@ Unit tests verify format conversion without actually registering hotkeys.
 1. **Platform abstraction**: Conditional compilation with unified interface
 2. **Linux**: `rdev` for raw keyboard grab, requires input group permissions
 3. **macOS/Windows**: `global-hotkey` for OS APIs, requires accessibility on macOS
-4. **Parsing**: Unified format (`"ctrl+shift+r"`), platform-specific conversion
+4. **Parsing**: Unified format (`"ctrl+alt+w"`), platform-specific conversion
 5. **RAII guard**: Automatic hotkey unregistration on drop
 6. **Channel pattern**: Convert events to simple signals
 

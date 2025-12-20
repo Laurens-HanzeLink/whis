@@ -82,7 +82,7 @@ Kept in-sync with `~/.config/whis/settings.json`.
 
 **`portal_shortcut: Mutex<Option<String>>`**: Actual shortcut bound by GNOME portal
 
-On Wayland, user might configure `Ctrl+Shift+R`, but portal binds `Ctrl+Alt+R` (conflict resolution). This stores what was actually bound.
+On Wayland, user might configure `Ctrl+Alt+W`, but portal binds `Ctrl+Alt+Z` (conflict resolution). This stores what was actually bound.
 
 **`portal_bind_error: Mutex<Option<String>>`**: Error from portal binding
 

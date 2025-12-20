@@ -7,7 +7,7 @@ When `whis listen` runs, it becomes a background daemon listening for hotkeys. B
 The daemon runs in one terminal:
 ```bash
 Terminal 1: $ whis listen
-🎧 Listening for hotkey: ctrl+shift+r
+🎧 Listening for hotkey: ctrl+alt+w
 ```
 
 You want to control it from another terminal:
@@ -690,17 +690,17 @@ stateDiagram-v2
 
 ```bash
 $ whis listen
-🎧 Listening for hotkey: ctrl+shift+r
+🎧 Listening for hotkey: ctrl+alt+w
 whis listening. Ctrl+C to stop.
 
-# Press Ctrl+Shift+R
+# Press Ctrl+Alt+W
 #1 recording...
 
-# Press Ctrl+Shift+R again
+# Press Ctrl+Alt+W again
 #1 transcribing...
 #1 done
 
-# Press Ctrl+Shift+R
+# Press Ctrl+Alt+W
 #2 recording...
 ```
 
@@ -760,7 +760,7 @@ $ ls $XDG_RUNTIME_DIR/whis.sock
 # Clean up manually
 $ rm $XDG_RUNTIME_DIR/whis.*
 $ whis listen
-🎧 Listening for hotkey: ctrl+shift+r
+🎧 Listening for hotkey: ctrl+alt+w
 ```
 
 Or use the helper:

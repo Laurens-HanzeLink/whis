@@ -222,8 +222,8 @@ ffmpeg -i video.mkv -f wav - | whis --stdin --format wav
 pub enum Commands {
     /// Start the background service that listens for hotkey triggers
     Listen {
-        /// Hotkey to trigger recording (e.g., "ctrl+shift+r")
-        #[arg(short = 'k', long, default_value = "ctrl+shift+r")]
+        /// Hotkey to trigger recording (e.g., "ctrl+alt+w")
+        #[arg(short = 'k', long, default_value = "ctrl+alt+w")]
         hotkey: String,
     },
 
@@ -279,7 +279,7 @@ Status,
 **Struct variant** (with args):
 ```rust
 Listen {
-    #[arg(short = 'k', long, default_value = "ctrl+shift+r")]
+    #[arg(short = 'k', long, default_value = "ctrl+alt+w")]
     hotkey: String,
 },
 ```
@@ -296,7 +296,7 @@ Presets {
 
 ```rust
 Listen {
-    #[arg(short = 'k', long, default_value = "ctrl+shift+r")]
+    #[arg(short = 'k', long, default_value = "ctrl+alt+w")]
     hotkey: String,
 },
 ```
@@ -308,7 +308,7 @@ Listen {
 
 **Usage examples**:
 ```bash
-whis listen                        # Uses default: ctrl+shift+r
+whis listen                        # Uses default: ctrl+alt+w
 whis listen -k ctrl+alt+r          # Short flag
 whis listen --hotkey super+space   # Long flag
 ```
@@ -539,16 +539,16 @@ Commands:
 
 **Field-level docs**:
 ```rust
-/// Hotkey to trigger recording (e.g., "ctrl+shift+r")
-#[arg(short = 'k', long, default_value = "ctrl+shift+r")]
+/// Hotkey to trigger recording (e.g., "ctrl+alt+w")
+#[arg(short = 'k', long, default_value = "ctrl+alt+w")]
 hotkey: String,
 ```
 
 **Becomes**:
 ```
 Options:
-  -k, --hotkey <HOTKEY>  Hotkey to trigger recording (e.g., "ctrl+shift+r")
-                         [default: ctrl+shift+r]
+  -k, --hotkey <HOTKEY>  Hotkey to trigger recording (e.g., "ctrl+alt+w")
+                         [default: ctrl+alt+w]
 ```
 
 ## Error Handling
@@ -743,8 +743,8 @@ This is the transcribed text formatted as markdown.
 
 ```bash
 $ whis listen
-🎧 Listening for hotkey: ctrl+shift+r
-Press ctrl+shift+r to record. Press Ctrl+C to stop service.
+🎧 Listening for hotkey: ctrl+alt+w
+Press ctrl+alt+w to record. Press Ctrl+C to stop service.
 ```
 
 ### Configure API Key
@@ -848,7 +848,7 @@ mod tests {
         let cli = Cli::parse_from(["whis", "listen"]);
         match cli.command {
             Some(Commands::Listen { hotkey }) => {
-                assert_eq!(hotkey, "ctrl+shift+r");
+                assert_eq!(hotkey, "ctrl+alt+w");
             }
             _ => panic!("Expected Listen command"),
         }

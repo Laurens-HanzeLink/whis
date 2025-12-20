@@ -143,7 +143,7 @@ pub fn setup_tauri_shortcut(app: &tauri::App, shortcut_str: &str)
 
 **From `whis-desktop/src/shortcuts.rs:449-475`**
 
-- Parse shortcut string (e.g., `"Ctrl+Shift+R"`) into `Shortcut` struct
+- Parse shortcut string (e.g., `"Ctrl+Alt+W"`) into `Shortcut` struct
 - Register plugin with handler that spawns async task to call `toggle_recording_public()`
 - Register shortcut with X11 backend
 - If it fails, fall back to `ManualSetup`
@@ -297,7 +297,7 @@ Key steps:
 4. **Bind shortcut** with `bind_shortcuts()`:
    - Provide shortcut ID (`"toggle-recording"`)
    - Provide description (shown to user)
-   - Provide preferred trigger (`"Ctrl+Shift+R"`)
+   - Provide preferred trigger (`"Ctrl+Alt+W"`)
    - GNOME shows a system dialog asking user to approve
 5. **Store actual binding** in `AppState.portal_shortcut` (compositor may modify it to avoid conflicts)
 6. **Listen for activations** with `receive_activated()` (async stream)
@@ -399,7 +399,7 @@ fn print_manual_setup_instructions(compositor: &str, shortcut: &str) {
 
 **From `whis-desktop/src/shortcuts.rs:550-581`**
 
-The user adds a binding in their compositor config (e.g., Sway's `bindsym Ctrl+Shift+r exec whis-desktop --toggle`). When pressed, it runs `whis-desktop` with the `--toggle` flag.
+The user adds a binding in their compositor config (e.g., Sway's `bindsym Ctrl+Alt+w exec whis-desktop --toggle`). When pressed, it runs `whis-desktop` with the `--toggle` flag.
 
 ## IPC: The --toggle Flag
 
@@ -558,7 +558,7 @@ pub fn portal_shortcut(state: State<'_, AppState>) -> Result<Option<String>, Str
 - `portal_shortcut()`: Returns currently active portal shortcut
 
 The frontend can display:
-- "Shortcut: Ctrl+Shift+R (via Portal)" on GNOME
+- "Shortcut: Ctrl+Alt+W (via Portal)" on GNOME
 - "Shortcut: Not configured. See instructions below." on Sway
 
 ## Dynamic Shortcut Updates
