@@ -1,0 +1,55 @@
+/* Design tokens - matching desktop app */
+:root {
+  /* Background */
+  --bg: hsl(0, 0%, 7%);
+  --bg-weak: hsl(0, 0%, 11%);
+  --bg-hover: hsl(0, 0%, 16%);
+  --bg-strong: hsl(0, 0%, 100%);
+  --bg-strong-hover: hsl(0, 0%, 90%);
+  --bg-interactive: hsl(48, 100%, 65%);
+
+  /* Text */
+  --text: hsl(0, 0%, 80%);
+  --text-weak: hsl(0, 0%, 62%);
+  --text-strong: hsl(0, 0%, 100%);
+  --text-inverted: hsl(0, 0%, 7%);
+
+  /* Accent - gold */
+  --accent: hsl(48, 100%, 60%);
+
+  /* Border */
+  --border: hsl(0, 0%, 28%);
+  --border-weak: hsl(0, 0%, 24%);
+
+  /* Icon */
+  --icon: hsl(0, 0%, 55%);
+
+  /* Typography */
+  --font: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
+  --font-size-base: 15px;
+  --line-height: 1.7;
+
+  /* Layout */
+  --padding: 5rem;
+  --vertical-padding: 4rem;
+  --max-width: 56rem;
+
+  /* Force dark color scheme */
+  color-scheme: dark;
+}
+
+/* Responsive adjustments */
+@media (max-width: 60rem) {
+  :root {
+    --padding: 2rem;
+    --vertical-padding: 3rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  :root {
+    --padding: 1.25rem;
+    --vertical-padding: 2rem;
+  }
+}
