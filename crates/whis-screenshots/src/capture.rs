@@ -99,7 +99,9 @@ async fn capture_settings(driver: &TauriDriver, output_dir: &Path) -> Result<Vec
             captured.push("settings-cloud-post-processing.png".to_string());
 
             // Cloud + post-processing + Ollama selected
-            let _ = driver.scroll_to(".post-processing-section .select-trigger").await;
+            let _ = driver
+                .scroll_to(".post-processing-section .select-trigger")
+                .await;
             if driver
                 .select_option(".post-processing-section .select-trigger", "Ollama")
                 .await
@@ -161,7 +163,9 @@ async fn capture_settings(driver: &TauriDriver, output_dir: &Path) -> Result<Vec
                 captured.push("settings-local-post-processing.png".to_string());
 
                 // Local + post-processing + Ollama
-                let _ = driver.scroll_to(".post-processing-section .select-trigger").await;
+                let _ = driver
+                    .scroll_to(".post-processing-section .select-trigger")
+                    .await;
                 if driver
                     .select_option(".post-processing-section .select-trigger", "Ollama")
                     .await

@@ -107,12 +107,11 @@ pub fn wait_for_stop(hotkey_str: &str) -> Result<()> {
             }
 
             // Check for Enter key with timeout (50ms polling)
-            if event::poll(Duration::from_millis(50))? {
-                if let Event::Key(key_event) = event::read()?
-                    && key_event.code == KeyCode::Enter
-                {
-                    break;
-                }
+            if event::poll(Duration::from_millis(50))?
+                && let Event::Key(key_event) = event::read()?
+                && key_event.code == KeyCode::Enter
+            {
+                break;
             }
         }
 

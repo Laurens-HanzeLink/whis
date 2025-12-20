@@ -105,7 +105,10 @@ fn setup_cloud() -> Result<()> {
     println!("Transcription: {}", provider.display_name());
     if settings.post_processor != PostProcessor::None {
         if provider == TranscriptionProvider::OpenAI || provider == TranscriptionProvider::Mistral {
-            println!("Post-processing: {} (same API key)", settings.post_processor);
+            println!(
+                "Post-processing: {} (same API key)",
+                settings.post_processor
+            );
         } else {
             println!("Post-processing: {}", settings.post_processor);
         }
@@ -196,7 +199,10 @@ fn setup_local() -> Result<()> {
     println!("Setup complete!");
     println!();
     println!("Your setup:");
-    println!("  Transcription:    Local Whisper ({})", model::DEFAULT_MODEL);
+    println!(
+        "  Transcription:    Local Whisper ({})",
+        model::DEFAULT_MODEL
+    );
     println!("  Post-processing:  Ollama ({})", ollama_model);
     println!();
     println!("Try it out:");
