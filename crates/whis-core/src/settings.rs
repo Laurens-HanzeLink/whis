@@ -52,7 +52,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            shortcut: "Ctrl+Shift+R".to_string(),
+            shortcut: "Ctrl+Alt+W".to_string(),
             provider: TranscriptionProvider::default(),
             language: None, // Auto-detect
             api_keys: HashMap::new(),

@@ -75,8 +75,8 @@ pub struct Cli {
 pub enum Commands {
     /// Start the background service that listens for hotkey triggers
     Listen {
-        /// Hotkey to trigger recording (e.g., "ctrl+shift+r")
-        #[arg(short = 'k', long, default_value = "ctrl+shift+r")]
+        /// Hotkey to trigger recording (e.g., "ctrl+alt+w" or "cmd+option+w" on macOS)
+        #[arg(short = 'k', long, default_value = "ctrl+alt+w")]
         hotkey: String,
     },
 

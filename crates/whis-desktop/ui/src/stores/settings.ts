@@ -13,7 +13,7 @@ function debounce<T extends (...args: unknown[]) => unknown>(fn: T, ms: number) 
 
 // Default settings values
 const defaultSettings: Settings = {
-  shortcut: 'Ctrl+Shift+R',
+  shortcut: 'Ctrl+Alt+W',
   provider: 'openai',
   language: null,
   api_keys: {},
