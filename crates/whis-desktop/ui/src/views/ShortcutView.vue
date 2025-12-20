@@ -16,6 +16,19 @@ const portalShortcut = computed(() => settingsStore.state.portalShortcut)
 const portalBindError = computed(() => settingsStore.state.portalBindError)
 const currentShortcut = computed(() => localShortcut.value)
 
+// Platform detection for macOS-friendly key display
+const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+
+function displayKey(key: string): string {
+  if (!isMac) return key
+  switch (key.toLowerCase()) {
+    case 'ctrl': return 'Control'
+    case 'alt': return 'Option'
+    case 'super': return 'Cmd'
+    default: return key
+  }
+}
+
 onMounted(async () => {
   localShortcut.value = settingsStore.state.shortcut
   try {
@@ -32,10 +45,10 @@ function parsePortalShortcut(portalStr: string): string[] {
   const matches = cleaned.matchAll(/<(\w+)>/g)
   for (const match of matches) {
     const mod = (match[1] ?? '').toLowerCase()
-    if (mod === 'control') keys.push('Ctrl')
+    if (mod === 'control') keys.push(displayKey('Ctrl'))
     else if (mod === 'shift') keys.push('Shift')
-    else if (mod === 'alt') keys.push('Alt')
-    else if (mod === 'super') keys.push('Super')
+    else if (mod === 'alt') keys.push(displayKey('Alt'))
+    else if (mod === 'super') keys.push(displayKey('Super'))
     else if (mod) keys.push(mod.charAt(0).toUpperCase() + mod.slice(1))
   }
   const finalKey = cleaned.replace(/<\w+>/g, '').trim()
@@ -53,7 +66,8 @@ const shortcutKeys = computed(() => {
   if (currentShortcut.value === 'Press keys...') {
     return ['...']
   }
-  return currentShortcut.value.split('+')
+  // Apply platform-aware display for each key
+  return currentShortcut.value.split('+').map(displayKey)
 })
 
 async function resetAndRestart() {
@@ -114,10 +128,11 @@ function handleKeyDown(e: KeyboardEvent) {
   e.preventDefault()
 
   const keys = []
-  if (e.ctrlKey) keys.push('Ctrl')
+  // Use platform-aware key names for display
+  if (e.ctrlKey) keys.push(isMac ? 'Control' : 'Ctrl')
   if (e.shiftKey) keys.push('Shift')
-  if (e.altKey) keys.push('Alt')
-  if (e.metaKey) keys.push('Super')
+  if (e.altKey) keys.push(isMac ? 'Option' : 'Alt')
+  if (e.metaKey) keys.push(isMac ? 'Cmd' : 'Super')
 
   const key = e.key.toUpperCase()
   if (!['CONTROL', 'SHIFT', 'ALT', 'META'].includes(key)) {

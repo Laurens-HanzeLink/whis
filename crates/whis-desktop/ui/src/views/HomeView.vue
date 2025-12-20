@@ -114,17 +114,31 @@ watch(
   { deep: true }
 )
 
+// Platform detection for macOS-friendly key display
+const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+
+function displayKey(key: string): string {
+  if (!isMac) return key
+  switch (key.toLowerCase()) {
+    case 'ctrl': return 'Control'
+    case 'alt': return 'Option'
+    case 'super': return 'Cmd'
+    default: return key
+  }
+}
+
 const displayShortcut = computed(() => {
   const portalShortcut = settingsStore.state.portalShortcut
   const currentShortcut = settingsStore.state.shortcut
 
   if (portalShortcut) {
     let shortcut = portalShortcut
+    // Use platform-aware key names
     shortcut = shortcut
-      .replace(/<Control>/gi, 'Ctrl+')
+      .replace(/<Control>/gi, displayKey('Ctrl') + '+')
       .replace(/<Shift>/gi, 'Shift+')
-      .replace(/<Alt>/gi, 'Alt+')
-      .replace(/<Super>/gi, 'Super+')
+      .replace(/<Alt>/gi, displayKey('Alt') + '+')
+      .replace(/<Super>/gi, displayKey('Super') + '+')
     shortcut = shortcut.replace(/\+$/, '')
     const parts = shortcut.split('+')
     if (parts.length > 0 && parts[parts.length - 1]) {
@@ -132,7 +146,11 @@ const displayShortcut = computed(() => {
     }
     return parts.join('+')
   }
-  return currentShortcut || null
+  // Apply platform-aware display for stored shortcut
+  if (currentShortcut) {
+    return currentShortcut.split('+').map(displayKey).join('+')
+  }
+  return null
 })
 
 async function fetchStatus() {

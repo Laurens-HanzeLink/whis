@@ -50,7 +50,8 @@ fn main() {
         println!("    -h, --help      Print this help message");
         println!();
         println!("GLOBAL SHORTCUT:");
-        println!("    Ctrl+Shift+R    Toggle recording (X11/Portal only)");
+        println!("    Ctrl+Alt+W      Toggle recording (Linux: X11/Portal)");
+        println!("    Cmd+Option+W    Toggle recording (macOS)");
         println!();
         println!("For Wayland without portal support, configure your compositor");
         println!("to run 'whis-desktop --toggle' on your preferred shortcut.");

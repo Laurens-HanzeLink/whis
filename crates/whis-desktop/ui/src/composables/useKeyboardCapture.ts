@@ -1,5 +1,18 @@
 import { ref, computed } from 'vue'
 
+// Platform detection for macOS-friendly key display
+const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+
+function displayKey(key: string): string {
+  if (!isMac) return key
+  switch (key.toLowerCase()) {
+    case 'ctrl': return 'Control'
+    case 'alt': return 'Option'
+    case 'super': return 'Cmd'
+    default: return key
+  }
+}
+
 /**
  * Composable for capturing keyboard shortcuts.
  * Used in ShortcutView for recording global shortcuts.
@@ -8,23 +21,24 @@ export function useKeyboardCapture(initialValue: string = '') {
   const isRecording = ref(false)
   const capturedShortcut = ref(initialValue)
 
-  // Split shortcut into individual keys for display
+  // Split shortcut into individual keys for display (with platform-aware names)
   const shortcutKeys = computed(() => {
     if (capturedShortcut.value === 'Press keys...') {
       return ['...']
     }
-    return capturedShortcut.value.split('+')
+    return capturedShortcut.value.split('+').map(displayKey)
   })
 
   function handleKeyDown(e: KeyboardEvent) {
     if (!isRecording.value) return
     e.preventDefault()
 
+    // Use platform-aware key names for display
     const keys: string[] = []
-    if (e.ctrlKey) keys.push('Ctrl')
+    if (e.ctrlKey) keys.push(isMac ? 'Control' : 'Ctrl')
     if (e.shiftKey) keys.push('Shift')
-    if (e.altKey) keys.push('Alt')
-    if (e.metaKey) keys.push('Super')
+    if (e.altKey) keys.push(isMac ? 'Option' : 'Alt')
+    if (e.metaKey) keys.push(isMac ? 'Cmd' : 'Super')
 
     const key = e.key.toUpperCase()
     if (!['CONTROL', 'SHIFT', 'ALT', 'META'].includes(key)) {

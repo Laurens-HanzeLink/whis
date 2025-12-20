@@ -68,7 +68,7 @@ pub async fn configure_shortcut(app: AppHandle) -> Result<Option<String>, String
 }
 
 /// Configure shortcut with a preferred trigger from in-app key capture
-/// The trigger should be in human-readable format like "Ctrl+Shift+R"
+/// The trigger should be in human-readable format like "Ctrl+Alt+W" or "Cmd+Option+W"
 #[tauri::command]
 pub async fn configure_shortcut_with_trigger(
     app: AppHandle,
