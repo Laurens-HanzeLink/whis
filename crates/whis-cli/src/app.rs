@@ -8,11 +8,6 @@ use std::thread;
 use std::time::Duration;
 use whis_core::{Settings, TranscriptionProvider};
 
-/// Check if stdout is being piped (not a terminal)
-pub fn is_piped() -> bool {
-    !std::io::stdout().is_terminal()
-}
-
 /// Configuration for transcription, including provider, API key, and language
 pub struct TranscriptionConfig {
     pub provider: TranscriptionProvider,
@@ -53,11 +48,13 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
                 Some(path) => path,
                 None => {
                     eprintln!("Error: No whisper model path configured.");
+                    eprintln!("(Required for local transcription)");
                     eprintln!("\nSet the model path with:");
                     eprintln!(
                         "  whis config --whisper-model-path ~/.local/share/whis/models/ggml-small.bin\n"
                     );
                     eprintln!("Or set the LOCAL_WHISPER_MODEL_PATH environment variable.");
+                    eprintln!("\nTip: Run 'whis setup local' for guided setup.");
                     std::process::exit(1);
                 }
             }
@@ -68,6 +65,7 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
                 Some(key) => key,
                 None => {
                     eprintln!("Error: No {} API key configured.", provider.display_name());
+                    eprintln!("(Required for {} transcription)", provider.display_name());
                     eprintln!("\nSet your key with:");
                     eprintln!("  whis config --{}-api-key YOUR_KEY\n", provider.as_str());
                     eprintln!(
@@ -90,20 +88,34 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
 pub fn wait_for_enter() -> Result<()> {
     std::io::stdout().flush()?;
 
-    // Enable raw mode to read keypresses without echoing
-    enable_raw_mode()?;
+    if std::io::stdin().is_terminal() {
+        // Normal case: use crossterm for clean raw mode input (no echo)
+        enable_raw_mode()?;
 
-    // Wait for Enter key
-    loop {
-        if let Event::Key(key_event) = event::read()?
-            && key_event.code == KeyCode::Enter
-        {
-            break;
+        loop {
+            if let Event::Key(key_event) = event::read()?
+                && key_event.code == KeyCode::Enter
+            {
+                break;
+            }
         }
-    }
 
-    // Restore normal mode
-    disable_raw_mode()?;
+        disable_raw_mode()?;
+    } else {
+        // Subshell case (e.g., running inside AI assistant shell mode)
+        // stdin isn't a terminal, so read from the controlling terminal directly
+        use std::io::{BufRead, BufReader};
+
+        #[cfg(unix)]
+        let tty = std::fs::File::open("/dev/tty")?;
+
+        #[cfg(windows)]
+        let tty = std::fs::File::open("CONIN$")?;
+
+        let mut reader = BufReader::new(tty);
+        let mut line = String::new();
+        reader.read_line(&mut line)?;
+    }
 
     Ok(())
 }

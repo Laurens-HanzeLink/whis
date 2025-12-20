@@ -1,6 +1,7 @@
 use anyhow::{Result, anyhow};
 use std::io::{self, Write};
 use std::path::PathBuf;
+use std::time::Duration;
 use whis_core::{
     AudioRecorder, DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, Preset, RecordingOutput,
     Settings, TranscriptionProvider, copy_to_clipboard, load_audio_file, load_audio_stdin, ollama,
@@ -71,9 +72,12 @@ pub fn run(
     file_path: Option<PathBuf>,
     stdin_mode: bool,
     input_format: &str,
+    print_flag: bool,
+    duration: Option<Duration>,
 ) -> Result<()> {
-    // Detect if stdout is being piped (for clean output to other tools)
-    let piped = app::is_piped();
+    // Use --print flag for output mode (explicit user choice)
+    // When --print is set, suppress status messages for clean stdout output
+    let quiet = print_flag;
 
     // Load preset if provided
     let preset: Option<Preset> = if let Some(name) = preset_name {
@@ -95,13 +99,13 @@ pub fn run(
     // Determine audio source based on input mode
     let audio_result = if let Some(path) = file_path {
         // File input mode
-        if !piped {
+        if !quiet {
             println!("Loading audio file: {}", path.display());
         }
         load_audio_file(&path)?
     } else if stdin_mode {
         // Stdin input mode
-        if !piped {
+        if !quiet {
             println!("Reading audio from stdin ({} format)...", input_format);
         }
         load_audio_stdin(input_format)?
@@ -110,25 +114,33 @@ pub fn run(
         let mut recorder = AudioRecorder::new()?;
         recorder.start_recording()?;
 
-        // When piped: completely silent (user knows to press Enter)
-        // When TTY: show status messages
-        if !piped {
-            println!("Press Enter to stop recording");
-            print!("Recording...");
-            io::stdout().flush()?;
+        if let Some(dur) = duration {
+            // Timed recording mode (for non-interactive environments like AI assistants)
+            if !quiet {
+                println!("Recording for {} seconds...", dur.as_secs());
+                io::stdout().flush()?;
+            }
+            std::thread::sleep(dur);
+        } else {
+            // Interactive mode: wait for Enter to stop
+            if !quiet {
+                println!("Press Enter to stop recording");
+                print!("Recording...");
+                io::stdout().flush()?;
+            }
+            app::wait_for_enter()?;
         }
-        app::wait_for_enter()?;
 
-        // In verbose mode (TTY only), print newline so verbose output appears cleanly
-        if !piped && whis_core::verbose::is_verbose() {
+        // In verbose mode (non-quiet only), print newline so verbose output appears cleanly
+        if !quiet && whis_core::verbose::is_verbose() {
             println!();
         }
 
         recorder.finalize_recording()?
     };
 
-    // Transcribe based on output type (silent when piped)
-    if !piped {
+    // Transcribe (silent when --print)
+    if !quiet {
         if whis_core::verbose::is_verbose() {
             println!("Transcribing...");
         } else {
@@ -193,8 +205,8 @@ pub fn run(
         };
 
         if let Some(key_or_url) = api_key_or_url {
-            // Silent when piped
-            if !piped {
+            // Silent when --print
+            if !quiet {
                 app::typewriter(" Post-processing...", 25);
             }
 
@@ -246,9 +258,9 @@ pub fn run(
         transcription
     };
 
-    // Output: piped mode sends to stdout (silent), TTY mode copies to clipboard
-    if piped {
-        // Only output the transcription - nothing else
+    // Output: --print sends to stdout, otherwise copy to clipboard (default)
+    if print_flag {
+        // Explicit stdout mode (for piping to other tools)
         // Use writeln! and ignore BrokenPipe (happens when piped to `head`, etc.)
         if let Err(e) = writeln!(io::stdout(), "{}", final_text)
             && e.kind() != io::ErrorKind::BrokenPipe
@@ -256,7 +268,7 @@ pub fn run(
             return Err(e.into());
         }
     } else {
-        // Copy to clipboard (normal TTY mode)
+        // Default: always copy to clipboard
         copy_to_clipboard(&final_text, settings.clipboard_method.clone())?;
 
         if whis_core::verbose::is_verbose() {

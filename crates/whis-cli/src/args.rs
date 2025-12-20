@@ -1,5 +1,31 @@
 use clap::{Parser, Subcommand, ValueHint};
 use std::path::PathBuf;
+use std::time::Duration;
+
+/// Parse a duration string like "10s", "30s", "1m", "90"
+fn parse_duration(s: &str) -> Result<Duration, String> {
+    let s = s.trim();
+    if s.is_empty() {
+        return Err("duration cannot be empty".to_string());
+    }
+
+    // Check for suffix
+    if let Some(num_str) = s.strip_suffix('s') {
+        let secs: u64 = num_str
+            .parse()
+            .map_err(|_| format!("invalid number: {}", num_str))?;
+        Ok(Duration::from_secs(secs))
+    } else if let Some(num_str) = s.strip_suffix('m') {
+        let mins: u64 = num_str
+            .parse()
+            .map_err(|_| format!("invalid number: {}", num_str))?;
+        Ok(Duration::from_secs(mins * 60))
+    } else {
+        // No suffix, assume seconds
+        let secs: u64 = s.parse().map_err(|_| format!("invalid duration: {}", s))?;
+        Ok(Duration::from_secs(secs))
+    }
+}
 
 #[derive(Parser)]
 #[command(name = "whis")]
@@ -33,6 +59,15 @@ pub struct Cli {
     /// Input audio format when using --stdin (default: mp3)
     #[arg(long, default_value = "mp3")]
     pub format: String,
+
+    /// Print output to stdout instead of copying to clipboard
+    #[arg(long)]
+    pub print: bool,
+
+    /// Record for a fixed duration (e.g., "10s", "30s", "1m")
+    /// Useful for non-interactive environments like AI assistant shell modes
+    #[arg(short = 'd', long, value_parser = parse_duration)]
+    pub duration: Option<Duration>,
 }
 
 #[derive(Subcommand)]
@@ -51,7 +86,7 @@ pub enum Commands {
     /// Check service status
     Status,
 
-    /// Configure settings (API keys, provider, etc.)
+    /// Configure settings (API keys, transcription service, post-processing, etc.)
     Config {
         /// Set your OpenAI API key
         #[arg(long)]

@@ -56,6 +56,8 @@ fn main() -> Result<()> {
             cli.file,
             cli.stdin,
             &cli.format,
+            cli.print,
+            cli.duration,
         ),
     }
 }
