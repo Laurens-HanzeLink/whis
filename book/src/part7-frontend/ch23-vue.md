@@ -172,8 +172,8 @@ export type Provider =
   | 'elevenlabs'
   | 'local-whisper'
 
-// Text polishing providers
-export type Polisher = 'none' | 'openai' | 'mistral' | 'ollama'
+// Text post-processing providers
+export type PostProcessor = 'none' | 'openai' | 'mistral' | 'ollama'
 
 // All settings from the backend
 export interface Settings {
@@ -182,10 +182,10 @@ export interface Settings {
   language: string | null
   api_keys: Record<string, string>
   whisper_model_path: string | null
-  polisher: Polisher
+  post_processor: PostProcessor
   ollama_url: string | null
   ollama_model: string | null
-  polish_prompt: string | null
+  post_processing_prompt: string | null
   active_preset: string | null
 }
 
@@ -215,7 +215,7 @@ Instead of Pinia, Whis uses a lightweight custom store pattern with Vue's reacti
 ```typescript
 import { reactive, readonly } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import type { Settings, BackendInfo, Provider, Polisher } from '../types'
+import type { Settings, BackendInfo, Provider, PostProcessor } from '../types'
 
 // Default settings values
 const defaultSettings: Settings = {
@@ -718,7 +718,7 @@ The `components/settings/` folder has domain-specific components:
 - **CloudProviderConfig.vue**: Provider selection + API key input
 - **LocalWhisperConfig.vue**: Model download and path configuration
 - **OllamaConfig.vue**: Ollama server and model settings
-- **PolishingConfig.vue**: Polisher selection and prompt customization
+- **PostProcessingConfig.vue**: Post-processor selection and prompt customization
 
 These are composed in SettingsView:
 

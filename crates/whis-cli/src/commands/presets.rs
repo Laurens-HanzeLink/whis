@@ -63,11 +63,11 @@ fn show(name: &str) -> Result<()> {
     }
 
     // Show overrides if any
-    if preset.polisher.is_some() || preset.model.is_some() {
+    if preset.post_processor.is_some() || preset.model.is_some() {
         println!();
         println!("Overrides:");
-        if let Some(polisher) = &preset.polisher {
-            println!("  Polisher: {}", polisher);
+        if let Some(post_processor) = &preset.post_processor {
+            println!("  Post-processor: {}", post_processor);
         }
         if let Some(model) = &preset.model {
             println!("  Model: {}", model);

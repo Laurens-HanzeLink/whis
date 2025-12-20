@@ -1,6 +1,6 @@
 import { reactive, readonly, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import type { Settings, BackendInfo, Provider, Polisher } from '../types'
+import type { Settings, BackendInfo, Provider, PostProcessor } from '../types'
 
 // Simple debounce utility
 function debounce<T extends (...args: unknown[]) => unknown>(fn: T, ms: number) {
@@ -18,10 +18,10 @@ const defaultSettings: Settings = {
   language: null,
   api_keys: {},
   whisper_model_path: null,
-  polisher: 'none',
+  post_processor: 'none',
   ollama_url: null,
   ollama_model: null,
-  polish_prompt: null,
+  post_processing_prompt: null,
   active_preset: null,
   microphone_device: null,
 }
@@ -50,10 +50,10 @@ const debouncedSave = debounce(async () => {
         language: state.language,
         api_keys: state.api_keys,
         whisper_model_path: state.whisper_model_path,
-        polisher: state.polisher,
+        post_processor: state.post_processor,
         ollama_url: state.ollama_url,
         ollama_model: state.ollama_model,
-        polish_prompt: state.polish_prompt,
+        post_processing_prompt: state.post_processing_prompt,
         active_preset: state.active_preset,
         microphone_device: state.microphone_device,
       },
@@ -70,10 +70,10 @@ watch(
     state.language,
     state.api_keys,
     state.whisper_model_path,
-    state.polisher,
+    state.post_processor,
     state.ollama_url,
     state.ollama_model,
-    state.polish_prompt,
+    state.post_processing_prompt,
     state.active_preset,
     state.microphone_device,
   ],
@@ -92,10 +92,10 @@ async function load() {
     state.language = settings.language
     state.api_keys = settings.api_keys || {}
     state.whisper_model_path = settings.whisper_model_path
-    state.polisher = settings.polisher || 'none'
+    state.post_processor = settings.post_processor || 'none'
     state.ollama_url = settings.ollama_url
     state.ollama_model = settings.ollama_model
-    state.polish_prompt = settings.polish_prompt
+    state.post_processing_prompt = settings.post_processing_prompt
     state.active_preset = settings.active_preset
     state.microphone_device = settings.microphone_device
   } catch (e) {
@@ -112,10 +112,10 @@ async function save(): Promise<boolean> {
         language: state.language,
         api_keys: state.api_keys,
         whisper_model_path: state.whisper_model_path,
-        polisher: state.polisher,
+        post_processor: state.post_processor,
         ollama_url: state.ollama_url,
         ollama_model: state.ollama_model,
-        polish_prompt: state.polish_prompt,
+        post_processing_prompt: state.post_processing_prompt,
         active_preset: state.active_preset,
         microphone_device: state.microphone_device,
       },
@@ -164,8 +164,8 @@ function setWhisperModelPath(value: string | null) {
   state.whisper_model_path = value
 }
 
-function setPolisher(value: Polisher) {
-  state.polisher = value
+function setPostProcessor(value: PostProcessor) {
+  state.post_processor = value
 }
 
 function setOllamaUrl(value: string | null) {
@@ -176,8 +176,8 @@ function setOllamaModel(value: string | null) {
   state.ollama_model = value
 }
 
-function setPolishPrompt(value: string | null) {
-  state.polish_prompt = value
+function setPostProcessingPrompt(value: string | null) {
+  state.post_processing_prompt = value
 }
 
 function setShortcut(value: string) {
@@ -210,10 +210,10 @@ export const settingsStore = {
   setLanguage,
   setApiKey,
   setWhisperModelPath,
-  setPolisher,
+  setPostProcessor,
   setOllamaUrl,
   setOllamaModel,
-  setPolishPrompt,
+  setPostProcessingPrompt,
   setShortcut,
   setPortalShortcut,
   setMicrophoneDevice,

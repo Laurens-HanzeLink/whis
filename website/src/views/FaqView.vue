@@ -15,12 +15,12 @@ const faqItems = [
   {
     question: 'Can I use it offline?',
     answer:
-      'Yes! Run <code>whis setup local</code> to download a whisper model and use Ollama for polishing. Zero cloud dependency, completely private.',
+      'Yes! Run <code>whis setup local</code> to download a whisper model and use Ollama for post-processing. Zero cloud dependency, completely private.',
   },
   {
-    question: 'What is polishing?',
+    question: 'What is post-processing?',
     answer:
-      'AI-powered cleanup of your transcript. Removes filler words (um, uh, like), fixes grammar, and preserves technical terms. Use <code>--polish</code> or enable it in settings.',
+      'AI-powered cleanup of your transcript. Removes filler words (um, uh, like), fixes grammar, and preserves technical terms. Use <code>--post-process</code> or enable it in settings.',
   },
   {
     question: 'What do I need?',

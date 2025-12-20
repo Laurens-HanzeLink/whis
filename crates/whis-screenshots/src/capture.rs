@@ -90,32 +90,32 @@ async fn capture_settings(driver: &TauriDriver, output_dir: &Path) -> Result<Vec
             .await?;
         captured.push("settings-cloud-options.png".to_string());
 
-        // Cloud + polishing enabled (scroll to ensure visible)
+        // Cloud + post-processing enabled (scroll to ensure visible)
         let _ = driver.scroll_to(".toggle-switch").await;
         if driver.click(".toggle-switch").await.is_ok() {
             driver
-                .screenshot(save("settings-cloud-polishing.png").to_str().unwrap())
+                .screenshot(save("settings-cloud-post-processing.png").to_str().unwrap())
                 .await?;
-            captured.push("settings-cloud-polishing.png".to_string());
+            captured.push("settings-cloud-post-processing.png".to_string());
 
-            // Cloud + polishing + Ollama selected
-            let _ = driver.scroll_to(".polishing-section .select-trigger").await;
+            // Cloud + post-processing + Ollama selected
+            let _ = driver.scroll_to(".post-processing-section .select-trigger").await;
             if driver
-                .select_option(".polishing-section .select-trigger", "Ollama")
+                .select_option(".post-processing-section .select-trigger", "Ollama")
                 .await
                 .is_ok()
             {
                 driver
                     .screenshot(
-                        save("settings-cloud-polishing-ollama.png")
+                        save("settings-cloud-post-processing-ollama.png")
                             .to_str()
                             .unwrap(),
                     )
                     .await?;
-                captured.push("settings-cloud-polishing-ollama.png".to_string());
+                captured.push("settings-cloud-post-processing-ollama.png".to_string());
             }
 
-            // Turn off polishing for next section
+            // Turn off post-processing for next section
             let _ = driver.click(".toggle-switch").await;
         }
         // Collapse options
@@ -152,29 +152,29 @@ async fn capture_settings(driver: &TauriDriver, output_dir: &Path) -> Result<Vec
                 captured.push("settings-local-remote.png".to_string());
             }
 
-            // Local + polishing enabled (scroll to ensure visible)
+            // Local + post-processing enabled (scroll to ensure visible)
             let _ = driver.scroll_to(".toggle-switch").await;
             if driver.click(".toggle-switch").await.is_ok() {
                 driver
-                    .screenshot(save("settings-local-polishing.png").to_str().unwrap())
+                    .screenshot(save("settings-local-post-processing.png").to_str().unwrap())
                     .await?;
-                captured.push("settings-local-polishing.png".to_string());
+                captured.push("settings-local-post-processing.png".to_string());
 
-                // Local + polishing + Ollama
-                let _ = driver.scroll_to(".polishing-section .select-trigger").await;
+                // Local + post-processing + Ollama
+                let _ = driver.scroll_to(".post-processing-section .select-trigger").await;
                 if driver
-                    .select_option(".polishing-section .select-trigger", "Ollama")
+                    .select_option(".post-processing-section .select-trigger", "Ollama")
                     .await
                     .is_ok()
                 {
                     driver
                         .screenshot(
-                            save("settings-local-polishing-ollama.png")
+                            save("settings-local-post-processing-ollama.png")
                                 .to_str()
                                 .unwrap(),
                         )
                         .await?;
-                    captured.push("settings-local-polishing-ollama.png".to_string());
+                    captured.push("settings-local-post-processing-ollama.png".to_string());
                 }
             }
         }

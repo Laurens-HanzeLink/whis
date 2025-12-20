@@ -357,14 +357,14 @@ pub async fn apply_preset(name: String, state: State<'_, AppState>) -> Result<()
     {
         let mut settings = state.settings.lock().unwrap();
 
-        // Apply preset's polish prompt
-        settings.polish_prompt = Some(preset.prompt.clone());
+        // Apply preset's post-processing prompt
+        settings.post_processing_prompt = Some(preset.prompt.clone());
 
-        // Apply preset's polisher override if specified
-        if let Some(polisher_str) = &preset.polisher
-            && let Ok(polisher) = polisher_str.parse()
+        // Apply preset's post-processor override if specified
+        if let Some(post_processor_str) = &preset.post_processor
+            && let Ok(post_processor) = post_processor_str.parse()
         {
-            settings.polisher = polisher;
+            settings.post_processor = post_processor;
         }
 
         // Set this preset as active
@@ -405,7 +405,7 @@ pub struct PresetDetails {
     pub name: String,
     pub description: String,
     pub prompt: String,
-    pub polisher: Option<String>,
+    pub post_processor: Option<String>,
     pub model: Option<String>,
     pub is_builtin: bool,
 }
@@ -416,7 +416,7 @@ pub struct CreatePresetInput {
     pub name: String,
     pub description: String,
     pub prompt: String,
-    pub polisher: Option<String>,
+    pub post_processor: Option<String>,
     pub model: Option<String>,
 }
 
@@ -425,7 +425,7 @@ pub struct CreatePresetInput {
 pub struct UpdatePresetInput {
     pub description: String,
     pub prompt: String,
-    pub polisher: Option<String>,
+    pub post_processor: Option<String>,
     pub model: Option<String>,
 }
 
@@ -440,7 +440,7 @@ pub fn get_preset_details(name: String) -> Result<PresetDetails, String> {
         name: preset.name,
         description: preset.description,
         prompt: preset.prompt,
-        polisher: preset.polisher,
+        post_processor: preset.post_processor,
         model: preset.model,
         is_builtin: source == PresetSource::BuiltIn,
     })
@@ -464,7 +464,7 @@ pub fn create_preset(input: CreatePresetInput) -> Result<PresetInfo, String> {
         name: input.name.clone(),
         description: input.description.clone(),
         prompt: input.prompt,
-        polisher: input.polisher,
+        post_processor: input.post_processor,
         model: input.model,
     };
 
@@ -493,7 +493,7 @@ pub fn update_preset(name: String, input: UpdatePresetInput) -> Result<PresetInf
     // Update fields
     preset.description = input.description.clone();
     preset.prompt = input.prompt;
-    preset.polisher = input.polisher;
+    preset.post_processor = input.post_processor;
     preset.model = input.model;
 
     // Save
@@ -712,16 +712,16 @@ pub async fn start_ollama(url: String) -> Result<String, String> {
 pub struct ConfigReadiness {
     pub transcription_ready: bool,
     pub transcription_error: Option<String>,
-    pub polishing_ready: bool,
-    pub polishing_error: Option<String>,
+    pub post_processing_ready: bool,
+    pub post_processing_error: Option<String>,
 }
 
-/// Check if transcription and polishing are properly configured
+/// Check if transcription and post-processing are properly configured
 /// Called on app load and settings changes to show proactive warnings
 #[tauri::command]
 pub async fn check_config_readiness(
     provider: String,
-    polisher: String,
+    post_processor: String,
     api_keys: std::collections::HashMap<String, String>,
     whisper_model_path: Option<String>,
     ollama_url: Option<String>,
@@ -745,8 +745,8 @@ pub async fn check_config_readiness(
         }
     };
 
-    // Check polishing readiness
-    let (polishing_ready, polishing_error) = match polisher.as_str() {
+    // Check post-processing readiness
+    let (post_processing_ready, post_processing_error) = match post_processor.as_str() {
         "none" => (true, None),
         "ollama" => {
             let url = ollama_url.unwrap_or_else(|| "http://localhost:11434".to_string());
@@ -762,11 +762,14 @@ pub async fn check_config_readiness(
                 _ => (false, Some("Ollama not running".to_string())),
             }
         }
-        polisher => {
-            if api_keys.get(polisher).is_none_or(|k| k.is_empty()) {
+        post_processor => {
+            if api_keys.get(post_processor).is_none_or(|k| k.is_empty()) {
                 (
                     false,
-                    Some(format!("{} API key not configured", capitalize(polisher))),
+                    Some(format!(
+                        "{} API key not configured",
+                        capitalize(post_processor)
+                    )),
                 )
             } else {
                 (true, None)
@@ -777,8 +780,8 @@ pub async fn check_config_readiness(
     ConfigReadiness {
         transcription_ready,
         transcription_error,
-        polishing_ready,
-        polishing_error,
+        post_processing_ready,
+        post_processing_error,
     }
 }
 

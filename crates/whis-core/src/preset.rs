@@ -4,7 +4,7 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-/// A preset for transcript polishing
+/// A preset for transcript post-processing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Preset {
     /// Unique identifier (derived from filename, not serialized)
@@ -17,9 +17,9 @@ pub struct Preset {
     /// The system prompt for the LLM
     pub prompt: String,
 
-    /// Optional: Override the polisher for this preset (openai, mistral)
+    /// Optional: Override the post-processor for this preset (openai, mistral)
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub polisher: Option<String>,
+    pub post_processor: Option<String>,
 
     /// Optional: Override the model for this preset
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -64,7 +64,7 @@ impl Preset {
                     Preserve the speaker's intent and technical terminology. \
                     Output only the cleaned text."
                     .to_string(),
-                polisher: None,
+                post_processor: None,
                 model: None,
             },
             Preset {
@@ -76,7 +76,7 @@ impl Preset {
                     Do NOT add placeholder names or unnecessary formalities. \
                     Output only the cleaned text."
                     .to_string(),
-                polisher: None,
+                post_processor: None,
                 model: None,
             },
             Preset {
@@ -88,7 +88,7 @@ impl Preset {
                     IMPORTANT: Start directly with the cleaned content. NEVER add any introduction, preamble, or meta-commentary like 'Here are the notes'. \
                     Output ONLY the cleaned transcript, nothing else."
                     .to_string(),
-                polisher: None,
+                post_processor: None,
                 model: None,
             },
         ]
@@ -196,7 +196,7 @@ impl Preset {
             name: name.to_string(),
             description: "Describe what this preset does".to_string(),
             prompt: "Your system prompt here".to_string(),
-            polisher: None,
+            post_processor: None,
             model: None,
         }
     }

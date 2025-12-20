@@ -4,7 +4,7 @@ pub mod clipboard;
 pub mod config;
 pub mod model;
 pub mod ollama;
-pub mod polish;
+pub mod post_processing;
 pub mod preset;
 pub mod provider;
 pub mod resample;
@@ -20,7 +20,7 @@ pub use audio::{
 #[cfg(feature = "clipboard")]
 pub use clipboard::{ClipboardMethod, copy_to_clipboard};
 pub use config::TranscriptionProvider;
-pub use polish::{DEFAULT_POLISH_PROMPT, Polisher, polish};
+pub use post_processing::{DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, post_process};
 pub use preset::{Preset, PresetSource};
 pub use provider::{
     DEFAULT_TIMEOUT_SECS, TranscriptionBackend, TranscriptionRequest, TranscriptionResult, registry,

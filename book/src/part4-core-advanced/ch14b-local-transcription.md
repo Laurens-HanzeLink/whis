@@ -1,6 +1,6 @@
 # Chapter 14b: Local Transcription
 
-Cloud transcription is convenient, but some users need privacy, offline capability, or simply want to avoid API costs. This chapter explores how Whis implements fully local transcription using embedded Whisper models and Ollama for polishing.
+Cloud transcription is convenient, but some users need privacy, offline capability, or simply want to avoid API costs. This chapter explores how Whis implements fully local transcription using embedded Whisper models and Ollama for post-processing.
 
 ## Why Local Transcription?
 
@@ -30,7 +30,7 @@ Whis implements local transcription using embedded Whisper:
 │   │             │      │                                     │  │
 │   └─────────────┘      └─────────────────────────────────────┘  │
 │          │                                                      │
-│          │ (optional polish)                                    │
+│          │ (optional post-processing)                           │
 │          ▼                                                      │
 │   ┌─────────────┐                                               │
 │   │   Ollama    │  Local LLM for cleaning up transcripts        │
@@ -362,7 +362,7 @@ fn decode_and_resample(mp3_data: &[u8]) -> Result<Vec<f32>> {
 
 ## Ollama Integration
 
-For polishing transcripts locally, Whis integrates with Ollama - a popular local LLM server.
+For post-processing transcripts locally, Whis integrates with Ollama - a popular local LLM server.
 
 ### The `ollama.rs` Module
 
@@ -563,7 +563,7 @@ fn setup_local() -> Result<()> {
     let mut settings = Settings::load();
     settings.provider = TranscriptionProvider::LocalWhisper;
     settings.whisper_model_path = Some(model_path.to_string_lossy().to_string());
-    settings.polisher = Polisher::Ollama;
+    settings.post_processor = PostProcessor::Ollama;
     settings.ollama_url = Some(ollama::DEFAULT_OLLAMA_URL.to_string());
     settings.ollama_model = Some(ollama::DEFAULT_OLLAMA_MODEL.to_string());
     settings.save()?;
@@ -589,7 +589,7 @@ pub struct Settings {
     #[serde(default)]
     pub ollama_url: Option<String>,
 
-    /// Ollama model for polishing
+    /// Ollama model for post-processing
     #[serde(default)]
     pub ollama_model: Option<String>,
 }
@@ -605,7 +605,7 @@ pub struct Settings {
 
 ## Design Decisions
 
-### 1. Why Not Embed llama.cpp for Polishing?
+### 1. Why Not Embed llama.cpp for Post-Processing?
 
 **The problem**: Both whisper.cpp and llama.cpp bundle ggml (a tensor library), causing duplicate symbol errors at link time:
 
@@ -619,7 +619,7 @@ error: duplicate symbol '_ggml_init' in:
 
 **Benefits**:
 - Avoids complex build system hacks
-- Users can choose their own polish model
+- Users can choose their own post-processing model
 - Ollama is already popular for local LLMs
 - HTTP API is simpler than FFI
 
@@ -646,7 +646,7 @@ cargo build  # local-whisper is in defaults
 1. **Embedded whisper**: whisper.cpp compiled into the binary via `whisper-rs`
 2. **Model management**: Download from HuggingFace, store in platform-specific location
 3. **Audio pipeline**: MP3 decode (minimp3) → Resample to 16kHz (rubato) → Transcribe (whisper-rs)
-4. **Ollama integration**: Auto-start, model pulling, HTTP API for polish
+4. **Ollama integration**: Auto-start, model pulling, HTTP API for post-processing
 5. **Setup wizard**: `whis setup local` for fully offline transcription
 
 **Where This Matters in Whis:**

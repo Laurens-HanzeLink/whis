@@ -67,9 +67,9 @@ whis presets show my-preset   # View preset details
 whis --as my-preset       # Use preset for transcription
 ```
 
-**LLM Polishing:**
+**LLM Post-Processing:**
 ```bash
-whis --polish             # Clean up transcription with Ollama
+whis --post-process       # Clean up transcription with Ollama
 whis config --ollama-model llama3.2   # Set Ollama model
 ```
 

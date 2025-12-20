@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { settingsStore } from '../stores/settings'
-import type { Provider, Polisher, SelectOption } from '../types'
+import type { Provider, PostProcessor, SelectOption } from '../types'
 import ModeCards from '../components/settings/ModeCards.vue'
 import CloudProviderConfig from '../components/settings/CloudProviderConfig.vue'
 import LocalWhisperConfig from '../components/settings/LocalWhisperConfig.vue'
-import PolishingConfig from '../components/settings/PolishingConfig.vue'
+import PostProcessingConfig from '../components/settings/PostProcessingConfig.vue'
 import AppSelect from '../components/AppSelect.vue'
 import type { TranscriptionMode } from '../components/settings/ModeCards.vue'
 import { invoke } from '@tauri-apps/api/core'
@@ -16,7 +16,7 @@ const helpOpen = ref(false)
 const provider = computed(() => settingsStore.state.provider)
 const language = computed(() => settingsStore.state.language)
 const apiKeys = computed(() => settingsStore.state.api_keys)
-const polisher = computed(() => settingsStore.state.polisher)
+const postProcessor = computed(() => settingsStore.state.post_processor)
 
 // Transcription mode: cloud vs local
 const transcriptionMode = ref<TranscriptionMode>(
@@ -70,9 +70,9 @@ function handleModeChange(mode: TranscriptionMode) {
     // Switch to default cloud provider if currently on local
     if (provider.value === 'local-whisper') {
       settingsStore.setProvider('openai')
-      // Auto-sync polisher to match (if user has cloud polisher enabled)
-      if (polisher.value !== 'none' && polisher.value !== 'ollama') {
-        settingsStore.setPolisher('openai')
+      // Auto-sync post-processor to match (if user has cloud post-processor enabled)
+      if (postProcessor.value !== 'none' && postProcessor.value !== 'ollama') {
+        settingsStore.setPostProcessor('openai')
       }
     }
   } else {
@@ -87,10 +87,10 @@ function handleProviderUpdate(value: string | null) {
   if (!value) return
   const newProvider = value as Provider
   settingsStore.setProvider(newProvider)
-  // Auto-sync polisher to match provider (if user has cloud polisher enabled)
+  // Auto-sync post-processor to match provider (if user has cloud post-processor enabled)
   if ((newProvider === 'openai' || newProvider === 'mistral') &&
-      polisher.value !== 'none' && polisher.value !== 'ollama') {
-    settingsStore.setPolisher(newProvider as Polisher)
+      postProcessor.value !== 'none' && postProcessor.value !== 'ollama') {
+    settingsStore.setPostProcessor(newProvider as PostProcessor)
   }
 }
 
@@ -212,7 +212,7 @@ function handleMicrophoneChange(value: string | null) {
       <!-- Post-Processing Section -->
       <div class="settings-section">
         <p class="section-label">post-processing</p>
-        <PolishingConfig />
+        <PostProcessingConfig />
       </div>
     </div>
 
@@ -249,18 +249,18 @@ function handleMicrophoneChange(value: string | null) {
         </div>
 
         <div class="help-section">
-          <h3>polishing</h3>
+          <h3>post-processing</h3>
           <p>Clean up transcripts with AI. Fixes grammar, punctuation, and can add structure. Works with cloud providers or local Ollama. Optional—leave off for verbatim transcripts.</p>
         </div>
 
         <div class="help-section">
           <h3>presets</h3>
-          <p>Pre-configured polishing instructions. Choose a style that matches your use case, or create custom presets in the Presets page.</p>
+          <p>Pre-configured post-processing instructions. Choose a style that matches your use case, or create custom presets in the Presets page.</p>
         </div>
 
         <div class="help-section">
           <h3>ollama</h3>
-          <p>Use local AI models for polishing without cloud APIs or costs. Requires Ollama running on your machine.</p>
+          <p>Use local AI models for post-processing without cloud APIs or costs. Requires Ollama running on your machine.</p>
           <div class="help-steps">
             <p><strong>Setup:</strong></p>
             <ol>

@@ -164,7 +164,7 @@ Here's every feature flag in `whis-core` and what it does:
 
 **Used by**: `whis-cli`, `whis-desktop` (included in defaults)
 
-> **Note**: Local LLM polishing uses Ollama via HTTP, which doesn't require a feature flag. See [Chapter 14b: Local Transcription](../part4-core-advanced/ch14b-local-transcription.md) for details on the Ollama integration.
+> **Note**: Local LLM post-processing uses Ollama via HTTP, which doesn't require a feature flag. See [Chapter 14b: Local Transcription](../part4-core-advanced/ch14b-local-transcription.md) for details on the Ollama integration.
 
 ## How Apps Choose Features
 

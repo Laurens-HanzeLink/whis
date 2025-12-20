@@ -14,8 +14,8 @@ export type Provider =
   | 'elevenlabs'
   | 'local-whisper'
 
-// Text polishing providers
-export type Polisher = 'none' | 'openai' | 'mistral' | 'ollama'
+// Text post-processing providers
+export type PostProcessor = 'none' | 'openai' | 'mistral' | 'ollama'
 
 // All settings from the backend
 export interface Settings {
@@ -24,10 +24,10 @@ export interface Settings {
   language: string | null
   api_keys: Record<string, string>
   whisper_model_path: string | null
-  polisher: Polisher
+  post_processor: PostProcessor
   ollama_url: string | null
   ollama_model: string | null
-  polish_prompt: string | null
+  post_processing_prompt: string | null
   active_preset: string | null
   microphone_device: string | null
 }
@@ -71,7 +71,7 @@ export interface PresetDetails {
   name: string
   description: string
   prompt: string
-  polisher: string | null
+  post_processor: string | null
   model: string | null
   is_builtin: boolean
 }

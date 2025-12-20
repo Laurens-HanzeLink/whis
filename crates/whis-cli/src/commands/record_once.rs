@@ -2,43 +2,46 @@ use anyhow::{Result, anyhow};
 use std::io::{self, Write};
 use std::path::PathBuf;
 use whis_core::{
-    AudioRecorder, DEFAULT_POLISH_PROMPT, Polisher, Preset, RecordingOutput, Settings,
-    TranscriptionProvider, copy_to_clipboard, load_audio_file, load_audio_stdin, ollama,
-    parallel_transcribe, polish, transcribe_audio,
+    AudioRecorder, DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, Preset, RecordingOutput,
+    Settings, TranscriptionProvider, copy_to_clipboard, load_audio_file, load_audio_stdin, ollama,
+    parallel_transcribe, post_process, transcribe_audio,
 };
 
 use crate::app;
 
-/// Resolve which polisher to use based on priority:
+/// Resolve which post-processor to use based on priority:
 /// 1. Preset override (if specified and valid)
-/// 2. Settings polisher (if configured)
+/// 2. Settings post-processor (if configured)
 /// 3. Transcription provider fallback (OpenAI/Mistral only, others check key availability)
-fn resolve_polisher(
+fn resolve_post_processor(
     preset: &Option<Preset>,
     settings: &Settings,
     provider: &TranscriptionProvider,
-) -> Polisher {
+) -> PostProcessor {
     // 1. Preset override
     if let Some(p) = preset
-        && let Some(polisher_str) = &p.polisher
+        && let Some(post_processor_str) = &p.post_processor
     {
-        match polisher_str.parse() {
-            Ok(polisher) => return polisher,
-            Err(_) => eprintln!("Warning: Invalid polisher '{}' in preset", polisher_str),
+        match post_processor_str.parse() {
+            Ok(post_processor) => return post_processor,
+            Err(_) => eprintln!(
+                "Warning: Invalid post-processor '{}' in preset",
+                post_processor_str
+            ),
         }
     }
 
-    // 2. Settings polisher
-    if settings.polisher != Polisher::None {
-        return settings.polisher.clone();
+    // 2. Settings post-processor
+    if settings.post_processor != PostProcessor::None {
+        return settings.post_processor.clone();
     }
 
     // 3. Transcription provider fallback
-    // OpenAI and Mistral have built-in polish capabilities
+    // OpenAI and Mistral have built-in post-processing capabilities
     // Other providers need an available OpenAI or Mistral key
     match provider {
-        TranscriptionProvider::OpenAI => Polisher::OpenAI,
-        TranscriptionProvider::Mistral => Polisher::Mistral,
+        TranscriptionProvider::OpenAI => PostProcessor::OpenAI,
+        TranscriptionProvider::Mistral => PostProcessor::Mistral,
         // Cloud providers without built-in LLM: try OpenAI/Mistral keys
         TranscriptionProvider::Groq
         | TranscriptionProvider::Deepgram
@@ -47,23 +50,23 @@ fn resolve_polisher(
                 .get_api_key_for(&TranscriptionProvider::OpenAI)
                 .is_some()
             {
-                Polisher::OpenAI
+                PostProcessor::OpenAI
             } else if settings
                 .get_api_key_for(&TranscriptionProvider::Mistral)
                 .is_some()
             {
-                Polisher::Mistral
+                PostProcessor::Mistral
             } else {
-                Polisher::None
+                PostProcessor::None
             }
         }
-        // Local transcription: default to Ollama (local polishing)
-        TranscriptionProvider::LocalWhisper => Polisher::Ollama,
+        // Local transcription: default to Ollama (local post-processing)
+        TranscriptionProvider::LocalWhisper => PostProcessor::Ollama,
     }
 }
 
 pub fn run(
-    polish_flag: bool,
+    post_process_flag: bool,
     preset_name: Option<String>,
     file_path: Option<PathBuf>,
     stdin_mode: bool,
@@ -154,19 +157,19 @@ pub fn run(
         }
     };
 
-    // Apply polishing if enabled (via flag or preset)
+    // Apply post-processing if enabled (via flag or preset)
     let settings = Settings::load();
-    let should_polish = polish_flag || preset.is_some();
+    let should_post_process = post_process_flag || preset.is_some();
 
-    let final_text = if should_polish {
-        let polisher = resolve_polisher(&preset, &settings, &config.provider);
+    let final_text = if should_post_process {
+        let post_processor = resolve_post_processor(&preset, &settings, &config.provider);
 
-        // Get API key or URL depending on polisher type
-        // For cloud polishers: need API key
+        // Get API key or URL depending on post-processor type
+        // For cloud post-processors: need API key
         // For Ollama: need server URL (defaults to localhost:11434)
-        let api_key_or_url = if polisher.requires_api_key() {
-            settings.get_polisher_api_key()
-        } else if polisher == Polisher::Ollama {
+        let api_key_or_url = if post_processor.requires_api_key() {
+            settings.get_post_processor_api_key()
+        } else if post_processor == PostProcessor::Ollama {
             // For local-whisper provider, auto-start Ollama if not running
             let ollama_url = settings
                 .get_ollama_url()
@@ -178,8 +181,8 @@ pub fn run(
                     Ok(_) => Some(ollama_url),
                     Err(e) => {
                         eprintln!("Warning: Could not start Ollama: {}", e);
-                        eprintln!("Skipping polish. Start Ollama manually: ollama serve");
-                        None // Skip polish
+                        eprintln!("Skipping post-processing. Start Ollama manually: ollama serve");
+                        None // Skip post-processing
                     }
                 }
             } else {
@@ -192,7 +195,7 @@ pub fn run(
         if let Some(key_or_url) = api_key_or_url {
             // Silent when piped
             if !piped {
-                app::typewriter(" Polishing...", 25);
+                app::typewriter(" Post-processing...", 25);
             }
 
             // Priority: preset prompt > settings prompt > default
@@ -200,41 +203,41 @@ pub fn run(
                 p.prompt.as_str()
             } else {
                 settings
-                    .polish_prompt
+                    .post_processing_prompt
                     .as_deref()
-                    .unwrap_or(DEFAULT_POLISH_PROMPT)
+                    .unwrap_or(DEFAULT_POST_PROCESSING_PROMPT)
             };
 
             // For Ollama, use settings model if preset doesn't specify one
             let ollama_model = settings.get_ollama_model();
             let model = if let Some(ref p) = preset {
                 p.model.as_deref()
-            } else if polisher == Polisher::Ollama {
+            } else if post_processor == PostProcessor::Ollama {
                 ollama_model.as_deref()
             } else {
                 None
             };
-            match runtime.block_on(polish(
+            match runtime.block_on(post_process(
                 &transcription,
-                &polisher,
+                &post_processor,
                 &key_or_url,
                 prompt,
                 model,
             )) {
-                Ok(polished) => polished,
+                Ok(processed) => processed,
                 Err(e) => {
-                    eprintln!("Polish warning: {e}");
+                    eprintln!("Post-processing warning: {e}");
                     eprintln!("Falling back to raw transcript");
                     transcription
                 }
             }
         } else {
-            // Warn when polish was requested but we can't perform it
+            // Warn when post-processing was requested but we can't perform it
             // (Ollama case already warned above when auto-start failed)
-            if polisher != Polisher::None && polisher.requires_api_key() {
+            if post_processor != PostProcessor::None && post_processor.requires_api_key() {
                 eprintln!(
-                    "Warning: No API key for {} polisher, skipping polish",
-                    polisher
+                    "Warning: No API key for {} post-processor, skipping",
+                    post_processor
                 );
             }
             transcription

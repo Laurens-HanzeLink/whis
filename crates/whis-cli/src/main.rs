@@ -29,8 +29,8 @@ fn main() -> Result<()> {
             ollama_url,
             ollama_model,
             language,
-            polisher,
-            polish_prompt,
+            post_processor,
+            post_processing_prompt,
             show,
         }) => commands::config::run(
             openai_api_key,
@@ -43,15 +43,19 @@ fn main() -> Result<()> {
             ollama_url,
             ollama_model,
             language,
-            polisher,
-            polish_prompt,
+            post_processor,
+            post_processing_prompt,
             show,
         ),
         Some(args::Commands::Presets { action }) => commands::presets::run(action),
         Some(args::Commands::Setup { mode }) => commands::setup::run(mode),
         Some(args::Commands::Models { action }) => commands::models::run(action),
-        None => {
-            commands::record_once::run(cli.polish, cli.preset, cli.file, cli.stdin, &cli.format)
-        }
+        None => commands::record_once::run(
+            cli.post_process,
+            cli.preset,
+            cli.file,
+            cli.stdin,
+            &cli.format,
+        ),
     }
 }

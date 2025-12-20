@@ -229,7 +229,7 @@ function handleOllamaModelChange(value: string | null) {
       <span class="install-icon">[!]</span>
       <span class="install-title">Ollama not installed</span>
     </div>
-    <p class="install-desc">Ollama is required for local AI text polishing.</p>
+    <p class="install-desc">Ollama is required for local AI text post-processing.</p>
 
     <!-- Linux instructions -->
     <div v-if="currentPlatform === 'linux'" class="install-section">
@@ -292,7 +292,7 @@ function handleOllamaModelChange(value: string | null) {
     />
   </div>
   <p v-if="ollamaStatus === 'connected' && ollamaModels.length > 0" class="hint ollama-hint">
-    First polish may be slow while model loads into memory.
+    First post-processing may be slow while model loads into memory.
   </p>
 
   <!-- No models warning -->

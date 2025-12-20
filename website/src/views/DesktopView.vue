@@ -142,7 +142,7 @@ function openLightbox(index: number) {
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>AI polishing</strong> Clean up transcripts with presets</div>
+          <div><strong>AI post-processing</strong> Clean up transcripts with presets</div>
         </li>
         <li>
           <span class="marker">[*]</span>

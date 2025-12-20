@@ -76,7 +76,7 @@ const demoImage = [
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>AI polishing</strong> Clean up filler words and grammar with LLMs</div>
+          <div><strong>AI post-processing</strong> Clean up filler words and grammar with LLMs</div>
         </li>
         <li>
           <span class="marker">[*]</span>
@@ -119,8 +119,8 @@ const demoImage = [
 <span class="highlight">whis</span>
 <span class="comment"># Press Enter to stop — text is copied!</span>
 
-<span class="comment"># Polish your transcript with AI:</span>
-<span class="highlight">whis --polish</span></code></pre>
+<span class="comment"># Post-process your transcript with AI:</span>
+<span class="highlight">whis --post-process</span></code></pre>
     </section>
   </div>
 </template>

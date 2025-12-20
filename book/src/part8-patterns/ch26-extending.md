@@ -5,7 +5,7 @@ Whis is designed to be extensible. The provider trait pattern, feature flags, an
 In this chapter, we'll walk through:
 - Adding a new transcription provider
 - Adding a new audio format encoder
-- Adding presets for polish/summarization
+- Adding presets for post-processing/summarization
 - Plugin architecture ideas for the future
 
 ## Adding a New Transcription Provider
@@ -277,9 +277,9 @@ Now users can build with Opus:
 cargo build --no-default-features --features opus
 ```
 
-## Adding Polish Presets
+## Adding Post-Processing Presets
 
-Whis has a `polish` module for post-processing transcripts. Let's add a "Summarize" preset:
+Whis has a `post_processing` module for processing transcripts. Let's add a "Summarize" preset:
 
 ### Step 1: Add Preset Enum
 
@@ -316,12 +316,12 @@ impl Preset {
 }
 ```
 
-### Step 2: Use in Polish Function
+### Step 2: Use in Post-Process Function
 
-The `polish_text` function already handles any preset:
+The `post_process_text` function already handles any preset:
 
 ```rust
-pub async fn polish_text(
+pub async fn post_process_text(
     text: &str,
     preset: Preset,
     provider: LLMProvider,
@@ -491,14 +491,14 @@ The codebase is structured to make extensions easy. Most features can be added w
 
 1. **Provider trait**: Adding transcription providers takes ~50 lines of code
 2. **Feature flags**: Use for optional dependencies (encoders, backends)
-3. **Presets**: System prompts make it easy to add polish options
+3. **Presets**: System prompts make it easy to add post-processing options
 4. **Plugin system**: Possible via dynamic libraries or WASM (not implemented yet)
 
 **Extension Points**:
 
 - Transcription providers: Implement `TranscriptionBackend` trait
 - Audio formats: Add encoder functions with feature flags
-- Polish presets: Add enum variant and system prompt
+- Post-processing presets: Add enum variant and system prompt
 - UI themes: Modify CSS custom properties in App.vue
 
 **Best Practices**:

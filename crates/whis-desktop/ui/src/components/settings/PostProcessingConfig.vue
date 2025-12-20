@@ -5,22 +5,22 @@ import { invoke } from '@tauri-apps/api/core'
 import { settingsStore } from '../../stores/settings'
 import AppSelect from '../AppSelect.vue'
 import OllamaConfig from './OllamaConfig.vue'
-import type { Polisher, SelectOption } from '../../types'
+import type { PostProcessor, SelectOption } from '../../types'
 
 const router = useRouter()
 
-const polisher = computed(() => settingsStore.state.polisher)
+const postProcessor = computed(() => settingsStore.state.post_processor)
 const activePreset = computed(() => settingsStore.state.active_preset)
 
 // Preset list for inline dropdown
 const presets = ref<string[]>([])
 const loadingPresets = ref(false)
 
-// Computed: is polishing enabled?
-const polishingEnabled = computed(() => polisher.value !== 'none')
+// Computed: is post-processing enabled?
+const postProcessingEnabled = computed(() => postProcessor.value !== 'none')
 
 // Options for dropdowns
-const polisherOptions: SelectOption[] = [
+const postProcessorOptions: SelectOption[] = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'mistral', label: 'Mistral' },
   { value: 'ollama', label: 'Ollama (local)' },
@@ -49,8 +49,8 @@ async function loadPresets() {
   }
 }
 
-// Get default polisher based on transcription provider
-function getDefaultPolisher(): Polisher {
+// Get default post-processor based on transcription provider
+function getDefaultPostProcessor(): PostProcessor {
   const provider = settingsStore.state.provider
   if (provider === 'openai') return 'openai'
   if (provider === 'mistral') return 'mistral'
@@ -59,16 +59,16 @@ function getDefaultPolisher(): Polisher {
   return 'openai'
 }
 
-function togglePolishing(enable: boolean) {
+function togglePostProcessing(enable: boolean) {
   if (enable) {
-    settingsStore.setPolisher(getDefaultPolisher())
+    settingsStore.setPostProcessor(getDefaultPostProcessor())
   } else {
-    settingsStore.setPolisher('none')
+    settingsStore.setPostProcessor('none')
   }
 }
 
-function handlePolisherChange(value: string | null) {
-  if (value) settingsStore.setPolisher(value as Polisher)
+function handlePostProcessorChange(value: string | null) {
+  if (value) settingsStore.setPostProcessor(value as PostProcessor)
 }
 
 function handlePresetChange(value: string | null) {
@@ -81,32 +81,32 @@ function goToPresets() {
 </script>
 
 <template>
-  <div class="polishing-section">
+  <div class="post-processing-section">
     <!-- Toggle Row with Description -->
     <div class="toggle-row">
       <div class="toggle-info">
-        <label>Polishing</label>
+        <label>Post-processing</label>
         <span class="toggle-desc">Clean up with AI</span>
       </div>
       <button
         class="toggle-switch"
-        :class="{ active: polishingEnabled }"
-        :aria-pressed="polishingEnabled"
-        @click="togglePolishing(!polishingEnabled)"
+        :class="{ active: postProcessingEnabled }"
+        :aria-pressed="postProcessingEnabled"
+        @click="togglePostProcessing(!postProcessingEnabled)"
         type="button"
       >
         <span class="toggle-knob"></span>
       </button>
     </div>
 
-    <!-- Config (shown when polishing ON) -->
-    <div v-if="polishingEnabled" class="polish-config">
+    <!-- Config (shown when post-processing ON) -->
+    <div v-if="postProcessingEnabled" class="post-process-config">
       <div class="field-row">
         <label>Provider</label>
         <AppSelect
-          :model-value="polisher"
-          :options="polisherOptions"
-          @update:model-value="handlePolisherChange"
+          :model-value="postProcessor"
+          :options="postProcessorOptions"
+          @update:model-value="handlePostProcessorChange"
         />
       </div>
 
@@ -123,14 +123,14 @@ function goToPresets() {
         </div>
       </div>
 
-      <!-- Cloud polisher hint -->
-      <p v-if="polisher === 'openai' || polisher === 'mistral'" class="cloud-hint">
-        Uses your {{ polisher === 'openai' ? 'OpenAI' : 'Mistral' }} API key from transcription settings.
+      <!-- Cloud post-processor hint -->
+      <p v-if="postProcessor === 'openai' || postProcessor === 'mistral'" class="cloud-hint">
+        Uses your {{ postProcessor === 'openai' ? 'OpenAI' : 'Mistral' }} API key from transcription settings.
       </p>
     </div>
 
     <!-- Ollama Config (shown when Ollama selected) -->
-    <div v-if="polishingEnabled && polisher === 'ollama'" class="ollama-section">
+    <div v-if="postProcessingEnabled && postProcessor === 'ollama'" class="ollama-section">
       <p class="section-label">ollama</p>
       <OllamaConfig />
     </div>
@@ -138,7 +138,7 @@ function goToPresets() {
 </template>
 
 <style scoped>
-.polishing-section {
+.post-processing-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -225,7 +225,7 @@ function goToPresets() {
 }
 
 /* Config section */
-.polish-config {
+.post-process-config {
   display: flex;
   flex-direction: column;
   gap: 10px;

@@ -18,7 +18,7 @@
 - **Audio recording** — capture microphone input via cpal
 - **Multi-provider transcription** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
 - **Parallel processing** — split long recordings into chunks for parallel transcription
-- **LLM polishing** — clean up transcriptions using Ollama
+- **LLM post-processing** — clean up transcriptions using Ollama
 - **Clipboard** — copy results to system clipboard (X11, Wayland, Flatpak)
 - **Config management** — persistent settings in `~/.config/whis/`
 
@@ -75,8 +75,8 @@ copy_to_clipboard(&text, ClipboardMethod::Auto)?;
 | `config` | `TranscriptionProvider` enum (OpenAI, Mistral, Groq, etc.) |
 | `settings` | User preferences (provider, API keys, language, hotkeys) |
 | `preset` | Named configuration presets |
-| `polish` | LLM-based transcription cleanup |
-| `ollama` | Ollama client for local LLM polishing |
+| `post_processing` | LLM-based transcription cleanup |
+| `ollama` | Ollama client for local LLM post-processing |
 | `clipboard` | System clipboard operations with multiple backends |
 | `model` | Whisper model management |
 | `state` | Recording state machine |

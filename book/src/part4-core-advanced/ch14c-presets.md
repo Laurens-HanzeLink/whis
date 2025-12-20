@@ -1,14 +1,14 @@
 # Chapter 14c: The Preset System
 
-Transcription is just the first step. Often you need the output formatted for a specific purpose: an AI prompt, an email, personal notes. The preset system lets you define reusable output formats that transform raw transcripts into polished, purpose-specific text.
+Transcription is just the first step. Often you need the output formatted for a specific purpose: an AI prompt, an email, personal notes. The preset system lets you define reusable output formats that transform raw transcripts into clean, purpose-specific text.
 
 ## What Are Presets?
 
-A preset is a named configuration that tells the polisher *how* to transform your transcript. Each preset contains:
+A preset is a named configuration that tells the post-processor *how* to transform your transcript. Each preset contains:
 
 1. **Description**: What this preset is for
 2. **Prompt**: System prompt for the LLM
-3. **Overrides** (optional): Different polisher or model
+3. **Overrides** (optional): Different post-processor or model
 
 **Example**: The `email` preset transforms rambling voice notes into concise emails. The `ai-prompt` preset cleans up voice input for pasting into AI assistants.
 
@@ -29,9 +29,9 @@ pub struct Preset {
     /// The system prompt for the LLM
     pub prompt: String,
 
-    /// Optional: Override the polisher for this preset (openai, mistral)
+    /// Optional: Override the post-processor for this preset (openai, mistral)
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub polisher: Option<String>,
+    pub post_processor: Option<String>,
 
     /// Optional: Override the model for this preset
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -43,7 +43,7 @@ pub struct Preset {
 
 1. **`#[serde(skip)]` on name**: The preset name comes from the filename, not the JSON content
 2. **`skip_serializing_if`**: Optional fields are omitted from JSON when `None` (cleaner files)
-3. **Polisher/model overrides**: Advanced users can specify a different backend per preset
+3. **Post-processor/model overrides**: Advanced users can specify a different backend per preset
 
 ## Preset Sources
 
@@ -79,7 +79,7 @@ Preset {
         lists (ordered/unordered) for multiple items, bold for emphasis, headings only when absolutely necessary. \
         Preserve the speaker's intent and technical terminology. \
         Output only the cleaned text.".to_string(),
-    polisher: None,
+    post_processor: None,
     model: None,
 }
 ```
@@ -99,7 +99,7 @@ Preset {
         Keep it concise. Match the sender's original tone (casual or formal). \
         Do NOT add placeholder names or unnecessary formalities. \
         Output only the cleaned text.".to_string(),
-    polisher: None,
+    post_processor: None,
     model: None,
 }
 ```
@@ -119,7 +119,7 @@ Preset {
         Preserve the speaker's natural voice and thought structure. \
         IMPORTANT: Start directly with the cleaned content. NEVER add any introduction, preamble, or meta-commentary like 'Here are the notes'. \
         Output ONLY the cleaned transcript, nothing else.".to_string(),
-    polisher: None,
+    post_processor: None,
     model: None,
 }
 ```
@@ -156,7 +156,7 @@ Here's a complete user preset file (`~/.config/whis/presets/code-review.json`):
 {
   "description": "Format transcript as code review feedback",
   "prompt": "Transform this voice transcript into structured code review feedback. Fix grammar. Organize into sections: Summary, Issues Found, Suggestions. Use bullet points for clarity. Be constructive but direct. Output only the formatted review.",
-  "polisher": "openai",
+  "post_processor": "openai",
   "model": "gpt-4o"
 }
 ```
@@ -307,7 +307,7 @@ $ whis --as email
 ⏹️  Stopped.
 🔄 Transcribing...
 ✨ Applying email preset...
-✅ [polished email output]
+✅ [cleaned up email output]
 📋 Copied to clipboard.
 ```
 
@@ -321,23 +321,23 @@ $ whis config --active-preset email
 $ whis listen
 ```
 
-## Preset vs Polish
+## Preset vs Post-Process
 
-| Feature | `--polish` | `--as <preset>` |
-|---------|-----------|-----------------|
-| Uses | Default polish prompt | Preset's custom prompt |
+| Feature | `--post-process` | `--as <preset>` |
+|---------|------------------|-----------------|
+| Uses | Default post-processing prompt | Preset's custom prompt |
 | Customization | None | Full prompt control |
 | Model override | No | Yes (per preset) |
-| Polisher override | No | Yes (per preset) |
+| Post-processor override | No | Yes (per preset) |
 
 **When to use which?**
 
-- `--polish`: Quick cleanup, default behavior
+- `--post-process`: Quick cleanup, default behavior
 - `--as <preset>`: Specific output format, custom prompts
 
-## Advanced: Polisher Overrides
+## Advanced: Post-Processor Overrides
 
-Presets can override the polisher and model. This is useful when:
+Presets can override the post-processor and model. This is useful when:
 
 1. **Quality needs differ**: Use GPT-4o for important emails, local Ollama for quick notes
 2. **Cost control**: Route expensive presets to cloud, cheap ones to local
@@ -349,12 +349,12 @@ Presets can override the polisher and model. This is useful when:
 {
   "description": "High-quality document editing",
   "prompt": "...",
-  "polisher": "openai",
+  "post_processor": "openai",
   "model": "gpt-4o"
 }
 ```
 
-When this preset is used, it ignores the global polisher setting and uses OpenAI's GPT-4o instead.
+When this preset is used, it ignores the global post-processor setting and uses OpenAI's GPT-4o instead.
 
 ## Implementation: Listing All Presets
 
@@ -402,7 +402,7 @@ pub fn list_all() -> Vec<(Preset, PresetSource)> {
 1. **Presets = named output formats**: Custom prompts for different use cases
 2. **Two sources**: Built-in (hardcoded) and user (`~/.config/whis/presets/`)
 3. **User overrides built-in**: Same-name user preset takes precedence
-4. **Optional overrides**: Presets can specify different polisher/model
+4. **Optional overrides**: Presets can specify different post-processor/model
 5. **CLI management**: `whis presets list/show/new/edit`
 
 **Where This Matters in Whis:**
@@ -418,13 +418,13 @@ pub fn list_all() -> Vec<(Preset, PresetSource)> {
 - **Precedence chain**: User → Built-in → Error
 - **Filename as ID**: Name derived from file, not content
 - **HashMap merge**: Built-ins + user files, deduplicated by name
-- **Optional overrides**: `Option<String>` for polisher/model
+- **Optional overrides**: `Option<String>` for post-processor/model
 
 **Design Decisions:**
 
 1. **Why filename as name?** Prevents name/file mismatch, simpler file management
 2. **Why allow overriding built-ins?** Users can customize defaults without losing them
-3. **Why per-preset polisher?** Different quality/cost tradeoffs per use case
+3. **Why per-preset post-processor?** Different quality/cost tradeoffs per use case
 4. **Why JSON?** Human-readable, easy to edit, widely understood
 
 ---

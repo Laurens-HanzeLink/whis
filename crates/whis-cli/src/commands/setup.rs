@@ -6,7 +6,7 @@
 
 use anyhow::{Result, anyhow};
 use std::io::{self, Write};
-use whis_core::{Polisher, Settings, TranscriptionProvider, model, ollama};
+use whis_core::{PostProcessor, Settings, TranscriptionProvider, model, ollama};
 
 use crate::args::SetupMode;
 
@@ -80,19 +80,19 @@ fn setup_cloud() -> Result<()> {
     settings.provider = provider.clone();
     settings.set_api_key(&provider, api_key);
 
-    // Set polisher based on provider
-    settings.polisher = match provider {
-        TranscriptionProvider::OpenAI => Polisher::OpenAI,
-        TranscriptionProvider::Mistral => Polisher::Mistral,
+    // Set post-processor based on provider
+    settings.post_processor = match provider {
+        TranscriptionProvider::OpenAI => PostProcessor::OpenAI,
+        TranscriptionProvider::Mistral => PostProcessor::Mistral,
         _ => {
-            // For other providers, use OpenAI for polish if they have an OpenAI key
+            // For other providers, use OpenAI for post-processing if they have an OpenAI key
             if settings
                 .get_api_key_for(&TranscriptionProvider::OpenAI)
                 .is_some()
             {
-                Polisher::OpenAI
+                PostProcessor::OpenAI
             } else {
-                Polisher::None
+                PostProcessor::None
             }
         }
     };
@@ -103,11 +103,11 @@ fn setup_cloud() -> Result<()> {
     println!("Setup complete!");
     println!();
     println!("Provider: {}", provider.display_name());
-    println!("Polisher: {}", settings.polisher);
+    println!("Post-processor: {}", settings.post_processor);
     println!();
     println!("Try it out:");
-    println!("  whis              # Record and transcribe");
-    println!("  whis --polish     # Record, transcribe, and polish");
+    println!("  whis                # Record and transcribe");
+    println!("  whis --post-process # Record, transcribe, and post-process");
     println!();
 
     Ok(())
@@ -120,7 +120,7 @@ fn setup_local() -> Result<()> {
     println!();
     println!("This will set up fully local transcription:");
     println!("  - Whisper model for transcription (runs on CPU)");
-    println!("  - Ollama for transcript polishing (runs locally)");
+    println!("  - Ollama for transcript post-processing (runs locally)");
     println!();
 
     // Step 1: Download whisper model
@@ -143,8 +143,8 @@ fn setup_local() -> Result<()> {
     println!();
 
     // Step 2: Setup Ollama
-    println!("Step 2: Ollama (for polishing)");
-    println!("------------------------------");
+    println!("Step 2: Ollama (for post-processing)");
+    println!("------------------------------------");
 
     let ollama_url = ollama::DEFAULT_OLLAMA_URL;
     let ollama_model = ollama::DEFAULT_OLLAMA_MODEL;
@@ -180,7 +180,7 @@ fn setup_local() -> Result<()> {
     let mut settings = Settings::load();
     settings.provider = TranscriptionProvider::LocalWhisper;
     settings.whisper_model_path = Some(model_path.to_string_lossy().to_string());
-    settings.polisher = Polisher::Ollama;
+    settings.post_processor = PostProcessor::Ollama;
     settings.ollama_url = Some(ollama_url.to_string());
     settings.ollama_model = Some(ollama_model.to_string());
     settings.save()?;
@@ -190,12 +190,12 @@ fn setup_local() -> Result<()> {
     println!("Setup complete!");
     println!();
     println!("Your setup:");
-    println!("  Transcription: Local Whisper ({})", model::DEFAULT_MODEL);
-    println!("  Polishing:     Ollama ({})", ollama_model);
+    println!("  Transcription:    Local Whisper ({})", model::DEFAULT_MODEL);
+    println!("  Post-processing:  Ollama ({})", ollama_model);
     println!();
     println!("Try it out:");
-    println!("  whis              # Record and transcribe locally");
-    println!("  whis --polish     # Record, transcribe, and polish locally");
+    println!("  whis                # Record and transcribe locally");
+    println!("  whis --post-process # Record, transcribe, and post-process locally");
     println!();
     println!("Note: Ollama will auto-start when needed.");
 

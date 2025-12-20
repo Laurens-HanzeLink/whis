@@ -17,9 +17,9 @@ pub struct Settings {
     #[serde(default)]
     pub api_keys: HashMap<String, String>,
     #[serde(default)]
-    pub polisher: Polisher,
+    pub post_processor: PostProcessor,
     #[serde(default)]
-    pub polish_prompt: Option<String>,
+    pub post_processing_prompt: Option<String>,
     #[serde(default)]
     pub whisper_model_path: Option<String>,
     #[serde(default)]
@@ -55,8 +55,8 @@ Here's what `~/.config/whis/settings.json` looks like:
     "openai": "sk-proj-abc123...",
     "groq": "gsk_xyz789..."
   },
-  "polisher": "openai",
-  "polish_prompt": null,
+  "post_processor": "openai",
+  "post_processing_prompt": null,
   "whisper_model_path": null,
   "ollama_url": "http://localhost:11434",
   "ollama_model": "qwen2.5:1.5b",
@@ -68,9 +68,9 @@ Here's what `~/.config/whis/settings.json` looks like:
 **Reading this**:
 - User prefers OpenAI for transcription
 - Has API keys for OpenAI and Groq
-- Uses OpenAI for polishing transcripts
+- Uses OpenAI for post-processing transcripts
 - Language hint: English (`"en"`)
-- Ollama configured for local LLM polishing
+- Ollama configured for local LLM post-processing
 - No local whisper model configured (using cloud)
 - Active preset: `ai-prompt` (for AI assistant prompts)
 - Clipboard method: auto-detected
@@ -89,8 +89,8 @@ impl Default for Settings {
             provider: TranscriptionProvider::default(), // OpenAI
             language: None, // Auto-detect
             api_keys: HashMap::new(),
-            polisher: Polisher::default(), // None
-            polish_prompt: None,
+            post_processor: PostProcessor::default(), // None
+            post_processing_prompt: None,
             whisper_model_path: None,
             ollama_url: None,
             ollama_model: None,
@@ -106,7 +106,7 @@ impl Default for Settings {
 **Why these defaults?**
 - `"Ctrl+Shift+R"`: Unlikely to conflict with other apps
 - `OpenAI`: Most popular and reliable provider
-- `None` for polisher: Don't add latency/cost by default
+- `None` for post-processor: Don't add latency/cost by default
 - Auto-detect language: Works for most users
 
 ## The Provider Enum
@@ -280,7 +280,7 @@ For local transcription, additional settings control where to find models and se
 // Local whisper model path
 pub whisper_model_path: Option<String>,
 
-// Ollama server for local polishing
+// Ollama server for local post-processing
 pub ollama_url: Option<String>,
 pub ollama_model: Option<String>,
 ```
@@ -318,56 +318,56 @@ pub fn path() -> PathBuf {
 
 This follows platform conventions automatically.
 
-## The Polisher Enum
+## The PostProcessor Enum
 
-Polishing is optional transcript cleanup using LLMs:
+Post-processing is optional transcript cleanup using LLMs:
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub enum Polisher {
+pub enum PostProcessor {
     #[default]
-    None,      // No polishing
+    None,      // No post-processing
     OpenAI,    // Uses GPT models
     Mistral,   // Uses Mistral models
     Ollama,    // Local LLM via Ollama
 }
 ```
 
-**From `whis-core/src/polish.rs:17-23`**
+**From `whis-core/src/post_processing.rs:17-23`**
 
 **Usage pattern**:
 
 ```rust
-pub fn get_polisher_api_key(&self) -> Option<String> {
-    match &self.polisher {
-        Polisher::None | Polisher::Ollama => None,  // No API key needed
-        Polisher::OpenAI => self.get_api_key_for(&TranscriptionProvider::OpenAI),
-        Polisher::Mistral => self.get_api_key_for(&TranscriptionProvider::Mistral),
+pub fn get_post_processor_api_key(&self) -> Option<String> {
+    match &self.post_processor {
+        PostProcessor::None | PostProcessor::Ollama => None,  // No API key needed
+        PostProcessor::OpenAI => self.get_api_key_for(&TranscriptionProvider::OpenAI),
+        PostProcessor::Mistral => self.get_api_key_for(&TranscriptionProvider::Mistral),
     }
 }
 ```
 
 **From `whis-core/src/settings.rs:104-110`**
 
-**Why `Ollama` returns `None`?**  
+**Why `Ollama` returns `None`?**
 Ollama runs locally and doesn't need API keys. It uses `ollama_url` instead (e.g., `http://localhost:11434`).
 
-## The Default Polish Prompt
+## The Default Post-Processing Prompt
 
-When polishing is enabled, Whis sends the transcript through an LLM with this prompt:
+When post-processing is enabled, Whis sends the transcript through an LLM with this prompt:
 
 ```rust
-pub const DEFAULT_POLISH_PROMPT: &str = 
+pub const DEFAULT_POST_PROCESSING_PROMPT: &str =
     "Clean up this voice transcript. Fix grammar and punctuation. \
      Remove filler words (um, uh, like, you know). \
      If the speaker corrects themselves, keep only the correction. \
      Preserve technical terms and proper nouns. Output only the cleaned text.";
 ```
 
-**From `whis-core/src/polish.rs:9-12`**
+**From `whis-core/src/post_processing.rs:9-12`**
 
-Users can override this via `settings.polish_prompt`.
+Users can override this via `settings.post_processing_prompt`.
 
 ## Real-World Usage Example
 
@@ -389,14 +389,14 @@ let api_key = settings.get_api_key()
 // Transcribe audio
 let transcript = provider.transcribe(&audio_data, &api_key).await?;
 
-// Polish if enabled
-let final_text = if settings.polisher != Polisher::None {
-    let polish_key = settings.get_polisher_api_key()
-        .context("No polisher API key")?;
-    let prompt = settings.polish_prompt
+// Post-process if enabled
+let final_text = if settings.post_processor != PostProcessor::None {
+    let post_process_key = settings.get_post_processor_api_key()
+        .context("No post-processor API key")?;
+    let prompt = settings.post_processing_prompt
         .as_deref()
-        .unwrap_or(DEFAULT_POLISH_PROMPT);
-    polish(&transcript, &settings.polisher, &polish_key, prompt, None).await?
+        .unwrap_or(DEFAULT_POST_PROCESSING_PROMPT);
+    post_process(&transcript, &settings.post_processor, &post_process_key, prompt, None).await?
 } else {
     transcript
 };
@@ -405,7 +405,7 @@ let final_text = if settings.polisher != Polisher::None {
 clipboard::copy(&final_text)?;
 ```
 
-This shows the full flow: load → validate → transcribe → polish → clipboard.
+This shows the full flow: load → validate → transcribe → post-process → clipboard.
 
 ## Summary
 

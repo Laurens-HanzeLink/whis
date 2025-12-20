@@ -52,9 +52,9 @@ graph TB
     PAR3 --> MERGE
     MERGE --> TRANSCRIPT
     
-    TRANSCRIPT --> POLISH{Polish Enabled?}
-    POLISH -->|Yes| LLM[LLM Post-Processing<br/>fix grammar, punctuation]
-    POLISH -->|No| CLIP[📋 Clipboard]
+    TRANSCRIPT --> PP{Post-Processing Enabled?}
+    PP -->|Yes| LLM[LLM Post-Processing<br/>fix grammar, punctuation]
+    PP -->|No| CLIP[📋 Clipboard]
     LLM --> CLIP
     
     style MIC fill:#ff6b6b
@@ -95,7 +95,7 @@ If your recording exceeds 20MB, Whis:
 
 ### 4. Post-Processing (Optional)
 
-If you enable "polishing," Whis sends the raw transcription to an LLM (GPT-4, Claude, local LLM) to:
+If you enable "post-processing," Whis sends the raw transcription to an LLM (GPT-4, Claude, local LLM) to:
 - Fix grammar and punctuation
 - Remove filler words ("um," "uh")
 - Format the text nicely
@@ -104,7 +104,7 @@ This is optional because it costs extra API credits and adds latency.
 
 ### 5. Clipboard Integration
 
-Finally, the transcribed (and optionally polished) text gets copied to your system clipboard. You can paste it into any application.
+Finally, the transcribed (and optionally post-processed) text gets copied to your system clipboard. You can paste it into any application.
 
 **Platform-specific notes**:
 - **Linux**: Uses X11 clipboard via `arboard` crate
@@ -173,9 +173,9 @@ stateDiagram-v2
     Idle --> Recording : Hotkey Pressed
     Recording --> Idle : Hotkey Pressed Again
     Idle --> Transcribing : Audio Ready
-    Transcribing --> Polishing : Transcription Complete
-    Polishing --> ClipboardReady : LLM Processing Done
-    Transcribing --> ClipboardReady : Skip Polishing
+    Transcribing --> PostProcessing : Transcription Complete
+    PostProcessing --> ClipboardReady : LLM Processing Done
+    Transcribing --> ClipboardReady : Skip Post-Processing
     ClipboardReady --> Idle : Ready for Next Recording
     ClipboardReady --> [*]
 ```
@@ -184,7 +184,7 @@ At any given moment, Whis is in one of these states:
 - **Idle**: Waiting for you to press the hotkey
 - **Recording**: Capturing audio from your microphone
 - **Transcribing**: Sending audio to API and waiting for text
-- **Polishing**: (Optional) Sending transcription to LLM for cleanup
+- **PostProcessing**: (Optional) Sending transcription to LLM for cleanup
 - **ClipboardReady**: Text is in clipboard, ready to paste
 
 The entire system is built around making this loop as fast and frictionless as possible.

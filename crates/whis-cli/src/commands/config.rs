@@ -1,5 +1,5 @@
 use anyhow::Result;
-use whis_core::{Polisher, Preset, Settings, TranscriptionProvider};
+use whis_core::{PostProcessor, Preset, Settings, TranscriptionProvider};
 
 #[allow(clippy::too_many_arguments)]
 pub fn run(
@@ -13,8 +13,8 @@ pub fn run(
     ollama_url: Option<String>,
     ollama_model: Option<String>,
     language: Option<String>,
-    polisher: Option<String>,
-    polish_prompt: Option<String>,
+    post_processor: Option<String>,
+    post_processing_prompt: Option<String>,
     show: bool,
 ) -> Result<()> {
     let mut settings = Settings::load();
@@ -57,7 +57,7 @@ pub fn run(
         println!("Whisper model path set to: {}", expanded_path);
     }
 
-    // Handle Ollama URL for local polishing
+    // Handle Ollama URL for local post-processing
     if let Some(url) = ollama_url {
         let url_trimmed = url.trim();
         if url_trimmed.is_empty() {
@@ -69,7 +69,7 @@ pub fn run(
         println!("Ollama URL set to: {}", url_trimmed);
     }
 
-    // Handle Ollama model for local polishing
+    // Handle Ollama model for local post-processing
     if let Some(model) = ollama_model {
         let model_trimmed = model.trim();
         if model_trimmed.is_empty() {
@@ -153,13 +153,13 @@ pub fn run(
         println!("ElevenLabs API key saved");
     }
 
-    // Handle polisher change
-    if let Some(polisher_str) = polisher {
-        match polisher_str.parse::<Polisher>() {
+    // Handle post-processor change
+    if let Some(post_processor_str) = post_processor {
+        match post_processor_str.parse::<PostProcessor>() {
             Ok(p) => {
-                settings.polisher = p;
+                settings.post_processor = p;
                 changed = true;
-                println!("Polisher set to: {}", polisher_str);
+                println!("Post-processor set to: {}", post_processor_str);
             }
             Err(e) => {
                 eprintln!("{e}");
@@ -168,16 +168,16 @@ pub fn run(
         }
     }
 
-    // Handle polish prompt change
-    if let Some(prompt) = polish_prompt {
+    // Handle post-processing prompt change
+    if let Some(prompt) = post_processing_prompt {
         let prompt_trimmed = prompt.trim();
         if prompt_trimmed.is_empty() {
-            eprintln!("Invalid polish prompt: cannot be empty");
+            eprintln!("Invalid post-processing prompt: cannot be empty");
             std::process::exit(1);
         }
-        settings.polish_prompt = Some(prompt_trimmed.to_string());
+        settings.post_processing_prompt = Some(prompt_trimmed.to_string());
         changed = true;
-        println!("Polish prompt saved");
+        println!("Post-processing prompt saved");
     }
 
     // Save if anything changed
@@ -206,12 +206,12 @@ pub fn run(
             println!("{} API key: {}", provider.display_name(), key_status);
         }
 
-        // Polisher settings
-        println!("Polisher: {}", settings.polisher);
-        if let Some(prompt) = &settings.polish_prompt {
-            println!("Polish prompt: {}", truncate_prompt(prompt));
+        // Post-processor settings
+        println!("Post-processor: {}", settings.post_processor);
+        if let Some(prompt) = &settings.post_processing_prompt {
+            println!("Post-processing prompt: {}", truncate_prompt(prompt));
         } else {
-            println!("Polish prompt: (default)");
+            println!("Post-processing prompt: (default)");
         }
 
         // Local transcription settings
@@ -221,7 +221,7 @@ pub fn run(
             println!("Whisper model path: (not set, using $LOCAL_WHISPER_MODEL_PATH)");
         }
 
-        // Ollama settings for local polishing
+        // Ollama settings for local post-processing
         if let Some(url) = &settings.ollama_url {
             println!("Ollama URL: {}", url);
         } else {
@@ -248,14 +248,14 @@ pub fn run(
     eprintln!("  whis config --deepgram-api-key <KEY>");
     eprintln!("  whis config --elevenlabs-api-key <KEY>");
     eprintln!("  whis config --whisper-model-path <PATH>       # For local-whisper provider");
-    eprintln!("  whis config --polisher <none|openai|mistral|ollama>");
+    eprintln!("  whis config --post-processor <none|openai|mistral|ollama>");
     eprintln!(
-        "  whis config --ollama-url <URL>                # For ollama polisher (default: http://localhost:11434)"
+        "  whis config --ollama-url <URL>                # For ollama post-processor (default: http://localhost:11434)"
     );
     eprintln!(
-        "  whis config --ollama-model <MODEL>            # For ollama polisher (default: qwen2.5:1.5b)"
+        "  whis config --ollama-model <MODEL>            # For ollama post-processor (default: qwen2.5:1.5b)"
     );
-    eprintln!("  whis config --polish-prompt <PROMPT>");
+    eprintln!("  whis config --post-processing-prompt <PROMPT>");
     eprintln!("  whis config --show");
     std::process::exit(1);
 }

@@ -7,7 +7,7 @@ use std::path::PathBuf;
 #[cfg(feature = "clipboard")]
 use crate::clipboard::ClipboardMethod;
 use crate::config::TranscriptionProvider;
-use crate::polish::Polisher;
+use crate::post_processing::PostProcessor;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
@@ -21,20 +21,20 @@ pub struct Settings {
     /// API keys stored by provider name (e.g., "openai" -> "sk-...")
     #[serde(default)]
     pub api_keys: HashMap<String, String>,
-    /// LLM provider for polishing (cleaning up) transcripts
+    /// LLM provider for post-processing (cleaning up) transcripts
     #[serde(default)]
-    pub polisher: Polisher,
-    /// Custom prompt for polishing (uses default if None)
+    pub post_processor: PostProcessor,
+    /// Custom prompt for post-processing (uses default if None)
     #[serde(default)]
-    pub polish_prompt: Option<String>,
+    pub post_processing_prompt: Option<String>,
     /// Path to whisper.cpp model file for local transcription
     /// (e.g., ~/.local/share/whis/models/ggml-small.bin)
     #[serde(default)]
     pub whisper_model_path: Option<String>,
-    /// Ollama server URL for local LLM polishing (default: http://localhost:11434)
+    /// Ollama server URL for local LLM post-processing (default: http://localhost:11434)
     #[serde(default)]
     pub ollama_url: Option<String>,
-    /// Ollama model name for polishing (default: qwen2.5:1.5b)
+    /// Ollama model name for post-processing (default: qwen2.5:1.5b)
     #[serde(default)]
     pub ollama_model: Option<String>,
     /// Currently active preset name (if any)
@@ -56,8 +56,8 @@ impl Default for Settings {
             provider: TranscriptionProvider::default(),
             language: None, // Auto-detect
             api_keys: HashMap::new(),
-            polisher: Polisher::default(),
-            polish_prompt: None,
+            post_processor: PostProcessor::default(),
+            post_processing_prompt: None,
             whisper_model_path: None,
             ollama_url: None,
             ollama_model: None,
@@ -124,13 +124,13 @@ impl Settings {
         }
     }
 
-    /// Get the API key for the polisher, falling back to environment variables
-    /// Returns None for local polisher (Ollama uses URL instead)
-    pub fn get_polisher_api_key(&self) -> Option<String> {
-        match &self.polisher {
-            Polisher::None | Polisher::Ollama => None,
-            Polisher::OpenAI => self.get_api_key_for(&TranscriptionProvider::OpenAI),
-            Polisher::Mistral => self.get_api_key_for(&TranscriptionProvider::Mistral),
+    /// Get the API key for the post-processor, falling back to environment variables
+    /// Returns None for local post-processor (Ollama uses URL instead)
+    pub fn get_post_processor_api_key(&self) -> Option<String> {
+        match &self.post_processor {
+            PostProcessor::None | PostProcessor::Ollama => None,
+            PostProcessor::OpenAI => self.get_api_key_for(&TranscriptionProvider::OpenAI),
+            PostProcessor::Mistral => self.get_api_key_for(&TranscriptionProvider::Mistral),
         }
     }
 

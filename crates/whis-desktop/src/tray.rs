@@ -6,8 +6,9 @@ use tauri::{
     tray::TrayIconBuilder,
 };
 use whis_core::{
-    AudioRecorder, DEFAULT_POLISH_PROMPT, Polisher, RecordingOutput, TranscriptionProvider,
-    copy_to_clipboard, ollama, parallel_transcribe, polish, transcribe_audio,
+    AudioRecorder, DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, RecordingOutput,
+    TranscriptionProvider, copy_to_clipboard, ollama, parallel_transcribe, post_process,
+    transcribe_audio,
 };
 
 // Static icons for each state (pre-loaded at compile time)
@@ -281,22 +282,22 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
         }
     };
 
-    // Extract polishing config and clipboard method from settings (lock scope limited)
-    let (polish_config, clipboard_method) = {
+    // Extract post-processing config and clipboard method from settings (lock scope limited)
+    let (post_process_config, clipboard_method) = {
         let settings = state.settings.lock().unwrap();
         let clipboard_method = settings.clipboard_method.clone();
-        let polish_config = if settings.polisher != Polisher::None {
-            let polisher = settings.polisher.clone();
+        let post_process_config = if settings.post_processor != PostProcessor::None {
+            let post_processor = settings.post_processor.clone();
             let prompt = settings
-                .polish_prompt
+                .post_processing_prompt
                 .clone()
-                .unwrap_or_else(|| DEFAULT_POLISH_PROMPT.to_string());
+                .unwrap_or_else(|| DEFAULT_POST_PROCESSING_PROMPT.to_string());
             let ollama_model = settings.ollama_model.clone();
 
-            // Get API key or URL based on polisher type
-            let api_key_or_url = if polisher.requires_api_key() {
-                settings.get_polisher_api_key()
-            } else if polisher == Polisher::Ollama {
+            // Get API key or URL based on post-processor type
+            let api_key_or_url = if post_processor.requires_api_key() {
+                settings.get_post_processor_api_key()
+            } else if post_processor == PostProcessor::Ollama {
                 let ollama_url = settings
                     .get_ollama_url()
                     .unwrap_or_else(|| ollama::DEFAULT_OLLAMA_URL.to_string());
@@ -305,62 +306,64 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
                 None
             };
 
-            api_key_or_url.map(|key_or_url| (polisher, prompt, ollama_model, key_or_url))
+            api_key_or_url.map(|key_or_url| (post_processor, prompt, ollama_model, key_or_url))
         } else {
             None
         };
-        (polish_config, clipboard_method)
+        (post_process_config, clipboard_method)
     };
 
-    // Apply polishing if enabled (outside of lock scope)
-    let final_text = if let Some((polisher, prompt, ollama_model, key_or_url)) = polish_config {
-        // Auto-start Ollama if needed (and installed)
-        // Use spawn_blocking because ensure_ollama_running uses reqwest::blocking::Client
-        // which creates an internal tokio runtime that would panic if dropped in async context
-        if polisher == Polisher::Ollama {
-            let url_for_check = key_or_url.clone();
-            let ollama_result = tauri::async_runtime::spawn_blocking(move || {
-                ollama::ensure_ollama_running(&url_for_check)
-            })
-            .await
-            .map_err(|e| format!("Task join failed: {e}"))?;
+    // Apply post-processing if enabled (outside of lock scope)
+    let final_text =
+        if let Some((post_processor, prompt, ollama_model, key_or_url)) = post_process_config {
+            // Auto-start Ollama if needed (and installed)
+            // Use spawn_blocking because ensure_ollama_running uses reqwest::blocking::Client
+            // which creates an internal tokio runtime that would panic if dropped in async context
+            if post_processor == PostProcessor::Ollama {
+                let url_for_check = key_or_url.clone();
+                let ollama_result = tauri::async_runtime::spawn_blocking(move || {
+                    ollama::ensure_ollama_running(&url_for_check)
+                })
+                .await
+                .map_err(|e| format!("Task join failed: {e}"))?;
 
-            if let Err(e) = ollama_result {
-                let warning = format!("Ollama: {e}");
-                eprintln!("Polish warning: {warning}");
-                let _ = app.emit("polish-warning", &warning);
-                // Skip polishing, return raw transcription
-                copy_to_clipboard(&transcription, clipboard_method).map_err(|e| e.to_string())?;
-                println!(
-                    "Done (unpolished): {}",
-                    &transcription[..transcription.len().min(50)]
-                );
-                let _ = app.emit("transcription-complete", &transcription);
-                return Ok(());
+                if let Err(e) = ollama_result {
+                    let warning = format!("Ollama: {e}");
+                    eprintln!("Post-processing warning: {warning}");
+                    let _ = app.emit("post-process-warning", &warning);
+                    // Skip post-processing, return raw transcription
+                    copy_to_clipboard(&transcription, clipboard_method)
+                        .map_err(|e| e.to_string())?;
+                    println!(
+                        "Done (unprocessed): {}",
+                        &transcription[..transcription.len().min(50)]
+                    );
+                    let _ = app.emit("transcription-complete", &transcription);
+                    return Ok(());
+                }
             }
-        }
 
-        println!("Polishing...");
-        let _ = app.emit("polish-started", ());
+            println!("Post-processing...");
+            let _ = app.emit("post-process-started", ());
 
-        let model = if polisher == Polisher::Ollama {
-            ollama_model.as_deref()
+            let model = if post_processor == PostProcessor::Ollama {
+                ollama_model.as_deref()
+            } else {
+                None
+            };
+
+            match post_process(&transcription, &post_processor, &key_or_url, &prompt, model).await {
+                Ok(processed) => processed,
+                Err(e) => {
+                    let warning = e.to_string();
+                    eprintln!("Post-processing warning: {warning}");
+                    let _ = app.emit("post-process-warning", &warning);
+                    transcription
+                }
+            }
         } else {
-            None
+            transcription
         };
-
-        match polish(&transcription, &polisher, &key_or_url, &prompt, model).await {
-            Ok(polished) => polished,
-            Err(e) => {
-                let warning = e.to_string();
-                eprintln!("Polish warning: {warning}");
-                let _ = app.emit("polish-warning", &warning);
-                transcription
-            }
-        }
-    } else {
-        transcription
-    };
 
     // Copy to clipboard
     copy_to_clipboard(&final_text, clipboard_method).map_err(|e| e.to_string())?;

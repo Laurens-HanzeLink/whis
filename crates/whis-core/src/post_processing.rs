@@ -6,15 +6,15 @@ const OPENAI_CHAT_URL: &str = "https://api.openai.com/v1/chat/completions";
 const MISTRAL_CHAT_URL: &str = "https://api.mistral.ai/v1/chat/completions";
 const DEFAULT_TIMEOUT_SECS: u64 = 60;
 
-pub const DEFAULT_POLISH_PROMPT: &str = "Clean up this voice transcript. \
+pub const DEFAULT_POST_PROCESSING_PROMPT: &str = "Clean up this voice transcript. \
 Remove filler words (um, uh, like, you know). \
 Fix grammar and punctuation. Keep technical terms intact. \
 Output only the cleaned text, no explanations.";
 
-/// Available polishing providers (LLM for transcript cleanup)
+/// Available post-processing providers (LLM for transcript cleanup)
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub enum Polisher {
+pub enum PostProcessor {
     #[default]
     None,
     OpenAI,
@@ -22,38 +22,38 @@ pub enum Polisher {
     Ollama,
 }
 
-impl fmt::Display for Polisher {
+impl fmt::Display for PostProcessor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Polisher::None => write!(f, "none"),
-            Polisher::OpenAI => write!(f, "openai"),
-            Polisher::Mistral => write!(f, "mistral"),
-            Polisher::Ollama => write!(f, "ollama"),
+            PostProcessor::None => write!(f, "none"),
+            PostProcessor::OpenAI => write!(f, "openai"),
+            PostProcessor::Mistral => write!(f, "mistral"),
+            PostProcessor::Ollama => write!(f, "ollama"),
         }
     }
 }
 
-impl std::str::FromStr for Polisher {
+impl std::str::FromStr for PostProcessor {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "none" => Ok(Polisher::None),
-            "openai" => Ok(Polisher::OpenAI),
-            "mistral" => Ok(Polisher::Mistral),
-            "ollama" => Ok(Polisher::Ollama),
+            "none" => Ok(PostProcessor::None),
+            "openai" => Ok(PostProcessor::OpenAI),
+            "mistral" => Ok(PostProcessor::Mistral),
+            "ollama" => Ok(PostProcessor::Ollama),
             _ => Err(format!(
-                "Unknown polisher: {}. Use 'none', 'openai', 'mistral', or 'ollama'",
+                "Unknown post-processor: {}. Use 'none', 'openai', 'mistral', or 'ollama'",
                 s
             )),
         }
     }
 }
 
-impl Polisher {
-    /// Returns true if this polisher requires an API key (cloud providers)
+impl PostProcessor {
+    /// Returns true if this post-processor requires an API key (cloud providers)
     pub fn requires_api_key(&self) -> bool {
-        matches!(self, Polisher::OpenAI | Polisher::Mistral)
+        matches!(self, PostProcessor::OpenAI | PostProcessor::Mistral)
     }
 }
 
@@ -72,28 +72,28 @@ struct Message {
     content: String,
 }
 
-/// Polish (clean up) a transcript using the specified LLM provider
+/// Post-process (clean up) a transcript using the specified LLM provider
 ///
 /// For cloud providers (OpenAI, Mistral), `api_key_or_url` is the API key.
 /// For Ollama, `api_key_or_url` is the server URL (e.g., http://localhost:11434).
-pub async fn polish(
+pub async fn post_process(
     text: &str,
-    polisher: &Polisher,
+    post_processor: &PostProcessor,
     api_key_or_url: &str,
     prompt: &str,
     model: Option<&str>,
 ) -> Result<String> {
-    match polisher {
-        Polisher::None => Ok(text.to_string()),
-        Polisher::OpenAI => polish_openai(text, api_key_or_url, prompt, model).await,
-        Polisher::Mistral => polish_mistral(text, api_key_or_url, prompt, model).await,
-        Polisher::Ollama => polish_ollama(text, api_key_or_url, prompt, model).await,
+    match post_processor {
+        PostProcessor::None => Ok(text.to_string()),
+        PostProcessor::OpenAI => post_process_openai(text, api_key_or_url, prompt, model).await,
+        PostProcessor::Mistral => post_process_mistral(text, api_key_or_url, prompt, model).await,
+        PostProcessor::Ollama => post_process_ollama(text, api_key_or_url, prompt, model).await,
     }
 }
 
 const DEFAULT_OPENAI_MODEL: &str = "gpt-5-nano";
 
-async fn polish_openai(
+async fn post_process_openai(
     text: &str,
     api_key: &str,
     system_prompt: &str,
@@ -117,7 +117,7 @@ async fn polish_openai(
 
     if !response.status().is_success() {
         let error_text = response.text().await?;
-        return Err(anyhow!("OpenAI polish failed: {}", error_text));
+        return Err(anyhow!("OpenAI post-processing failed: {}", error_text));
     }
 
     let chat_response: ChatResponse = response.json().await?;
@@ -130,7 +130,7 @@ async fn polish_openai(
 
 const DEFAULT_MISTRAL_MODEL: &str = "mistral-small-latest";
 
-async fn polish_mistral(
+async fn post_process_mistral(
     text: &str,
     api_key: &str,
     system_prompt: &str,
@@ -154,7 +154,7 @@ async fn polish_mistral(
 
     if !response.status().is_success() {
         let error_text = response.text().await?;
-        return Err(anyhow!("Mistral polish failed: {}", error_text));
+        return Err(anyhow!("Mistral post-processing failed: {}", error_text));
     }
 
     let chat_response: ChatResponse = response.json().await?;
@@ -178,7 +178,7 @@ struct OllamaMessage {
     content: String,
 }
 
-async fn polish_ollama(
+async fn post_process_ollama(
     text: &str,
     server_url: &str,
     system_prompt: &str,
@@ -219,7 +219,7 @@ async fn polish_ollama(
 
     if !response.status().is_success() {
         let error_text = response.text().await?;
-        return Err(anyhow!("Ollama polish failed: {}", error_text));
+        return Err(anyhow!("Ollama post-processing failed: {}", error_text));
     }
 
     let ollama_response: OllamaResponse = response.json().await?;

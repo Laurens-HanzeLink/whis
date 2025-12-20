@@ -21,7 +21,7 @@ const loadingDetails = ref(false);
 const editName = ref('');
 const editDescription = ref('');
 const editPrompt = ref('');
-const editPolisher = ref<string | null>(null);
+const editPostProcessor = ref<string | null>(null);
 const editModel = ref<string | null>(null);
 const saving = ref(false);
 const error = ref<string | null>(null);
@@ -30,8 +30,8 @@ const error = ref<string | null>(null);
 const confirmingDelete = ref(false);
 const deleting = ref(false);
 
-// Polisher options for select
-const polisherOptions: SelectOption[] = [
+// Post-processor options for select
+const postProcessorOptions: SelectOption[] = [
   { value: null, label: 'Use default' },
   { value: 'none', label: 'None (raw transcript)' },
   { value: 'openai', label: 'OpenAI' },
@@ -85,7 +85,7 @@ function openCreate() {
   editName.value = '';
   editDescription.value = '';
   editPrompt.value = '';
-  editPolisher.value = null;
+  editPostProcessor.value = null;
   editModel.value = null;
 }
 
@@ -112,7 +112,7 @@ function startEdit() {
   editName.value = selectedPreset.value.name;
   editDescription.value = selectedPreset.value.description;
   editPrompt.value = selectedPreset.value.prompt;
-  editPolisher.value = selectedPreset.value.polisher;
+  editPostProcessor.value = selectedPreset.value.post_processor;
   editModel.value = selectedPreset.value.model;
   error.value = null;
 }
@@ -139,7 +139,7 @@ async function savePreset() {
           name: editName.value.trim(),
           description: editDescription.value.trim(),
           prompt: editPrompt.value,
-          polisher: editPolisher.value || null,
+          post_processor: editPostProcessor.value || null,
           model: editModel.value?.trim() || null,
         }
       });
@@ -153,7 +153,7 @@ async function savePreset() {
         input: {
           description: editDescription.value.trim(),
           prompt: editPrompt.value,
-          polisher: editPolisher.value || null,
+          post_processor: editPostProcessor.value || null,
           model: editModel.value?.trim() || null,
         }
       });
@@ -307,9 +307,9 @@ onMounted(loadPresets);
               <p class="prompt-text">{{ selectedPreset.prompt || '(empty)' }}</p>
             </div>
 
-            <div v-if="selectedPreset.polisher" class="detail-field">
-              <label>Polisher override</label>
-              <p>{{ selectedPreset.polisher }}</p>
+            <div v-if="selectedPreset.post_processor" class="detail-field">
+              <label>Post-processor override</label>
+              <p>{{ selectedPreset.post_processor }}</p>
             </div>
 
             <div v-if="selectedPreset.model" class="detail-field">
@@ -383,7 +383,7 @@ onMounted(loadPresets);
               <textarea
                 id="edit-prompt"
                 v-model="editPrompt"
-                placeholder="System prompt for polishing transcripts..."
+                placeholder="System prompt for post-processing transcripts..."
                 rows="6"
               ></textarea>
             </div>
@@ -392,12 +392,12 @@ onMounted(loadPresets);
               <summary>Advanced options</summary>
 
               <div class="edit-field">
-                <label>Polisher override</label>
+                <label>Post-processor override</label>
                 <AppSelect
-                  :model-value="editPolisher"
-                  :options="polisherOptions"
-                  aria-label="Polisher override"
-                  @update:model-value="editPolisher = $event"
+                  :model-value="editPostProcessor"
+                  :options="postProcessorOptions"
+                  aria-label="Post-processor override"
+                  @update:model-value="editPostProcessor = $event"
                 />
               </div>
 

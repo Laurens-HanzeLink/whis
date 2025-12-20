@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 /// Default Ollama server URL
 pub const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
 
-/// Default model for polishing
+/// Default model for post-processing
 pub const DEFAULT_OLLAMA_MODEL: &str = "qwen2.5:1.5b";
 
 /// Timeout for Ollama to start

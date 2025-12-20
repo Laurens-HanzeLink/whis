@@ -7,25 +7,25 @@ import type { StatusResponse } from '../types'
 
 const status = ref<StatusResponse>({ state: 'Idle', config_valid: false })
 const error = ref<string | null>(null)
-const polishWarning = ref<string | null>(null)
-const isPolishing = ref(false)
+const postProcessWarning = ref<string | null>(null)
+const isPostProcessing = ref(false)
 let pollInterval: number | null = null
-let unlistenPolishWarning: UnlistenFn | null = null
-let unlistenPolishStarted: UnlistenFn | null = null
+let unlistenPostProcessWarning: UnlistenFn | null = null
+let unlistenPostProcessStarted: UnlistenFn | null = null
 let unlistenTranscriptionComplete: UnlistenFn | null = null
 
 // Configuration readiness state (proactive checks)
 const configReadiness = ref<{
   transcriptionReady: boolean
   transcriptionError: string | null
-  polishingReady: boolean
-  polishingError: string | null
+  postProcessingReady: boolean
+  postProcessingError: string | null
   checking: boolean
 }>({
   transcriptionReady: true,
   transcriptionError: null,
-  polishingReady: true,
-  polishingError: null,
+  postProcessingReady: true,
+  postProcessingError: null,
   checking: false
 })
 
@@ -39,7 +39,7 @@ const buttonText = computed(() => {
 
 // Configuration summary for status display (compact single line)
 const configSummary = computed(() => {
-  const { provider, language, polisher, active_preset } = settingsStore.state
+  const { provider, language, post_processor, active_preset } = settingsStore.state
 
   // Mode + Provider
   let mode = 'Cloud'
@@ -55,13 +55,13 @@ const configSummary = computed(() => {
   // Language: show code or omit if auto-detect
   const lang = language ? language.toUpperCase() : null
 
-  // Polishing status: show preset name if active, "Polishing ON" if enabled but no preset, omit if off
-  let polishStatus: string | null = null
-  if (polisher !== 'none') {
-    polishStatus = active_preset || 'Polishing'
+  // Post-processing status: show preset name if active, "Post-processing" if enabled but no preset, omit if off
+  let postProcessStatus: string | null = null
+  if (post_processor !== 'none') {
+    postProcessStatus = active_preset || 'Post-processing'
   }
 
-  return { mode, provider: providerName, lang, polishStatus }
+  return { mode, provider: providerName, lang, postProcessStatus }
 })
 
 const canRecord = computed(() => {
@@ -72,18 +72,18 @@ const canRecord = computed(() => {
 
 // Check configuration readiness (proactive check for better UX)
 async function checkConfigReadiness() {
-  const { provider, polisher, api_keys, whisper_model_path, ollama_url } = settingsStore.state
+  const { provider, post_processor, api_keys, whisper_model_path, ollama_url } = settingsStore.state
 
   configReadiness.value.checking = true
   try {
     const result = await invoke<{
       transcription_ready: boolean
       transcription_error: string | null
-      polishing_ready: boolean
-      polishing_error: string | null
+      post_processing_ready: boolean
+      post_processing_error: string | null
     }>('check_config_readiness', {
       provider,
-      polisher,
+      postProcessor: post_processor,
       apiKeys: api_keys,
       whisperModelPath: whisper_model_path,
       ollamaUrl: ollama_url
@@ -91,8 +91,8 @@ async function checkConfigReadiness() {
     configReadiness.value = {
       transcriptionReady: result.transcription_ready,
       transcriptionError: result.transcription_error,
-      polishingReady: result.polishing_ready,
-      polishingError: result.polishing_error,
+      postProcessingReady: result.post_processing_ready,
+      postProcessingError: result.post_processing_error,
       checking: false
     }
   } catch (e) {
@@ -105,7 +105,7 @@ async function checkConfigReadiness() {
 watch(
   () => [
     settingsStore.state.provider,
-    settingsStore.state.polisher,
+    settingsStore.state.post_processor,
     settingsStore.state.api_keys,
     settingsStore.state.whisper_model_path,
     settingsStore.state.ollama_url
@@ -161,21 +161,21 @@ onMounted(async () => {
   checkConfigReadiness();
   pollInterval = window.setInterval(fetchStatus, 500);
 
-  // Listen for polish events
-  unlistenPolishWarning = await listen<string>('polish-warning', (event) => {
-    polishWarning.value = event.payload;
+  // Listen for post-processing events
+  unlistenPostProcessWarning = await listen<string>('post-process-warning', (event) => {
+    postProcessWarning.value = event.payload;
     // Auto-dismiss after 8 seconds
     setTimeout(() => {
-      polishWarning.value = null;
+      postProcessWarning.value = null;
     }, 8000);
   });
 
-  unlistenPolishStarted = await listen('polish-started', () => {
-    isPolishing.value = true;
+  unlistenPostProcessStarted = await listen('post-process-started', () => {
+    isPostProcessing.value = true;
   });
 
   unlistenTranscriptionComplete = await listen('transcription-complete', () => {
-    isPolishing.value = false;
+    isPostProcessing.value = false;
   });
 });
 
@@ -183,8 +183,8 @@ onUnmounted(() => {
   if (pollInterval) {
     clearInterval(pollInterval);
   }
-  unlistenPolishWarning?.();
-  unlistenPolishStarted?.();
+  unlistenPostProcessWarning?.();
+  unlistenPostProcessStarted?.();
   unlistenTranscriptionComplete?.();
 });
 </script>
@@ -216,7 +216,7 @@ onUnmounted(() => {
 
         <!-- Config summary - compact single line status -->
         <span v-if="status.config_valid && status.state === 'Idle'" class="config-summary">
-          <span :class="{ 'config-error': !configReadiness.transcriptionReady }">{{ configSummary.mode }} · {{ configSummary.provider }}</span><span v-if="configSummary.lang"> · {{ configSummary.lang }}</span><span v-if="configSummary.polishStatus" :class="{ 'config-warning': !configReadiness.polishingReady }"> · {{ configSummary.polishStatus }}</span>
+          <span :class="{ 'config-error': !configReadiness.transcriptionReady }">{{ configSummary.mode }} · {{ configSummary.provider }}</span><span v-if="configSummary.lang"> · {{ configSummary.lang }}</span><span v-if="configSummary.postProcessStatus" :class="{ 'config-warning': !configReadiness.postProcessingReady }"> · {{ configSummary.postProcessStatus }}</span>
         </span>
 
         <!-- State hints (announced to screen readers) -->
@@ -224,8 +224,8 @@ onUnmounted(() => {
           <span v-if="status.state === 'Recording'" class="state-hint recording">
             speak now...
           </span>
-          <span v-else-if="isPolishing" class="state-hint polishing">
-            polishing...
+          <span v-else-if="isPostProcessing" class="state-hint post-processing">
+            post-processing...
           </span>
           <span v-else-if="status.state === 'Transcribing'" class="state-hint">
             processing audio...
@@ -236,9 +236,9 @@ onUnmounted(() => {
       <!-- Error message -->
       <p v-if="error" class="error-msg">{{ error }}</p>
 
-      <!-- Polish warning (runtime) -->
-      <div v-if="polishWarning" class="warning-msg">
-        <strong>Polishing skipped:</strong> {{ polishWarning }}
+      <!-- Post-processing warning (runtime) -->
+      <div v-if="postProcessWarning" class="warning-msg">
+        <strong>Post-processing skipped:</strong> {{ postProcessWarning }}
       </div>
 
       <!-- Transcription not ready (blocking) -->
@@ -250,11 +250,11 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Polishing not ready (non-blocking warning) -->
-      <div v-else-if="!configReadiness.polishingReady && settingsStore.state.polisher !== 'none' && status.config_valid" class="config-notice warning">
+      <!-- Post-processing not ready (non-blocking warning) -->
+      <div v-else-if="!configReadiness.postProcessingReady && settingsStore.state.post_processor !== 'none' && status.config_valid" class="config-notice warning">
         <span class="notice-marker">[!]</span>
         <div>
-          <p>Polishing unavailable: {{ configReadiness.polishingError }}</p>
+          <p>Post-processing unavailable: {{ configReadiness.postProcessingError }}</p>
           <router-link to="/settings">Configure →</router-link>
         </div>
       </div>
@@ -367,7 +367,7 @@ onUnmounted(() => {
   color: var(--recording);
 }
 
-.state-hint.polishing {
+.state-hint.post-processing {
   color: var(--accent);
 }
 
@@ -381,7 +381,7 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 
-/* Warning message (for polish warnings) */
+/* Warning message (for post-processing warnings) */
 .warning-msg {
   font-size: 12px;
   color: var(--text);

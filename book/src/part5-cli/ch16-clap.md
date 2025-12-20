@@ -21,7 +21,7 @@ Whis CLI has this command hierarchy:
 ```
 whis                          # Record once (default)
   -v, --verbose               # Enable debug output
-  --polish                    # Polish transcript with LLM
+  --post-process              # Post-process transcript with LLM
   --as <preset>               # Apply output preset
   -f, --file <path>           # Transcribe from file
   --stdin                     # Read audio from stdin
@@ -37,7 +37,7 @@ whis config                   # Configure settings
   --openai-api-key <KEY>
   --provider <NAME>
   --whisper-model-path <PATH> # Local whisper model
-  --ollama-url <URL>          # Ollama server for polishing
+  --ollama-url <URL>          # Ollama server for post-processing
   --ollama-model <NAME>       # Ollama model name
   --show                      # Display current config
 
@@ -72,9 +72,9 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub verbose: bool,
 
-    /// Polish transcript with LLM (cleanup grammar, filler words)
+    /// Post-process transcript with LLM (cleanup grammar, filler words)
     #[arg(long)]
-    pub polish: bool,
+    pub post_process: bool,
 
     /// Output preset for transcript (run 'whis presets' to see all)
     #[arg(long = "as", value_name = "PRESET")]
@@ -132,7 +132,7 @@ Commands:
 
 Options:
   -v, --verbose         Enable verbose output for debugging
-      --polish          Polish transcript with LLM (cleanup grammar, filler words)
+      --post-process    Post-process transcript with LLM (cleanup grammar, filler words)
       --as <PRESET>     Output preset for transcript (run 'whis presets' to see all)
   -f, --file <FILE>     Transcribe audio from file instead of recording
       --stdin           Read audio from stdin (use with pipes)
@@ -167,12 +167,12 @@ pub verbose: bool,
 
 ```rust
 #[arg(long)]
-pub polish: bool,
+pub post_process: bool,
 ```
 
-**`#[arg(long)]`**: Enables `--polish` flag
+**`#[arg(long)]`**: Enables `--post-process` flag
 - `bool` type: presence = `true`, absence = `false`
-- No value needed: `whis --polish` (not `--polish=true`)
+- No value needed: `whis --post-process` (not `--post-process=true`)
 
 ```rust
 #[arg(long = "as", value_name = "PRESET")]
@@ -440,7 +440,7 @@ whis setup local
 
 The setup wizard handles:
 - **Cloud**: Prompts for provider selection, displays API key URLs, validates key format
-- **Local**: Downloads whisper model, starts Ollama, pulls polish model
+- **Local**: Downloads whisper model, starts Ollama, pulls post-processing model
 
 For implementation details, see [Chapter 14b: Local Transcription](../part4-core-advanced/ch14b-local-transcription.md).
 
@@ -503,7 +503,7 @@ fn main() -> Result<()> {
         Some(args::Commands::Status) => commands::status::run(),
         Some(args::Commands::Config { ... }) => commands::config::run(...),
         Some(args::Commands::Presets { action }) => commands::presets::run(action),
-        None => commands::record_once::run(cli.polish, cli.preset),
+        None => commands::record_once::run(cli.post_process, cli.preset),
     }
 }
 ```
@@ -716,14 +716,14 @@ $ whis
 📋 Copied to clipboard.
 ```
 
-### Record with Polish
+### Record with Post-Processing
 
 ```bash
-$ whis --polish
+$ whis --post-process
 🎤 Recording...
 [Record and transcribe]
-✨ Polishing with OpenAI...
-✅ This is the polished, grammatically correct text.
+✨ Post-processing with OpenAI...
+✅ This is the cleaned up, grammatically correct text.
 ```
 
 ### Record with Preset
@@ -760,7 +760,7 @@ $ whis config --show
 Configuration:
   Provider: OpenAI Whisper
   Language: Auto-detect
-  Polisher: None
+  Post-processor: None
   API Keys: OpenAI (configured), Groq (not set)
 ```
 

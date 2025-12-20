@@ -14,9 +14,9 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub verbose: bool,
 
-    /// Polish transcript with LLM (cleanup grammar, filler words)
+    /// Post-process transcript with LLM (cleanup grammar, filler words)
     #[arg(long)]
-    pub polish: bool,
+    pub post_process: bool,
 
     /// Output preset for transcript (run 'whis presets' to see all)
     #[arg(long = "as", value_name = "PRESET")]
@@ -81,11 +81,11 @@ pub enum Commands {
         #[arg(long)]
         whisper_model_path: Option<String>,
 
-        /// Ollama server URL for local polishing (default: http://localhost:11434)
+        /// Ollama server URL for local post-processing (default: http://localhost:11434)
         #[arg(long)]
         ollama_url: Option<String>,
 
-        /// Ollama model name for local polishing (default: qwen2.5:1.5b)
+        /// Ollama model name for local post-processing (default: qwen2.5:1.5b)
         #[arg(long)]
         ollama_model: Option<String>,
 
@@ -93,13 +93,13 @@ pub enum Commands {
         #[arg(long)]
         language: Option<String>,
 
-        /// Set the polisher for transcript cleanup (none, openai, mistral, or ollama)
+        /// Set the post-processor for transcript cleanup (none, openai, mistral, or ollama)
         #[arg(long)]
-        polisher: Option<String>,
+        post_processor: Option<String>,
 
-        /// Set custom polish prompt for transcript cleanup
+        /// Set custom post-processing prompt for transcript cleanup
         #[arg(long)]
-        polish_prompt: Option<String>,
+        post_processing_prompt: Option<String>,
 
         /// Show current configuration
         #[arg(long)]
@@ -130,7 +130,7 @@ pub enum SetupMode {
     /// Setup for cloud providers (OpenAI, Mistral, Groq, etc.)
     Cloud,
 
-    /// Setup for fully local (on-device) transcription and polishing
+    /// Setup for fully local (on-device) transcription and post-processing
     Local,
 }
 

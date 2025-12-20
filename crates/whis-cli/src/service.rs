@@ -7,8 +7,8 @@ use crate::app::TranscriptionConfig;
 use crate::ipc::{IpcMessage, IpcResponse, IpcServer};
 use std::time::Duration;
 use whis_core::{
-    AudioRecorder, DEFAULT_POLISH_PROMPT, Polisher, RecordingOutput, Settings,
-    TranscriptionProvider, copy_to_clipboard, parallel_transcribe, polish, transcribe_audio,
+    AudioRecorder, DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, RecordingOutput, Settings,
+    TranscriptionProvider, copy_to_clipboard, parallel_transcribe, post_process, transcribe_audio,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -199,27 +199,27 @@ impl Service {
             }
         };
 
-        // Apply polishing if configured
+        // Apply post-processing if configured
         let settings = Settings::load();
-        let final_text = if settings.polisher != Polisher::None {
-            if let Some(polisher_api_key) = settings.get_polisher_api_key() {
-                println!("#{count} Polishing...");
+        let final_text = if settings.post_processor != PostProcessor::None {
+            if let Some(post_processor_api_key) = settings.get_post_processor_api_key() {
+                println!("#{count} Post-processing...");
 
                 let prompt = settings
-                    .polish_prompt
+                    .post_processing_prompt
                     .as_deref()
-                    .unwrap_or(DEFAULT_POLISH_PROMPT);
+                    .unwrap_or(DEFAULT_POST_PROCESSING_PROMPT);
 
-                match polish(
+                match post_process(
                     &transcription,
-                    &settings.polisher,
-                    &polisher_api_key,
+                    &settings.post_processor,
+                    &post_processor_api_key,
                     prompt,
                     None,
                 )
                 .await
                 {
-                    Ok(polished) => polished,
+                    Ok(processed) => processed,
                     Err(_) => transcription, // Silently fallback in service mode
                 }
             } else {
