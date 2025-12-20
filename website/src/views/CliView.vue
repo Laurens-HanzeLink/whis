@@ -84,7 +84,7 @@ const demoImage = [
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>Hotkey mode</strong> Ctrl+Shift+R toggles recording from anywhere</div>
+          <div><strong>Hotkey mode</strong> Ctrl+Alt+W toggles recording from anywhere</div>
         </li>
       </ul>
     </section>

@@ -130,7 +130,7 @@ function openLightbox(index: number) {
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>Global hotkey</strong> Ctrl+Shift+R from anywhere (configurable)</div>
+          <div><strong>Global hotkey</strong> Ctrl+Alt+W from anywhere (configurable)</div>
         </li>
         <li>
           <span class="marker">[*]</span>
@@ -171,7 +171,7 @@ chmod +x <span class="highlight">Whis_*_amd64.AppImage</span>
 
 <span class="comment"># 3. Tray icon → Settings → Configure provider</span>
 
-<span class="comment"># 4. Use Ctrl+Shift+R or tray menu to record!</span></code></pre>
+<span class="comment"># 4. Use Ctrl+Alt+W or tray menu to record!</span></code></pre>
 
       <!-- Flatpak -->
       <pre v-else-if="installTab === 'flatpak'"><code><span class="comment"># 1. Install from Flathub</span>
@@ -181,7 +181,7 @@ flatpak install flathub <span class="highlight">ink.whis.Whis</span>
 
 <span class="comment"># 3. Tray icon → Settings → Configure provider</span>
 
-<span class="comment"># 4. Use Ctrl+Shift+R or tray menu to record!</span></code></pre>
+<span class="comment"># 4. Use Ctrl+Alt+W or tray menu to record!</span></code></pre>
 
       <!-- deb -->
       <pre v-else-if="installTab === 'deb'"><code><span class="comment"># 1. Install the package</span>
@@ -191,7 +191,7 @@ sudo apt install ./<span class="highlight">Whis_*_amd64.deb</span>
 
 <span class="comment"># 3. Tray icon → Settings → Configure provider</span>
 
-<span class="comment"># 4. Use Ctrl+Shift+R or tray menu to record!</span></code></pre>
+<span class="comment"># 4. Use Ctrl+Alt+W or tray menu to record!</span></code></pre>
 
       <!-- rpm -->
       <pre v-else-if="installTab === 'rpm'"><code><span class="comment"># 1. Install the package</span>
@@ -201,7 +201,7 @@ sudo dnf install ./<span class="highlight">Whis-*.x86_64.rpm</span>
 
 <span class="comment"># 3. Tray icon → Settings → Configure provider</span>
 
-<span class="comment"># 4. Use Ctrl+Shift+R or tray menu to record!</span></code></pre>
+<span class="comment"># 4. Use Ctrl+Alt+W or tray menu to record!</span></code></pre>
 
       <!-- source -->
       <pre v-else-if="installTab === 'source'"><code><span class="comment"># 1. Install just (if not already installed)</span>

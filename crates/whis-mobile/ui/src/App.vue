@@ -96,7 +96,7 @@ async function saveSettings() {
   try {
     await invoke('save_settings', {
       settings: {
-        shortcut: 'Ctrl+Shift+R', // Not used on mobile
+        shortcut: 'Ctrl+Alt+W', // Not used on mobile
         provider: provider.value,
         language: language.value || null,
         openai_api_key: openaiApiKey.value || null,

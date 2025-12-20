@@ -30,7 +30,7 @@ const faqItems = [
   {
     question: 'How does hotkey mode work?',
     answer:
-      'Run <code>whis listen</code> to start the background service. Hit Ctrl+Shift+R to toggle recording from anywhere. Customize with <code>--hotkey</code>.',
+      'Run <code>whis listen</code> to start the background service. Hit Ctrl+Alt+W to toggle recording from anywhere. Customize with <code>--hotkey</code>.',
   },
   {
     question: 'What about my data?',
