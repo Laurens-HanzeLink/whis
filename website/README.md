@@ -1,0 +1,46 @@
+<div align="center">
+<img src="https://raw.githubusercontent.com/frankdierolf/whis/main/crates/whis-desktop/icons/128x128.png" alt="whis" width="80" height="80" />
+
+<h3>whis.ink</h3>
+<p>
+  Website for Whis.
+  <br />
+  <a href="https://whis.ink">Live Site</a>
+  ·
+  <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-cli">CLI</a>
+  ·
+  <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-desktop">Desktop</a>
+  ·
+  <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-mobile">Mobile</a>
+</p>
+</div>
+
+## Introduction
+
+Landing page for Whis. Demo, features, downloads for CLI and Desktop, and FAQ.
+
+## Screenshot
+
+![Screenshot](./screenshot.png)
+
+## Development
+
+```bash
+npm install
+npm run dev      # Start dev server
+npm run build    # Build for production
+npm run lint     # Check code style
+```
+
+## Deployment
+
+Automatically deployed to GitHub Pages on push to main.
+See `.github/workflows/website.yml`.
+
+## Structure
+
+```
+views/       # Page components (Home, CLI, Desktop, Mobile, FAQ)
+components/  # Reusable UI components
+assets/      # CSS tokens and base styles
+```

@@ -9,16 +9,15 @@
   ·
   <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-desktop">Desktop</a>
   ·
+  <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-mobile">Mobile</a>
+  ·
   <a href="https://github.com/frankdierolf/whis/releases">Releases</a>
 </p>
 </div>
 
-## Why?
+## Introduction
 
-- **Built for AI workflows** — speak your prompt, paste to Claude/Copilot
-- **Cheap** — ~$0.006/minute via cloud providers (no local GPU required)
-- **Simple** — record → transcribe → clipboard
-- **Multi-provider** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
+The terminal-native voice-to-text tool. Record, transcribe, paste — all from your shell. Supports hotkey mode, presets, and pipes nicely with AI assistants.
 
 ## Quick Start
 
@@ -30,58 +29,28 @@ whis
 
 ## Usage
 
-**One-shot mode:**
 ```bash
-whis    # Recording starts, press Enter to stop
-```
+# Record once
+whis                           # Press Enter to stop — text copied!
 
-**From file or stdin:**
-```bash
-whis -f audio.mp3              # Transcribe audio file
-whis --stdin < audio.mp3       # Read from stdin
-yt-dlp -x ... | whis --stdin   # Pipe from other tools
-```
-
-**Hotkey mode (background service):**
-```bash
-whis listen                    # Global Ctrl+Alt+W anywhere
+# Hotkey mode (background)
+whis listen                    # Ctrl+Alt+W toggles recording
 whis listen -k "super+space"   # Custom hotkey
-whis status                    # Check if running
-whis stop                      # Stop service
-```
 
-**Configuration:**
-```bash
-whis config --openai-api-key sk-...   # Save OpenAI API key
-whis config --mistral-api-key ...     # Save Mistral API key
-whis config --groq-api-key ...        # Save Groq API key
-whis config --provider mistral        # Switch provider
-whis config --language en             # Set language hint (ISO-639-1)
-whis config --show                    # View current settings
-```
+# From file
+whis -f audio.mp3
 
-**Presets:**
-```bash
-whis presets              # List all presets
-whis presets show my-preset   # View preset details
-whis --as my-preset       # Use preset for transcription
-```
+# Presets
+whis --as email                # Use preset
+whis presets                   # List all
 
-**LLM Post-Processing:**
-```bash
-whis --post-process       # Clean up transcription with Ollama
-whis config --ollama-model llama3.2   # Set Ollama model
-```
-
-**Model Management:**
-```bash
-whis models whisper       # List local Whisper models
-whis models ollama        # List Ollama models
+# Post-process with LLM
+whis --post-process            # Clean up with Ollama
 ```
 
 ## Requirements
 
-- API key from [OpenAI](https://platform.openai.com/api-keys), [Mistral](https://console.mistral.ai/api-keys), [Groq](https://console.groq.com/keys), [Deepgram](https://deepgram.com), or [ElevenLabs](https://elevenlabs.io) — or use local Whisper (no API key needed)
+- API key from [OpenAI](https://platform.openai.com/api-keys) (or Groq, Deepgram, ...) — or use local Whisper (no API key needed)
 - FFmpeg (`sudo apt install ffmpeg` or `brew install ffmpeg`)
 - Linux (X11/Wayland) or macOS
 

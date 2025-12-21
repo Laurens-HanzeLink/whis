@@ -10,6 +10,8 @@
   <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-cli">CLI</a>
   ·
   <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-desktop">Desktop</a>
+  ·
+  <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-mobile">Mobile</a>
 </p>
 </div>
 
