@@ -1,54 +1,21 @@
-## Changes
+## What's New
 
 - <!-- Add your changes here -->
 
----
+## Downloads
 
-## CLI
+| Platform | CLI | Desktop |
+|----------|-----|---------|
+| Linux x86_64 | `whis-VERSION_TAG-x86_64-unknown-linux-gnu.tar.gz` | `Whis_VERSION_amd64.AppImage` / `.deb` / `.rpm` |
+| Linux ARM64 | `whis-VERSION_TAG-aarch64-unknown-linux-gnu.tar.gz` | — |
+| macOS Apple Silicon | `whis-VERSION_TAG-aarch64-apple-darwin.tar.gz` | `Whis_VERSION_aarch64.dmg` |
+| macOS Intel | `whis-VERSION_TAG-x86_64-apple-darwin.tar.gz` | — |
+| Windows | `whis-VERSION_TAG-x86_64-pc-windows-msvc.zip` | `Whis_VERSION_x64-setup.exe` / `.msi` |
 
-Voice-to-text from your terminal.
+### Android (Alpha)
 
-| Platform | Download |
-|----------|----------|
-| Linux | `whis-VERSION_TAG-x86_64-unknown-linux-gnu.tar.gz` |
-| macOS | `whis-VERSION_TAG-aarch64-apple-darwin.tar.gz` |
-| Windows | `whis-VERSION_TAG-x86_64-pc-windows-msvc.zip` |
-
-> Other platforms (Linux ARM64, macOS Intel) available in attached assets.
-
-**Install via package manager:**
-```bash
-cargo install whis        # All platforms
-yay -S whis               # Arch Linux (AUR)
-```
+`app-universal-release-unsigned.apk` — Early development, feedback welcome!
 
 ---
 
-## Desktop App
-
-Full-featured GUI with system tray, hotkey support, and auto-paste.
-
-| Platform | Download |
-|----------|----------|
-| Linux | `Whis_VERSION_amd64.AppImage` |
-| macOS | `Whis_VERSION_x64.dmg` |
-| Windows | `Whis_VERSION_x64-setup.exe` |
-
-> Linux also available as `.deb` and `.rpm`. Windows also available as `.msi`.
-
-**Linux AppImage install:**
-```bash
-chmod +x Whis_VERSION_amd64.AppImage
-./Whis_VERSION_amd64.AppImage --install
-# Then launch "Whis" from your app menu
-```
-
----
-
-## 📱 Mobile (Alpha)
-
-> ⚠️ **Early Development** — The Android app is in active development. Features may be incomplete or change without notice. We'd love your feedback!
-
-| Platform | Download |
-|----------|----------|
-| Android | `app-universal-release.apk` |
+**Other install methods:** [whis.ink](https://whis.ink) (Cargo, AUR, Flatpak)
