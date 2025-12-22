@@ -10,13 +10,13 @@ const lightboxOpen = ref(false)
 const lightboxIndex = ref(0)
 
 const screenshots = [
-  { src: '/screenshot-00-tray.png', alt: 'Whis system tray menu showing Start Recording, Settings, and Quit options', caption: 'System tray' },
-  { src: '/screenshot-01-home.png', alt: 'Whis home screen with Start Recording button', caption: 'Home' },
-  { src: '/screenshot-02-shortcuts.png', alt: 'Global shortcut configuration', caption: 'Shortcuts' },
-  { src: '/screenshot-03-settings-cloud.png', alt: 'Cloud provider settings with OpenAI, Groq, Deepgram options', caption: 'Cloud mode' },
-  { src: '/screenshot-04-settings-local.png', alt: 'Local whisper model selection for offline transcription', caption: 'Local mode' },
+  { src: '/screenshot-01-about.png', alt: 'About page showing Whis version and description', caption: 'About' },
+  { src: '/screenshot-02-tray.png', alt: 'Whis running in system tray', caption: 'System tray' },
+  { src: '/screenshot-03-home.png', alt: 'Whis home screen with Start Recording button', caption: 'Home' },
+  { src: '/screenshot-04-shortcuts.png', alt: 'Global shortcut configuration', caption: 'Shortcuts' },
+  { src: '/screenshot-05-settings-cloud.png', alt: 'Cloud provider settings with OpenAI, Groq, Deepgram options', caption: 'Cloud mode' },
+  { src: '/screenshot-06-settings-local.png', alt: 'Local whisper model selection for offline transcription', caption: 'Local mode' },
   { src: '/screenshot-07-presets.png', alt: 'Preset configurations for AI prompts, email, and notes', caption: 'Presets' },
-  { src: '/screenshot-08-about.png', alt: 'About page with version info', caption: 'About' },
 ]
 
 function openLightbox(index: number) {
