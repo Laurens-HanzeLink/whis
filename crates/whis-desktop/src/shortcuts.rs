@@ -31,6 +31,7 @@ pub struct ShortcutBackendInfo {
 }
 
 /// Get the GlobalShortcuts portal version (0 if unavailable)
+#[cfg(target_os = "linux")]
 pub fn portal_version() -> u32 {
     std::process::Command::new("busctl")
         .args([
@@ -49,6 +50,11 @@ pub fn portal_version() -> u32 {
             output.split_whitespace().last()?.parse().ok()
         })
         .unwrap_or(0)
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn portal_version() -> u32 {
+    0
 }
 
 /// Get backend info for the frontend
@@ -96,6 +102,7 @@ pub fn detect_backend() -> ShortcutCapability {
 }
 
 /// Check if GlobalShortcuts portal is available via D-Bus
+#[cfg(target_os = "linux")]
 fn is_portal_available() -> bool {
     std::process::Command::new("busctl")
         .args([
@@ -109,6 +116,11 @@ fn is_portal_available() -> bool {
         .unwrap_or(false)
 }
 
+#[cfg(not(target_os = "linux"))]
+fn is_portal_available() -> bool {
+    false
+}
+
 /// Detect the current desktop compositor
 fn detect_compositor() -> String {
     env::var("XDG_CURRENT_DESKTOP")
@@ -119,6 +131,7 @@ fn detect_compositor() -> String {
 /// Register app_id with the xdg-desktop-portal Registry
 /// This is required for native (non-Flatpak) apps to use portal features like GlobalShortcuts.
 /// Without this, the portal uses cgroup-based detection which fails when running from terminal.
+#[cfg(target_os = "linux")]
 pub async fn register_app_with_portal() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use std::collections::HashMap;
     use zbus::Connection;
@@ -156,8 +169,14 @@ pub async fn register_app_with_portal() -> Result<(), Box<dyn std::error::Error 
     }
 }
 
+#[cfg(not(target_os = "linux"))]
+pub async fn register_app_with_portal() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    Ok(())
+}
+
 /// Read the actual portal shortcut from dconf (GNOME)
 /// Returns the shortcut in format like "Ctrl+Alt+M" if found
+#[cfg(target_os = "linux")]
 pub fn read_portal_shortcut_from_dconf() -> Option<String> {
     // Run: dconf dump /org/gnome/settings-daemon/global-shortcuts/
     let output = std::process::Command::new("dconf")
@@ -184,8 +203,14 @@ pub fn read_portal_shortcut_from_dconf() -> Option<String> {
     None
 }
 
+#[cfg(not(target_os = "linux"))]
+pub fn read_portal_shortcut_from_dconf() -> Option<String> {
+    None
+}
+
 /// Convert GVariant shortcut format to human-readable format
 /// e.g., "<Control><Alt>m" -> "Ctrl+Alt+M"
+#[cfg(target_os = "linux")]
 fn convert_gvariant_shortcut(raw: &str) -> String {
     let converted = raw
         .replace("<Control>", "Ctrl+")
@@ -203,6 +228,7 @@ fn convert_gvariant_shortcut(raw: &str) -> String {
 }
 
 /// Setup global shortcuts using the XDG Portal (for Wayland with GNOME 48+, KDE)
+#[cfg(target_os = "linux")]
 pub async fn setup_portal_shortcuts<F>(
     shortcut_str: String,
     on_toggle: F,
@@ -306,15 +332,24 @@ where
 
 /// Open the system's shortcut configuration dialog (Portal v2+ only)
 /// Falls back to direct binding on Portal v1
+#[cfg(target_os = "linux")]
 pub async fn open_configure_shortcuts(
     app_handle: AppHandle,
 ) -> Result<Option<String>, Box<dyn std::error::Error + Send + Sync>> {
     bind_shortcut_with_trigger(None, app_handle).await
 }
 
+#[cfg(not(target_os = "linux"))]
+pub async fn open_configure_shortcuts(
+    _app_handle: AppHandle,
+) -> Result<Option<String>, Box<dyn std::error::Error + Send + Sync>> {
+    Ok(None)
+}
+
 /// Bind a shortcut with an optional preferred trigger from in-app key capture
 /// Works on Portal v1 and v2. On v2, also opens the configuration dialog.
 /// Returns the actual binding after success.
+#[cfg(target_os = "linux")]
 pub async fn bind_shortcut_with_trigger(
     preferred_trigger: Option<&str>,
     app_handle: AppHandle,
@@ -418,7 +453,24 @@ pub async fn bind_shortcut_with_trigger(
     }
 }
 
+#[cfg(not(target_os = "linux"))]
+pub async fn bind_shortcut_with_trigger(
+    _preferred_trigger: Option<&str>,
+    _app_handle: AppHandle,
+) -> Result<Option<String>, Box<dyn std::error::Error + Send + Sync>> {
+    Ok(None)
+}
+
 /// Legacy alias for configure_with_preferred_trigger
+#[cfg(target_os = "linux")]
+pub async fn configure_with_preferred_trigger(
+    preferred_trigger: Option<&str>,
+    app_handle: AppHandle,
+) -> Result<Option<String>, Box<dyn std::error::Error + Send + Sync>> {
+    bind_shortcut_with_trigger(preferred_trigger, app_handle).await
+}
+
+#[cfg(not(target_os = "linux"))]
 pub async fn configure_with_preferred_trigger(
     preferred_trigger: Option<&str>,
     app_handle: AppHandle,
@@ -428,6 +480,7 @@ pub async fn configure_with_preferred_trigger(
 
 /// Convert Tauri/human-readable shortcut format to XDG portal format
 /// e.g., "Ctrl+Shift+R" -> "<Control><Shift>r"
+#[cfg(target_os = "linux")]
 fn convert_to_xdg_format(shortcut: &str) -> String {
     let parts: Vec<&str> = shortcut.split('+').collect();
     let mut result = String::new();
@@ -499,6 +552,7 @@ pub fn setup_shortcuts(app: &tauri::App) {
                 print_manual_setup_instructions(&capability.compositor, &shortcut_str);
             }
         }
+        #[cfg(target_os = "linux")]
         ShortcutBackend::PortalGlobalShortcuts => {
             let app_handle = app.handle().clone();
             let app_handle_for_state = app.handle().clone();
@@ -520,6 +574,11 @@ pub fn setup_shortcuts(app: &tauri::App) {
                     eprintln!("Falling back to CLI mode");
                 }
             });
+        }
+        #[cfg(not(target_os = "linux"))]
+        ShortcutBackend::PortalGlobalShortcuts => {
+            // Portal shortcuts only available on Linux
+            print_manual_setup_instructions(&capability.compositor, &shortcut_str);
         }
         ShortcutBackend::ManualSetup => {
             print_manual_setup_instructions(&capability.compositor, &shortcut_str);
@@ -594,6 +653,7 @@ fn print_manual_setup_instructions(compositor: &str, shortcut: &str) {
 }
 
 /// Send toggle command to running instance via Unix socket
+#[cfg(unix)]
 pub fn send_toggle_command() -> Result<(), Box<dyn std::error::Error>> {
     use std::io::Write;
     use std::os::unix::net::UnixStream;
@@ -614,7 +674,13 @@ pub fn send_toggle_command() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+#[cfg(not(unix))]
+pub fn send_toggle_command() -> Result<(), Box<dyn std::error::Error>> {
+    Err("Unix sockets not available on this platform".into())
+}
+
 /// Start listening for IPC commands
+#[cfg(unix)]
 pub fn start_ipc_listener(app_handle: AppHandle) {
     let socket_path = socket_path();
 
@@ -657,6 +723,12 @@ pub fn start_ipc_listener(app_handle: AppHandle) {
     });
 }
 
+#[cfg(not(unix))]
+pub fn start_ipc_listener(_app_handle: AppHandle) {
+    // No-op on non-Unix platforms
+}
+
+#[cfg(unix)]
 fn socket_path() -> String {
     let runtime_dir = env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".into());
     format!("{runtime_dir}/whis-desktop.sock")

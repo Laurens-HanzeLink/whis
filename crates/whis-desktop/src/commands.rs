@@ -201,6 +201,7 @@ pub fn validate_elevenlabs_api_key(api_key: String) -> Result<bool, String> {
 
 /// Reset portal shortcuts by clearing dconf (GNOME)
 /// This allows rebinding after restart
+#[cfg(target_os = "linux")]
 #[tauri::command]
 pub fn reset_shortcut() -> Result<(), String> {
     std::process::Command::new("dconf")
@@ -211,6 +212,12 @@ pub fn reset_shortcut() -> Result<(), String> {
         ])
         .status()
         .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+pub fn reset_shortcut() -> Result<(), String> {
     Ok(())
 }
 

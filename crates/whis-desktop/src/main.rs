@@ -16,12 +16,19 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     // Handle --toggle command: send toggle to running instance and exit
+    #[cfg(unix)]
     if args.contains(&"--toggle".to_string()) || args.contains(&"-t".to_string()) {
         if let Err(e) = whis_desktop::shortcuts::send_toggle_command() {
             eprintln!("Failed to toggle: {e}");
             std::process::exit(1);
         }
         return;
+    }
+
+    #[cfg(not(unix))]
+    if args.contains(&"--toggle".to_string()) || args.contains(&"-t".to_string()) {
+        eprintln!("--toggle is not supported on this platform");
+        std::process::exit(1);
     }
 
     // Handle --install: create .desktop file for proper app_id on Wayland
