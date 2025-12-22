@@ -457,7 +457,16 @@ setup-desktop:
         echo "✓ tauri-cli installed"
     else
         echo "→ Installing tauri-cli..."
-        cargo install tauri-cli
+        # Workaround: reqwest 0.12.27 has a Windows compilation bug (TokioIo import missing)
+        # Use cargo-binstall to download prebuilt binary instead of compiling from source
+        # See: https://github.com/seanmonstar/reqwest/issues/2895
+        if command -v cargo-binstall >/dev/null 2>&1; then
+            cargo binstall tauri-cli --no-confirm
+        else
+            echo "→ Installing cargo-binstall first..."
+            cargo install cargo-binstall
+            cargo binstall tauri-cli --no-confirm
+        fi
         echo "✓ tauri-cli installed"
     fi
 
