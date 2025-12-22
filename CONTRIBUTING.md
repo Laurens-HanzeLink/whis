@@ -4,65 +4,97 @@ Thanks for your interest in contributing! This guide will help you get started.
 
 ## Quick Start
 
+Pick what you want to work on - you only need to set up what you need:
+
+| Component | What it is | Start here |
+|-----------|------------|------------|
+| **Website** | Project website | `just setup-website` |
+| **CLI** | Terminal app (Rust) | `just setup-cli` |
+| **Desktop** | Desktop app (Tauri + Vue) | `just setup-desktop` |
+| **Mobile** | Android app (Tauri + Vue) | `just setup-mobile` |
+
+### Example: Working on the Website
+
+The website is a great place to start - most developers are familiar with web development.
+
 ```bash
-# Clone the repository
-git clone https://github.com/frankdierolf/whis.git
-cd whis
+# Check what you need
+just setup-website
 
-# Install dependencies for all components
-just setup-all
+# Install dependencies
+just deps-website
 
-# Build everything
-just build-all
+# Start dev server (hot reload)
+just dev-website
+
+# Before committing
+just lint-website
+just fmt-website
 ```
+
+### Switching Components
+
+Once you know one, you know them all. Switching from website to desktop:
+
+```bash
+# Same pattern, different component
+just setup-desktop
+just dev-desktop
+just lint-desktop
+```
+
+## Command Pattern
+
+Every component follows the same pattern:
+
+| Command | Purpose |
+|---------|---------|
+| `just setup-{component}` | Check/install prerequisites |
+| `just deps-{component}` | Fetch dependencies |
+| `just dev-{component}` | Run with hot reload |
+| `just build-{component}` | Build for release |
+| `just lint-{component}` | Check code quality |
+| `just fmt-{component}` | Format code |
+
+Replace `{component}` with `cli`, `desktop`, `mobile`, or `website`.
 
 ## Prerequisites
 
-- **Rust** (latest stable)
-- **Node.js 20+** (for desktop frontend)
-- **FFmpeg** (`sudo apt install ffmpeg` or `brew install ffmpeg`)
-- **just** task runner (`cargo install just`)
+Each component has its own requirements. Run `just setup-{component}` to check what you need.
 
-### Linux Dependencies
+### Using just
 
-```bash
-sudo apt-get install -y \
-  libasound2-dev libx11-dev libxtst-dev \
-  libwebkit2gtk-4.1-dev libappindicator3-dev \
-  librsvg2-dev patchelf ffmpeg
-```
-
-### macOS Dependencies
+We use [just](https://github.com/casey/just) as a task runner. Run `just` to see all available commands.
 
 ```bash
-brew install ffmpeg
+cargo install just
+just  # see all commands
 ```
 
-### Windows Dependencies
+It keeps development and CI nicely aligned across platforms. That said, it's just a convenience - feel free to use `cargo`, `npm`, or whatever you prefer directly.
 
-Windows requires:
-- [Visual Studio 2019+](https://visualstudio.microsoft.com/) with "Desktop development with C++" workload, or [Build Tools for Visual Studio](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)
-- FFmpeg: `choco install ffmpeg` or download from [ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH
+### CLI
 
-Rust will automatically link Windows system libraries (WASAPI for audio, Windows API for hotkeys).
+- Rust (latest stable)
+- FFmpeg
+- Linux: ALSA dev libraries (`libasound2-dev`)
 
-## Development Workflow
+### Desktop
 
-We use [just](https://github.com/casey/just) for task automation. Run `just` to see all available commands.
+- Rust + Node.js 20+
+- Linux: WebKit2GTK, AppIndicator, librsvg, patchelf
 
-### Common Commands
+### Mobile
 
-| Command | Description |
-|---------|-------------|
-| `just build-cli` | Build CLI (debug) |
-| `just build-release-cli` | Build CLI (release) |
-| `just dev-desktop` | Run desktop app with hot reload |
-| `just lint-all` | Run clippy on all crates |
-| `just fmt-all` | Format all code |
-| `just check-all` | Pre-commit check (format + lint) |
-| `just clean-all` | Clean all build artifacts |
+- Rust + Node.js 20+
+- Android Studio with SDK, NDK, and platform-tools
+- Rust Android targets (auto-installed by `just setup-mobile`)
 
-### Project Structure
+### Website
+
+- Node.js 20+
+
+## Project Structure
 
 ```
 whis/
@@ -71,21 +103,33 @@ whis/
 │   ├── whis-cli/       # CLI application (package: whis)
 │   ├── whis-desktop/   # Tauri desktop app + Vue frontend
 │   └── whis-mobile/    # Tauri mobile app (Android)
+├── website/            # Project website
 └── justfile            # Task automation
+```
+
+## Working on Everything
+
+If you need to work across all components (or for CI):
+
+```bash
+just setup-all   # Check all prerequisites
+just build-all   # Build everything
+just check-all   # Run all checks (format + lint)
 ```
 
 ## Making Changes
 
 1. **Fork and clone** the repository
 2. **Create a branch** for your changes: `git checkout -b feature/my-feature`
-3. **Make your changes**
-4. **Run checks**: `just check-all`
-5. **Commit** with a clear message
-6. **Open a Pull Request** with a description of your changes
+3. **Set up** your component: `just setup-{component}`
+4. **Make your changes**
+5. **Run checks**: `just lint-{component}` and `just fmt-{component}`
+6. **Commit** with a clear message
+7. **Open a Pull Request** with a description of your changes
 
 ## Code Style
 
-- Run `just fmt` before committing
+- Run `just fmt-{component}` before committing
 - Follow existing patterns in the codebase
 - Keep changes focused - one feature/fix per PR
 - Add comments for non-obvious logic
