@@ -127,10 +127,9 @@ jobs:
       - name: Build
         run: just build-release-cli-macos ${{ matrix.target }}
         env:
-          # Use baseline Apple Silicon CPU to avoid i8mm issues on GitHub runners
-          # apple-m1 is supported by all Apple Silicon Macs
-          CFLAGS: ${{ matrix.target == 'aarch64-apple-darwin' && '-mcpu=apple-m1' || '' }}
-          CXXFLAGS: ${{ matrix.target == 'aarch64-apple-darwin' && '-mcpu=apple-m1' || '' }}
+          # Disable native CPU detection and i8mm to avoid build issues on GitHub runners
+          CMAKE_TOOLCHAIN_FILE_aarch64-apple-darwin: ${{ matrix.target == 'aarch64-apple-darwin' && github.workspace + '/.github/cmake-apple-silicon.cmake' || '' }}
+          CMAKE_TOOLCHAIN_FILE_aarch64_apple_darwin: ${{ matrix.target == 'aarch64-apple-darwin' && github.workspace + '/.github/cmake-apple-silicon.cmake' || '' }}
 
       - name: Package
         run: |
@@ -286,9 +285,9 @@ jobs:
       - name: Build desktop app
         run: just build-release-desktop
         env:
-          # Use baseline Apple Silicon CPU to avoid i8mm issues on GitHub runners
-          CFLAGS: "-mcpu=apple-m1"
-          CXXFLAGS: "-mcpu=apple-m1"
+          # Disable native CPU detection and i8mm to avoid build issues on GitHub runners
+          CMAKE_TOOLCHAIN_FILE_aarch64-apple-darwin: ${{ github.workspace }}/.github/cmake-apple-silicon.cmake
+          CMAKE_TOOLCHAIN_FILE_aarch64_apple_darwin: ${{ github.workspace }}/.github/cmake-apple-silicon.cmake
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4
