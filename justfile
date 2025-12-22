@@ -468,28 +468,38 @@ setup-desktop:
 # Fetch desktop dependencies
 [group('desktop')]
 deps-desktop: _check-npm _check-tauri
+    #!/usr/bin/env bash
+    set -euo pipefail
     cargo fetch
     cd crates/whis-desktop/ui && npm ci
 
 # Run desktop in dev mode
 [group('desktop')]
 dev-desktop: deps-desktop
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-desktop && cargo tauri dev
 
 # Build desktop for release
 [group('desktop')]
 build-desktop: deps-desktop
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-desktop/ui && npm run build
     cd crates/whis-desktop && cargo tauri build
 
 # Lint desktop code
 [group('desktop')]
 lint-desktop: _check-npm
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-desktop/ui && npm run lint
 
 # Format desktop code
 [group('desktop')]
 fmt-desktop: _check-npm
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-desktop/ui && npm run lint:fix
 
 # Install desktop app to user directory
@@ -839,12 +849,16 @@ setup-mobile:
 # Fetch mobile dependencies
 [group('mobile')]
 deps-mobile: _check-npm _check-tauri _check-android _init-android
+    #!/usr/bin/env bash
+    set -euo pipefail
     cargo fetch
     cd crates/whis-mobile/ui && npm ci
 
 # Run mobile app on connected Android device
 [group('mobile')]
 dev-mobile: deps-mobile _check-android-device
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-mobile/ui && npm run build
     # Forward port 5173 from device to host for stable dev server connection
     adb reverse tcp:5173 tcp:5173
@@ -854,17 +868,23 @@ dev-mobile: deps-mobile _check-android-device
 # Build mobile APK
 [group('mobile')]
 build-mobile: deps-mobile
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-mobile/ui && npm run build
     cd crates/whis-mobile && cargo tauri android build
 
 # Lint mobile code
 [group('mobile')]
 lint-mobile: _check-npm
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-mobile/ui && npm run lint
 
 # Format mobile code
 [group('mobile')]
 fmt-mobile: _check-npm
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-mobile/ui && npm run lint:fix
 
 # Install mobile app to connected device (uses debug build for signing)
@@ -912,26 +932,36 @@ setup-website:
 # Fetch website dependencies
 [group('website')]
 deps-website: _check-npm
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd website && npm ci
 
 # Run website dev server
 [group('website')]
 dev-website: deps-website
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd website && npm run dev
 
 # Build website for production
 [group('website')]
 build-website: deps-website
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd website && npm run build
 
 # Lint website code
 [group('website')]
 lint-website: _check-npm
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd website && npm run lint
 
 # Format website code
 [group('website')]
 fmt-website: _check-npm
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd website && npm run lint:fix
 
 # ============================================================================
@@ -949,6 +979,8 @@ deps-all: deps-cli deps-desktop deps-mobile deps-website
 # Build all (frontend + Rust)
 [group('all')]
 build-all: deps-all
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-desktop/ui && npm run build
     cd crates/whis-mobile/ui && npm run build
     cd website && npm run build
@@ -957,6 +989,8 @@ build-all: deps-all
 # Lint all code
 [group('all')]
 lint-all: build-all
+    #!/usr/bin/env bash
+    set -euo pipefail
     cargo clippy --all-targets --all-features
     cd crates/whis-desktop/ui && npm run lint
     cd crates/whis-mobile/ui && npm run lint
@@ -965,6 +999,8 @@ lint-all: build-all
 # Format all code
 [group('all')]
 fmt-all:
+    #!/usr/bin/env bash
+    set -euo pipefail
     cargo fmt --all
     cd crates/whis-desktop/ui && npm run lint:fix
     cd crates/whis-mobile/ui && npm run lint:fix
@@ -981,6 +1017,8 @@ uninstall-all: uninstall-cli uninstall-desktop
 # Verify all code (format check + lint)
 [group('all')]
 check-all: build-all
+    #!/usr/bin/env bash
+    set -euo pipefail
     cargo fmt --all -- --check
     cargo clippy --all-targets --all-features
     cd crates/whis-desktop/ui && npm run lint
@@ -990,6 +1028,8 @@ check-all: build-all
 # Clean all build artifacts
 [group('all')]
 clean-all:
+    #!/usr/bin/env bash
+    set -euo pipefail
     cargo clean
     rm -rf crates/whis-desktop/ui/dist
     rm -rf crates/whis-desktop/ui/node_modules
@@ -1016,18 +1056,24 @@ build-release-cli-cross target: _check-cargo
 # Build CLI for macOS target
 [group('release')]
 build-release-cli-macos target: _check-cargo
+    #!/usr/bin/env bash
+    set -euo pipefail
     rustup target add {{target}}
     cargo build --release -p whis --target {{target}}
 
 # Build desktop release (outputs platform-appropriate bundles)
 [group('release')]
 build-release-desktop: deps-desktop
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-desktop/ui && npm run build
     cd crates/whis-desktop && cargo tauri build
 
 # Build mobile release APK
 [group('release')]
 build-release-mobile: deps-mobile
+    #!/usr/bin/env bash
+    set -euo pipefail
     cd crates/whis-mobile/ui && npm run build
     cd crates/whis-mobile && cargo tauri android build
 
