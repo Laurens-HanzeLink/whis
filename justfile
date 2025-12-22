@@ -19,15 +19,15 @@ default:
 
 [private]
 _check-cargo:
-    @command -v cargo >/dev/null 2>&1 || { echo "❌ cargo not found. Run: just setup-cli"; exit 1; }
+    @cargo --version >/dev/null 2>&1 || { echo "❌ cargo not found. Run: just setup-cli"; exit 1; }
 
 [private]
 _check-npm:
-    @command -v npm >/dev/null 2>&1 || { echo "❌ npm not found. Install Node.js: https://nodejs.org"; exit 1; }
+    @npm --version >/dev/null 2>&1 || { echo "❌ npm not found. Install Node.js: https://nodejs.org"; exit 1; }
 
 [private]
 _check-tauri:
-    @command -v cargo-tauri >/dev/null 2>&1 || { echo "❌ tauri-cli not found. Run: just setup-desktop"; exit 1; }
+    @cargo tauri --version >/dev/null 2>&1 || { echo "❌ tauri-cli not found. Run: just setup-desktop"; exit 1; }
 
 [private]
 _check-android:
