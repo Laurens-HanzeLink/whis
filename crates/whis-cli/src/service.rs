@@ -44,6 +44,13 @@ impl Service {
         // Create IPC server
         let ipc_server = IpcServer::new().context("Failed to create IPC server")?;
 
+        // Enable model caching for local-whisper in listen mode
+        // This keeps the model loaded between transcriptions for faster response
+        #[cfg(feature = "local-whisper")]
+        if self.provider == TranscriptionProvider::LocalWhisper {
+            whis_core::model_manager::set_keep_loaded(true);
+        }
+
         // Show startup message with shortcut hint
         let settings = Settings::load();
         println!("Press {} to record. Ctrl+C to stop.", settings.shortcut);
@@ -153,6 +160,14 @@ impl Service {
     /// Start recording audio
     async fn start_recording(&self) -> Result<()> {
         let mut recorder = AudioRecorder::new()?;
+
+        // Configure VAD from settings
+        #[cfg(feature = "vad")]
+        {
+            let settings = Settings::load();
+            recorder.set_vad(settings.vad_enabled, settings.vad_threshold);
+        }
+
         recorder.start_recording()?;
 
         *self.recorder.lock().unwrap() = Some(recorder);

@@ -2,11 +2,15 @@
 //!
 //! This provider enables offline transcription without API calls.
 //! Requires a whisper.cpp model file (e.g., ggml-small.bin).
+//!
+//! Uses the model_manager for caching the WhisperContext to avoid
+//! reloading the model on every transcription.
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 
 use super::{TranscriptionBackend, TranscriptionRequest, TranscriptionResult};
+use crate::model_manager;
 
 /// Local whisper.cpp transcription provider
 #[derive(Debug, Default, Clone)]
@@ -49,35 +53,16 @@ fn transcribe_local(
     model_path: &str,
     request: TranscriptionRequest,
 ) -> Result<TranscriptionResult> {
-    use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+    use whisper_rs::{FullParams, SamplingStrategy};
 
-    // Suppress verbose whisper.cpp logging
-    whisper_rs::install_logging_hooks();
+    use super::TranscriptionStage;
 
-    // Validate model path
-    if model_path.is_empty() {
-        anyhow::bail!(
-            "Whisper model path not configured. Set LOCAL_WHISPER_MODEL_PATH or use: whis config --whisper-model-path <path>"
-        );
-    }
+    // Report transcribing stage (local transcription)
+    request.report(TranscriptionStage::Transcribing);
 
-    if !std::path::Path::new(model_path).exists() {
-        anyhow::bail!(
-            "Whisper model not found at: {}\n\
-             Download a model from: https://huggingface.co/ggerganov/whisper.cpp/tree/main",
-            model_path
-        );
-    }
-
-    // Load model
-    // Note: For better performance, this should be cached globally
-    let ctx = WhisperContext::new_with_params(model_path, WhisperContextParameters::default())
-        .context("Failed to load whisper model")?;
-
-    // Create state
-    let mut state = ctx
-        .create_state()
-        .context("Failed to create whisper state")?;
+    // Get or load the cached model and create a state
+    let mut model_guard = model_manager::get_model(model_path)?;
+    let state = model_guard.state_mut();
 
     // Configure parameters
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
@@ -112,6 +97,12 @@ fn transcribe_local(
             text.push_str(segment_text);
         }
     }
+
+    // Drop guard before potentially unloading model
+    drop(model_guard);
+
+    // Conditionally unload model based on keep_loaded setting
+    model_manager::maybe_unload();
 
     Ok(TranscriptionResult {
         text: text.trim().to_string(),
