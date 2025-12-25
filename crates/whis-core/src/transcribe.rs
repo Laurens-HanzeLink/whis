@@ -10,7 +10,7 @@ use tokio::sync::Semaphore;
 
 use crate::audio::AudioChunk;
 use crate::config::TranscriptionProvider;
-use crate::provider::{DEFAULT_TIMEOUT_SECS, TranscriptionRequest, registry};
+use crate::provider::{DEFAULT_TIMEOUT_SECS, ProgressCallback, TranscriptionRequest, registry};
 
 /// Maximum concurrent API requests
 const MAX_CONCURRENT_REQUESTS: usize = 3;
@@ -31,15 +31,13 @@ pub struct ChunkTranscription {
 /// * `api_key` - API key for the provider
 /// * `language` - Optional language hint (ISO-639-1 code, e.g., "en", "de")
 /// * `audio_data` - Audio data to transcribe
-/// * `mime_type` - Optional MIME type (defaults to "audio/mpeg" for MP3)
-/// * `filename` - Optional filename (defaults to "audio.mp3")
 pub fn transcribe_audio(
     provider: &TranscriptionProvider,
     api_key: &str,
     language: Option<&str>,
     audio_data: Vec<u8>,
 ) -> Result<String> {
-    transcribe_audio_with_format(provider, api_key, language, audio_data, None, None)
+    transcribe_audio_with_progress(provider, api_key, language, audio_data, None, None, None)
 }
 
 /// Transcribe a single audio file with explicit format (blocking)
@@ -51,12 +49,28 @@ pub fn transcribe_audio_with_format(
     mime_type: Option<&str>,
     filename: Option<&str>,
 ) -> Result<String> {
+    transcribe_audio_with_progress(
+        provider, api_key, language, audio_data, mime_type, filename, None,
+    )
+}
+
+/// Transcribe a single audio file with progress callback (blocking)
+pub fn transcribe_audio_with_progress(
+    provider: &TranscriptionProvider,
+    api_key: &str,
+    language: Option<&str>,
+    audio_data: Vec<u8>,
+    mime_type: Option<&str>,
+    filename: Option<&str>,
+    progress: Option<ProgressCallback>,
+) -> Result<String> {
     let provider_impl = registry().get_by_kind(provider)?;
     let request = TranscriptionRequest {
         audio_data,
         language: language.map(String::from),
         filename: filename.unwrap_or("audio.mp3").to_string(),
         mime_type: mime_type.unwrap_or("audio/mpeg").to_string(),
+        progress,
     };
 
     let result = provider_impl.transcribe_sync(api_key, request)?;
@@ -112,6 +126,7 @@ pub async fn parallel_transcribe(
                 language: language.as_ref().map(|s| s.to_string()),
                 filename: format!("audio_chunk_{chunk_index}.mp3"),
                 mime_type: "audio/mpeg".to_string(),
+                progress: None,
             };
 
             let result = provider_impl

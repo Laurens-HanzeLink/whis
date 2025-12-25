@@ -11,6 +11,7 @@ use serde::Deserialize;
 
 use super::{
     DEFAULT_TIMEOUT_SECS, TranscriptionBackend, TranscriptionRequest, TranscriptionResult,
+    TranscriptionStage,
 };
 
 const API_URL: &str = "https://api.deepgram.com/v1/listen";
@@ -58,6 +59,9 @@ impl TranscriptionBackend for DeepgramProvider {
         api_key: &str,
         request: TranscriptionRequest,
     ) -> Result<TranscriptionResult> {
+        // Report uploading stage
+        request.report(TranscriptionStage::Uploading);
+
         let client = reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(DEFAULT_TIMEOUT_SECS))
             .build()
@@ -72,11 +76,14 @@ impl TranscriptionBackend for DeepgramProvider {
             url.query_pairs_mut().append_pair("language", lang);
         }
 
+        // Report transcribing stage
+        request.report(TranscriptionStage::Transcribing);
+
         let response = client
             .post(url)
             .header("Authorization", format!("Token {api_key}"))
             .header("Content-Type", &request.mime_type)
-            .body(request.audio_data)
+            .body(request.audio_data.clone())
             .send()
             .context("Failed to send request to Deepgram API")?;
 
@@ -113,6 +120,9 @@ impl TranscriptionBackend for DeepgramProvider {
         api_key: &str,
         request: TranscriptionRequest,
     ) -> Result<TranscriptionResult> {
+        // Report uploading stage
+        request.report(TranscriptionStage::Uploading);
+
         let mut url = reqwest::Url::parse(API_URL).context("Failed to parse Deepgram URL")?;
         url.query_pairs_mut()
             .append_pair("model", MODEL)
@@ -122,11 +132,14 @@ impl TranscriptionBackend for DeepgramProvider {
             url.query_pairs_mut().append_pair("language", lang);
         }
 
+        // Report transcribing stage
+        request.report(TranscriptionStage::Transcribing);
+
         let response = client
             .post(url)
             .header("Authorization", format!("Token {api_key}"))
             .header("Content-Type", &request.mime_type)
-            .body(request.audio_data)
+            .body(request.audio_data.clone())
             .send()
             .await
             .context("Failed to send request to Deepgram API")?;

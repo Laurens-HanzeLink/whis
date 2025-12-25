@@ -9,6 +9,40 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
+/// Stages of the transcription workflow for progress reporting
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TranscriptionStage {
+    /// Recording audio from microphone
+    Recording,
+    /// Encoding audio to MP3
+    Encoding,
+    /// Uploading audio to cloud provider
+    Uploading,
+    /// Transcribing audio (cloud processing or local inference)
+    Transcribing,
+    /// Post-processing transcript with LLM
+    PostProcessing,
+    /// Transcription complete
+    Complete,
+}
+
+impl TranscriptionStage {
+    /// Get a human-readable status message for this stage
+    pub fn message(&self) -> &'static str {
+        match self {
+            Self::Recording => "Recording...",
+            Self::Encoding => "Encoding...",
+            Self::Uploading => "Uploading...",
+            Self::Transcribing => "Transcribing...",
+            Self::PostProcessing => "Post-processing...",
+            Self::Complete => "Done!",
+        }
+    }
+}
+
+/// Progress callback type for reporting transcription stages
+pub type ProgressCallback = Arc<dyn Fn(TranscriptionStage) + Send + Sync>;
+
 mod deepgram;
 mod elevenlabs;
 mod groq;
@@ -37,6 +71,34 @@ pub struct TranscriptionRequest {
     pub language: Option<String>,
     pub filename: String,
     pub mime_type: String,
+    /// Optional progress callback for status updates
+    pub progress: Option<ProgressCallback>,
+}
+
+impl TranscriptionRequest {
+    /// Create a new request without progress callback
+    pub fn new(audio_data: Vec<u8>, language: Option<String>) -> Self {
+        Self {
+            audio_data,
+            language,
+            filename: "audio.mp3".to_string(),
+            mime_type: "audio/mpeg".to_string(),
+            progress: None,
+        }
+    }
+
+    /// Set the progress callback
+    pub fn with_progress(mut self, callback: ProgressCallback) -> Self {
+        self.progress = Some(callback);
+        self
+    }
+
+    /// Report progress if callback is set
+    pub fn report(&self, stage: TranscriptionStage) {
+        if let Some(cb) = &self.progress {
+            cb(stage);
+        }
+    }
 }
 
 /// Result of a transcription
@@ -59,6 +121,9 @@ pub(crate) fn openai_compatible_transcribe_sync(
     api_key: &str,
     request: TranscriptionRequest,
 ) -> Result<TranscriptionResult> {
+    // Report uploading stage
+    request.report(TranscriptionStage::Uploading);
+
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(DEFAULT_TIMEOUT_SECS))
         .build()
@@ -68,14 +133,17 @@ pub(crate) fn openai_compatible_transcribe_sync(
         .text("model", model.to_string())
         .part(
             "file",
-            reqwest::blocking::multipart::Part::bytes(request.audio_data)
-                .file_name(request.filename)
+            reqwest::blocking::multipart::Part::bytes(request.audio_data.clone())
+                .file_name(request.filename.clone())
                 .mime_str(&request.mime_type)?,
         );
 
-    if let Some(lang) = request.language {
+    if let Some(lang) = request.language.clone() {
         form = form.text("language", lang);
     }
+
+    // Report transcribing stage (request sent, waiting for response)
+    request.report(TranscriptionStage::Transcribing);
 
     let response = client
         .post(api_url)
@@ -109,18 +177,24 @@ pub(crate) async fn openai_compatible_transcribe_async(
     api_key: &str,
     request: TranscriptionRequest,
 ) -> Result<TranscriptionResult> {
+    // Report uploading stage
+    request.report(TranscriptionStage::Uploading);
+
     let mut form = reqwest::multipart::Form::new()
         .text("model", model.to_string())
         .part(
             "file",
-            reqwest::multipart::Part::bytes(request.audio_data)
-                .file_name(request.filename)
+            reqwest::multipart::Part::bytes(request.audio_data.clone())
+                .file_name(request.filename.clone())
                 .mime_str(&request.mime_type)?,
         );
 
-    if let Some(lang) = request.language {
+    if let Some(lang) = request.language.clone() {
         form = form.text("language", lang);
     }
+
+    // Report transcribing stage
+    request.report(TranscriptionStage::Transcribing);
 
     let response = client
         .post(api_url)

@@ -9,6 +9,7 @@ use serde::Deserialize;
 
 use super::{
     DEFAULT_TIMEOUT_SECS, TranscriptionBackend, TranscriptionRequest, TranscriptionResult,
+    TranscriptionStage,
 };
 
 const API_URL: &str = "https://api.elevenlabs.io/v1/speech-to-text";
@@ -42,6 +43,9 @@ impl TranscriptionBackend for ElevenLabsProvider {
         api_key: &str,
         request: TranscriptionRequest,
     ) -> Result<TranscriptionResult> {
+        // Report uploading stage
+        request.report(TranscriptionStage::Uploading);
+
         let client = reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(DEFAULT_TIMEOUT_SECS))
             .build()
@@ -51,14 +55,17 @@ impl TranscriptionBackend for ElevenLabsProvider {
             .text("model_id", MODEL)
             .part(
                 "file",
-                reqwest::blocking::multipart::Part::bytes(request.audio_data)
-                    .file_name(request.filename)
+                reqwest::blocking::multipart::Part::bytes(request.audio_data.clone())
+                    .file_name(request.filename.clone())
                     .mime_str(&request.mime_type)?,
             );
 
-        if let Some(lang) = request.language {
+        if let Some(lang) = request.language.clone() {
             form = form.text("language_code", lang);
         }
+
+        // Report transcribing stage
+        request.report(TranscriptionStage::Transcribing);
 
         let response = client
             .post(API_URL)
@@ -88,18 +95,24 @@ impl TranscriptionBackend for ElevenLabsProvider {
         api_key: &str,
         request: TranscriptionRequest,
     ) -> Result<TranscriptionResult> {
+        // Report uploading stage
+        request.report(TranscriptionStage::Uploading);
+
         let mut form = reqwest::multipart::Form::new()
             .text("model_id", MODEL)
             .part(
                 "file",
-                reqwest::multipart::Part::bytes(request.audio_data)
-                    .file_name(request.filename)
+                reqwest::multipart::Part::bytes(request.audio_data.clone())
+                    .file_name(request.filename.clone())
                     .mime_str(&request.mime_type)?,
             );
 
-        if let Some(lang) = request.language {
+        if let Some(lang) = request.language.clone() {
             form = form.text("language_code", lang);
         }
+
+        // Report transcribing stage
+        request.report(TranscriptionStage::Transcribing);
 
         let response = client
             .post(API_URL)
