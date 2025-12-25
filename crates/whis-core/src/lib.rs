@@ -32,6 +32,8 @@ pub use provider::{
     DEFAULT_TIMEOUT_SECS, ProgressCallback, TranscriptionBackend, TranscriptionRequest,
     TranscriptionResult, TranscriptionStage, registry,
 };
+#[cfg(feature = "local-whisper")]
+pub use provider::transcribe_raw;
 pub use settings::Settings;
 pub use state::RecordingState;
 pub use transcribe::{

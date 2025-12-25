@@ -59,6 +59,8 @@ pub use elevenlabs::ElevenLabsProvider;
 pub use groq::GroqProvider;
 #[cfg(feature = "local-whisper")]
 pub use local_whisper::LocalWhisperProvider;
+#[cfg(feature = "local-whisper")]
+pub use local_whisper::transcribe_raw;
 pub use mistral::MistralProvider;
 pub use openai::OpenAIProvider;
 

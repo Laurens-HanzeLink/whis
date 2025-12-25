@@ -98,19 +98,65 @@ pub fn run(
     // Load transcription configuration (provider + API key)
     let config = app::load_transcription_config()?;
 
-    // Determine audio source based on input mode
-    let audio_result = if let Some(path) = file_path {
+    // Determine audio source and transcribe
+    let transcription = if let Some(path) = file_path {
         // File input mode
         if !quiet {
             println!("Loading audio file: {}", path.display());
         }
-        load_audio_file(&path)?
+        let audio_result = load_audio_file(&path)?;
+
+        if !quiet {
+            if whis_core::verbose::is_verbose() {
+                println!("Transcribing...");
+            } else {
+                app::typewriter(" Transcribing...", 25);
+            }
+        }
+        match audio_result {
+            RecordingOutput::Single(audio_data) => transcribe_audio(
+                &config.provider,
+                &config.api_key,
+                config.language.as_deref(),
+                audio_data,
+            )?,
+            RecordingOutput::Chunked(chunks) => runtime.block_on(parallel_transcribe(
+                &config.provider,
+                &config.api_key,
+                config.language.as_deref(),
+                chunks,
+                None,
+            ))?,
+        }
     } else if stdin_mode {
         // Stdin input mode
         if !quiet {
             println!("Reading audio from stdin ({} format)...", input_format);
         }
-        load_audio_stdin(input_format)?
+        let audio_result = load_audio_stdin(input_format)?;
+
+        if !quiet {
+            if whis_core::verbose::is_verbose() {
+                println!("Transcribing...");
+            } else {
+                app::typewriter(" Transcribing...", 25);
+            }
+        }
+        match audio_result {
+            RecordingOutput::Single(audio_data) => transcribe_audio(
+                &config.provider,
+                &config.api_key,
+                config.language.as_deref(),
+                audio_data,
+            )?,
+            RecordingOutput::Chunked(chunks) => runtime.block_on(parallel_transcribe(
+                &config.provider,
+                &config.api_key,
+                config.language.as_deref(),
+                chunks,
+                None,
+            ))?,
+        }
     } else {
         // Microphone recording mode (default)
         let mut recorder = AudioRecorder::new()?;
@@ -127,6 +173,13 @@ pub fn run(
         let _ = no_vad; // Suppress unused variable warning
 
         recorder.start_recording()?;
+
+        // Preload whisper model in background while recording
+        // By the time recording finishes, model should be loaded
+        #[cfg(feature = "local-whisper")]
+        if config.provider == TranscriptionProvider::LocalWhisper {
+            whis_core::model_manager::preload_model(&config.api_key);
+        }
 
         if let Some(dur) = duration {
             // Timed recording mode (for non-interactive environments like AI assistants)
@@ -157,37 +210,64 @@ pub fn run(
             println!();
         }
 
-        recorder.finalize_recording()?
-    };
+        // Stop recording and get raw recording data
+        let recording_data = recorder.stop_recording()?;
 
-    // Transcribe (silent when --print)
-    if !quiet {
-        if whis_core::verbose::is_verbose() {
-            println!("Transcribing...");
+        // Transcribe (silent when --print)
+        if !quiet {
+            if whis_core::verbose::is_verbose() {
+                println!("Transcribing...");
+            } else {
+                app::typewriter(" Transcribing...", 25);
+            }
+        }
+
+        // For local whisper: use raw samples directly (skip MP3 encode/decode)
+        // For cloud providers: encode to MP3 for upload
+        #[cfg(feature = "local-whisper")]
+        let result = if config.provider == TranscriptionProvider::LocalWhisper {
+            let samples = recording_data.finalize_raw();
+            whis_core::transcribe_raw(&config.api_key, &samples, config.language.as_deref())?.text
         } else {
-            app::typewriter(" Transcribing...", 25);
-        }
-    }
-    let transcription = match audio_result {
-        RecordingOutput::Single(audio_data) => {
-            // Small file - simple transcription
-            transcribe_audio(
-                &config.provider,
-                &config.api_key,
-                config.language.as_deref(),
-                audio_data,
-            )?
-        }
-        RecordingOutput::Chunked(chunks) => {
-            // Large file - parallel transcription
-            runtime.block_on(parallel_transcribe(
-                &config.provider,
-                &config.api_key,
-                config.language.as_deref(),
-                chunks,
-                None,
-            ))?
-        }
+            let audio_result = recording_data.finalize()?;
+            match audio_result {
+                RecordingOutput::Single(audio_data) => transcribe_audio(
+                    &config.provider,
+                    &config.api_key,
+                    config.language.as_deref(),
+                    audio_data,
+                )?,
+                RecordingOutput::Chunked(chunks) => runtime.block_on(parallel_transcribe(
+                    &config.provider,
+                    &config.api_key,
+                    config.language.as_deref(),
+                    chunks,
+                    None,
+                ))?,
+            }
+        };
+
+        #[cfg(not(feature = "local-whisper"))]
+        let result = {
+            let audio_result = recording_data.finalize()?;
+            match audio_result {
+                RecordingOutput::Single(audio_data) => transcribe_audio(
+                    &config.provider,
+                    &config.api_key,
+                    config.language.as_deref(),
+                    audio_data,
+                )?,
+                RecordingOutput::Chunked(chunks) => runtime.block_on(parallel_transcribe(
+                    &config.provider,
+                    &config.api_key,
+                    config.language.as_deref(),
+                    chunks,
+                    None,
+                ))?,
+            }
+        };
+
+        result
     };
 
     // Apply post-processing if enabled (via flag or preset)

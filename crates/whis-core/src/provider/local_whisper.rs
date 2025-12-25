@@ -53,12 +53,42 @@ fn transcribe_local(
     model_path: &str,
     request: TranscriptionRequest,
 ) -> Result<TranscriptionResult> {
-    use whisper_rs::{FullParams, SamplingStrategy};
-
     use super::TranscriptionStage;
 
     // Report transcribing stage (local transcription)
     request.report(TranscriptionStage::Transcribing);
+
+    // Decode MP3 to PCM and resample to 16kHz mono
+    let pcm_samples = decode_and_resample(&request.audio_data)?;
+
+    // Transcribe the samples
+    transcribe_samples(model_path, &pcm_samples, request.language.as_deref())
+}
+
+/// Transcribe raw f32 samples directly (skips MP3 decoding).
+///
+/// Use this for local recordings where samples are already 16kHz mono.
+/// This is faster than going through MP3 encoding/decoding.
+///
+/// # Arguments
+/// * `model_path` - Path to the whisper.cpp model file (.bin)
+/// * `samples` - Raw f32 audio samples (must be 16kHz mono)
+/// * `language` - Optional language code (e.g., "en", "de")
+pub fn transcribe_raw(
+    model_path: &str,
+    samples: &[f32],
+    language: Option<&str>,
+) -> Result<TranscriptionResult> {
+    transcribe_samples(model_path, samples, language)
+}
+
+/// Internal function to transcribe PCM samples
+fn transcribe_samples(
+    model_path: &str,
+    samples: &[f32],
+    language: Option<&str>,
+) -> Result<TranscriptionResult> {
+    use whisper_rs::{FullParams, SamplingStrategy};
 
     // Get or load the cached model and create a state
     let mut model_guard = model_manager::get_model(model_path)?;
@@ -68,7 +98,7 @@ fn transcribe_local(
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
 
     // Set language if provided
-    if let Some(ref lang) = request.language {
+    if let Some(lang) = language {
         params.set_language(Some(lang));
     }
 
@@ -78,12 +108,9 @@ fn transcribe_local(
     params.set_print_realtime(false);
     params.set_print_timestamps(false);
 
-    // Decode MP3 to PCM and resample to 16kHz mono
-    let pcm_samples = decode_and_resample(&request.audio_data)?;
-
     // Run transcription
     state
-        .full(params, &pcm_samples)
+        .full(params, samples)
         .context("Transcription failed")?;
 
     // Extract text from segments

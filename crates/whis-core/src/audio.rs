@@ -434,6 +434,14 @@ impl AudioRecorder {
 }
 
 impl RecordingData {
+    /// Finalize the recording and return raw f32 samples (16kHz mono).
+    ///
+    /// Use this for local whisper transcription to skip MP3 encoding.
+    /// The samples are already resampled to 16kHz mono during recording.
+    pub fn finalize_raw(self) -> Vec<f32> {
+        self.samples
+    }
+
     /// Finalize the recording by converting samples to MP3.
     /// This is Send-safe and can be called from spawn_blocking.
     pub fn finalize(self) -> Result<RecordingOutput> {

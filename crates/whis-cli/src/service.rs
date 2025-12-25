@@ -170,6 +170,13 @@ impl Service {
 
         recorder.start_recording()?;
 
+        // Preload whisper model in background while recording
+        // By the time recording finishes, model should be loaded
+        #[cfg(feature = "local-whisper")]
+        if self.provider == TranscriptionProvider::LocalWhisper {
+            whis_core::model_manager::preload_model(&self.api_key);
+        }
+
         *self.recorder.lock().unwrap() = Some(recorder);
         *self.state.lock().unwrap() = ServiceState::Recording;
 
@@ -190,27 +197,64 @@ impl Service {
         // (cpal::Stream is dropped here, making RecordingData movable across threads)
         let recording_data = recorder.stop_recording()?;
 
-        // Finalize recording (blocking operation, run in tokio blocking task)
-        let audio_result = tokio::task::spawn_blocking(move || recording_data.finalize())
-            .await
-            .context("Failed to join task")??;
-
-        // Transcribe based on output type
+        // Transcribe based on provider type
         let api_key = self.api_key.clone();
         let provider = self.provider.clone();
         let language = self.language.clone();
-        let transcription = match audio_result {
-            RecordingOutput::Single(audio_data) => {
-                // Small file - use simple blocking transcription
-                tokio::task::spawn_blocking(move || {
-                    transcribe_audio(&provider, &api_key, language.as_deref(), audio_data)
-                })
+
+        // For local whisper: use raw samples directly (skip MP3 encoding)
+        // For cloud providers: encode to MP3 for upload
+        #[cfg(feature = "local-whisper")]
+        let transcription = if provider == TranscriptionProvider::LocalWhisper {
+            // Fast path: raw samples -> whisper (no MP3 encode/decode)
+            let samples = recording_data.finalize_raw();
+            let model_path = api_key.clone();
+            tokio::task::spawn_blocking(move || {
+                whis_core::transcribe_raw(&model_path, &samples, language.as_deref())
+                    .map(|r| r.text)
+            })
+            .await
+            .context("Failed to join task")??
+        } else {
+            // Cloud path: MP3 encoding required
+            let audio_result = tokio::task::spawn_blocking(move || recording_data.finalize())
                 .await
-                .context("Failed to join task")??
+                .context("Failed to join task")??;
+
+            match audio_result {
+                RecordingOutput::Single(audio_data) => {
+                    tokio::task::spawn_blocking(move || {
+                        transcribe_audio(&provider, &api_key, language.as_deref(), audio_data)
+                    })
+                    .await
+                    .context("Failed to join task")??
+                }
+                RecordingOutput::Chunked(chunks) => {
+                    parallel_transcribe(&provider, &api_key, language.as_deref(), chunks, None)
+                        .await?
+                }
             }
-            RecordingOutput::Chunked(chunks) => {
-                // Large file - use parallel async transcription
-                parallel_transcribe(&provider, &api_key, language.as_deref(), chunks, None).await?
+        };
+
+        #[cfg(not(feature = "local-whisper"))]
+        let transcription = {
+            // Finalize recording (blocking operation, run in tokio blocking task)
+            let audio_result = tokio::task::spawn_blocking(move || recording_data.finalize())
+                .await
+                .context("Failed to join task")??;
+
+            match audio_result {
+                RecordingOutput::Single(audio_data) => {
+                    tokio::task::spawn_blocking(move || {
+                        transcribe_audio(&provider, &api_key, language.as_deref(), audio_data)
+                    })
+                    .await
+                    .context("Failed to join task")??
+                }
+                RecordingOutput::Chunked(chunks) => {
+                    parallel_transcribe(&provider, &api_key, language.as_deref(), chunks, None)
+                        .await?
+                }
             }
         };
 

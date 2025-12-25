@@ -148,6 +148,34 @@ pub fn maybe_unload() {
     }
 }
 
+/// Preload the whisper model in a background thread.
+///
+/// Call this when recording starts to overlap model loading with recording.
+/// By the time recording finishes, the model should already be loaded.
+///
+/// # Arguments
+/// * `path` - Path to the whisper model file (.bin)
+pub fn preload_model(path: &str) {
+    // Check if model is already loaded
+    {
+        let cache = get_cache().read().unwrap();
+        if let Some(ref cached) = *cache
+            && cached.path == path
+        {
+            crate::verbose!("Model already cached, skipping preload");
+            return;
+        }
+    }
+
+    let path = path.to_string();
+    std::thread::spawn(move || {
+        crate::verbose!("Preloading whisper model in background...");
+        if let Err(e) = get_model(&path) {
+            crate::verbose!("Preload failed: {}", e);
+        }
+    });
+}
+
 /// Guard that holds a WhisperState for transcription.
 ///
 /// The state internally holds an Arc to the context, so it's safe to use
