@@ -36,7 +36,9 @@ pub fn prompt_choice_with_default(
         let trimmed = input.trim();
 
         // If empty and we have a default, use it
-        if trimmed.is_empty() && let Some(d) = default {
+        if trimmed.is_empty()
+            && let Some(d) = default
+        {
             return Ok(d);
         }
 

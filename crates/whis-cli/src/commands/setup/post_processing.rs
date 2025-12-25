@@ -257,7 +257,11 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
             (false, true) => " [current]",
             (false, false) => "",
         };
-        options.push((model.name.clone(), format!("{}{}{}", model.name, size, markers), false));
+        options.push((
+            model.name.clone(),
+            format!("{}{}{}", model.name, size, markers),
+            false,
+        ));
     }
 
     // Add recommended models that aren't installed
@@ -303,7 +307,10 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
 
     // Determine default (current model or first recommended)
     let default = if let Some(current) = current_model {
-        options.iter().position(|(n, _, _)| n == current).map(|i| i + 1)
+        options
+            .iter()
+            .position(|(n, _, _)| n == current)
+            .map(|i| i + 1)
     } else {
         Some(1)
     };

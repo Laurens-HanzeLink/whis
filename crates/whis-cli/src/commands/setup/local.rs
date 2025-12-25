@@ -175,10 +175,24 @@ pub fn setup_transcription_local() -> Result<()> {
     };
 
     println!("Model:");
-    let parakeet_marker = if current_engine == Some(1) { " [current]" } else { "" };
-    let whisper_marker = if current_engine == Some(2) { " [current]" } else { "" };
-    println!("  1. Parakeet (recommended) - Fast, accurate{}", parakeet_marker);
-    println!("  2. Whisper - OpenAI model, multiple sizes{}", whisper_marker);
+    let parakeet_marker = if current_engine == Some(1) {
+        " [current]"
+    } else {
+        ""
+    };
+    let whisper_marker = if current_engine == Some(2) {
+        " [current]"
+    } else {
+        ""
+    };
+    println!(
+        "  1. Parakeet (recommended) - Fast, accurate{}",
+        parakeet_marker
+    );
+    println!(
+        "  2. Whisper - OpenAI model, multiple sizes{}",
+        whisper_marker
+    );
     println!();
 
     // Default to current engine if local, otherwise Parakeet
@@ -208,7 +222,11 @@ pub fn setup_transcription_local() -> Result<()> {
             println!("Whisper model:");
             for (i, (name, _, desc)) in model::WHISPER_MODELS.iter().enumerate() {
                 let path = model::default_model_path(name);
-                let status = if model::model_exists(&path) { " [installed]" } else { "" };
+                let status = if model::model_exists(&path) {
+                    " [installed]"
+                } else {
+                    ""
+                };
                 println!("  {}. {} - {}{}", i + 1, name, desc, status);
             }
             println!();
