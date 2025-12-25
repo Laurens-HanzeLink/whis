@@ -4,6 +4,7 @@ mod commands;
 mod hotkey;
 mod ipc;
 mod service;
+mod ui;
 
 use anyhow::Result;
 use clap::Parser;
@@ -26,6 +27,7 @@ fn main() -> Result<()> {
             elevenlabs_api_key,
             provider,
             whisper_model_path,
+            parakeet_model_path,
             ollama_url,
             ollama_model,
             language,
@@ -42,6 +44,7 @@ fn main() -> Result<()> {
             elevenlabs_api_key,
             provider,
             whisper_model_path,
+            parakeet_model_path,
             ollama_url,
             ollama_model,
             language,

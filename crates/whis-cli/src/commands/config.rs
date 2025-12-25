@@ -1,6 +1,8 @@
 use anyhow::Result;
 use whis_core::{PostProcessor, Preset, Settings, TranscriptionProvider};
 
+use crate::ui::mask_key;
+
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     openai_api_key: Option<String>,
@@ -10,6 +12,7 @@ pub fn run(
     elevenlabs_api_key: Option<String>,
     provider: Option<String>,
     whisper_model_path: Option<String>,
+    parakeet_model_path: Option<String>,
     ollama_url: Option<String>,
     ollama_model: Option<String>,
     language: Option<String>,
@@ -57,6 +60,28 @@ pub fn run(
         settings.whisper_model_path = Some(expanded_path.clone());
         changed = true;
         println!("Whisper model path set to: {}", expanded_path);
+    }
+
+    // Handle parakeet model path for local transcription
+    if let Some(path) = parakeet_model_path {
+        let path_trimmed = path.trim();
+        if path_trimmed.is_empty() {
+            eprintln!("Invalid Parakeet model path: cannot be empty");
+            std::process::exit(1);
+        }
+        // Expand ~ to home directory
+        let expanded_path = if let Some(rest) = path_trimmed.strip_prefix("~/") {
+            if let Some(home) = dirs::home_dir() {
+                home.join(rest).to_string_lossy().to_string()
+            } else {
+                path_trimmed.to_string()
+            }
+        } else {
+            path_trimmed.to_string()
+        };
+        settings.parakeet_model_path = Some(expanded_path.clone());
+        changed = true;
+        println!("Parakeet model path set to: {}", expanded_path);
     }
 
     // Handle Ollama URL for local post-processing
@@ -243,6 +268,12 @@ pub fn run(
             println!("Whisper model path: (not set, using $LOCAL_WHISPER_MODEL_PATH)");
         }
 
+        if let Some(path) = &settings.parakeet_model_path {
+            println!("Parakeet model path: {}", path);
+        } else {
+            println!("Parakeet model path: (not set, using $LOCAL_PARAKEET_MODEL_PATH)");
+        }
+
         // Ollama settings for local post-processing
         if let Some(url) = &settings.ollama_url {
             println!("Ollama URL: {}", url);
@@ -269,7 +300,9 @@ pub fn run(
 
     // No flags - show help
     eprintln!("Usage:");
-    eprintln!("  whis config --provider <openai|mistral|groq|deepgram|elevenlabs|local-whisper>");
+    eprintln!(
+        "  whis config --provider <openai|mistral|groq|deepgram|elevenlabs|local-whisper|local-parakeet>"
+    );
     eprintln!("  whis config --language <en|de|fr|...|auto>");
     eprintln!("  whis config --openai-api-key <KEY>");
     eprintln!("  whis config --mistral-api-key <KEY>");
@@ -277,6 +310,7 @@ pub fn run(
     eprintln!("  whis config --deepgram-api-key <KEY>");
     eprintln!("  whis config --elevenlabs-api-key <KEY>");
     eprintln!("  whis config --whisper-model-path <PATH>       # For local-whisper provider");
+    eprintln!("  whis config --parakeet-model-path <PATH>      # For local-parakeet provider");
     eprintln!("  whis config --post-processor <none|openai|mistral|ollama>");
     eprintln!(
         "  whis config --ollama-url <URL>                # For ollama post-processor (default: http://localhost:11434)"
@@ -308,14 +342,6 @@ fn validate_api_key(key: &str, provider_name: &str) -> Result<(), String> {
         ));
     }
     Ok(())
-}
-
-fn mask_key(key: &str) -> String {
-    if key.len() > 10 {
-        format!("{}...{}", &key[..6], &key[key.len() - 4..])
-    } else {
-        "***".to_string()
-    }
 }
 
 fn truncate_prompt(prompt: &str) -> String {

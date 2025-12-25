@@ -112,13 +112,17 @@ pub enum Commands {
         #[arg(long)]
         elevenlabs_api_key: Option<String>,
 
-        /// Set the transcription provider (openai, mistral, groq, deepgram, elevenlabs, local-whisper)
+        /// Set the transcription provider (openai, mistral, groq, deepgram, elevenlabs, local-whisper, local-parakeet)
         #[arg(long)]
         provider: Option<String>,
 
         /// Path to whisper.cpp model file for local transcription (e.g., ~/.local/share/whis/models/ggml-small.bin)
         #[arg(long)]
         whisper_model_path: Option<String>,
+
+        /// Path to Parakeet model directory for local transcription (e.g., ~/.local/share/whis/models/parakeet/parakeet-tdt-0.6b-v3-int8)
+        #[arg(long)]
+        parakeet_model_path: Option<String>,
 
         /// Ollama server URL for local post-processing (default: http://localhost:11434)
         #[arg(long)]
@@ -160,10 +164,10 @@ pub enum Commands {
         action: Option<PresetsAction>,
     },
 
-    /// Quick setup wizard for different usage modes
+    /// Interactive setup wizard
     Setup {
         #[command(subcommand)]
-        mode: SetupMode,
+        mode: Option<SetupMode>,
     },
 
     /// List available models (whisper, ollama)
@@ -176,10 +180,16 @@ pub enum Commands {
 #[derive(Subcommand)]
 pub enum SetupMode {
     /// Setup for cloud providers (OpenAI, Mistral, Groq, etc.)
+    #[command(hide = true)]
     Cloud,
 
     /// Setup for fully local (on-device) transcription and post-processing
+    #[command(hide = true)]
     Local,
+
+    /// Configure post-processing (Ollama model selection, cleanup settings)
+    #[command(hide = true)]
+    PostProcessing,
 }
 
 #[derive(Subcommand)]
@@ -213,6 +223,9 @@ pub enum PresetsAction {
 pub enum ModelsAction {
     /// List available whisper models with install status (default)
     Whisper,
+
+    /// List available Parakeet models with install status
+    Parakeet,
 
     /// List available Ollama models from server
     Ollama {

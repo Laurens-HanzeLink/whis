@@ -48,12 +48,29 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
                 Some(path) => path,
                 None => {
                     eprintln!("Error: No whisper model path configured.");
-                    eprintln!("(Required for local transcription)");
+                    eprintln!("(Required for local Whisper transcription)");
                     eprintln!("\nSet the model path with:");
                     eprintln!(
                         "  whis config --whisper-model-path ~/.local/share/whis/models/ggml-small.bin\n"
                     );
                     eprintln!("Or set the LOCAL_WHISPER_MODEL_PATH environment variable.");
+                    eprintln!("\nTip: Run 'whis setup local' for guided setup.");
+                    std::process::exit(1);
+                }
+            }
+        }
+        TranscriptionProvider::LocalParakeet => {
+            // Local parakeet: use model path
+            match settings.get_parakeet_model_path() {
+                Some(path) => path,
+                None => {
+                    eprintln!("Error: No parakeet model path configured.");
+                    eprintln!("(Required for local Parakeet transcription)");
+                    eprintln!("\nSet the model path with:");
+                    eprintln!(
+                        "  whis config --parakeet-model-path ~/.local/share/whis/models/parakeet/parakeet-tdt-0.6b-v3-int8\n"
+                    );
+                    eprintln!("Or set the LOCAL_PARAKEET_MODEL_PATH environment variable.");
                     eprintln!("\nTip: Run 'whis setup local' for guided setup.");
                     std::process::exit(1);
                 }

@@ -62,7 +62,9 @@ fn resolve_post_processor(
             }
         }
         // Local transcription: default to Ollama (local post-processing)
-        TranscriptionProvider::LocalWhisper => PostProcessor::Ollama,
+        TranscriptionProvider::LocalWhisper | TranscriptionProvider::LocalParakeet => {
+            PostProcessor::Ollama
+        }
     }
 }
 
@@ -176,9 +178,31 @@ pub fn run(
 
         // Preload whisper model in background while recording
         // By the time recording finishes, model should be loaded
-        #[cfg(feature = "local-whisper")]
+        // (Parakeet doesn't need preloading - it loads fast on first use)
+        #[cfg(feature = "local-transcription")]
         if config.provider == TranscriptionProvider::LocalWhisper {
             whis_core::model_manager::preload_model(&config.api_key);
+        }
+
+        // Preload Ollama model in background if using Ollama post-processing
+        // This overlaps model loading with recording to reduce latency
+        {
+            let should_post_process = post_process_flag || preset.is_some();
+            if should_post_process {
+                let settings = Settings::load();
+                let post_processor = resolve_post_processor(&preset, &settings, &config.provider);
+
+                if post_processor == PostProcessor::Ollama {
+                    let ollama_url = settings
+                        .get_ollama_url()
+                        .unwrap_or_else(|| ollama::DEFAULT_OLLAMA_URL.to_string());
+                    let ollama_model = settings
+                        .get_ollama_model()
+                        .unwrap_or_else(|| ollama::DEFAULT_OLLAMA_MODEL.to_string());
+
+                    whis_core::preload_ollama(&ollama_url, &ollama_model);
+                }
+            }
         }
 
         if let Some(dur) = duration {
@@ -222,12 +246,15 @@ pub fn run(
             }
         }
 
-        // For local whisper: use raw samples directly (skip MP3 encode/decode)
+        // For local providers: use raw samples directly (skip MP3 encode/decode)
         // For cloud providers: encode to MP3 for upload
-        #[cfg(feature = "local-whisper")]
+        #[cfg(feature = "local-transcription")]
         let result = if config.provider == TranscriptionProvider::LocalWhisper {
             let samples = recording_data.finalize_raw();
             whis_core::transcribe_raw(&config.api_key, &samples, config.language.as_deref())?.text
+        } else if config.provider == TranscriptionProvider::LocalParakeet {
+            let samples = recording_data.finalize_raw();
+            whis_core::transcribe_raw_parakeet(&config.api_key, samples)?.text
         } else {
             let audio_result = recording_data.finalize()?;
             match audio_result {
@@ -247,7 +274,7 @@ pub fn run(
             }
         };
 
-        #[cfg(not(feature = "local-whisper"))]
+        #[cfg(not(feature = "local-transcription"))]
         let result = {
             let audio_result = recording_data.finalize()?;
             match audio_result {

@@ -46,7 +46,7 @@ impl Service {
 
         // Enable model caching for local-whisper in listen mode
         // This keeps the model loaded between transcriptions for faster response
-        #[cfg(feature = "local-whisper")]
+        #[cfg(feature = "local-transcription")]
         if self.provider == TranscriptionProvider::LocalWhisper {
             whis_core::model_manager::set_keep_loaded(true);
         }
@@ -172,7 +172,7 @@ impl Service {
 
         // Preload whisper model in background while recording
         // By the time recording finishes, model should be loaded
-        #[cfg(feature = "local-whisper")]
+        #[cfg(feature = "local-transcription")]
         if self.provider == TranscriptionProvider::LocalWhisper {
             whis_core::model_manager::preload_model(&self.api_key);
         }
@@ -204,7 +204,7 @@ impl Service {
 
         // For local whisper: use raw samples directly (skip MP3 encoding)
         // For cloud providers: encode to MP3 for upload
-        #[cfg(feature = "local-whisper")]
+        #[cfg(feature = "local-transcription")]
         let transcription = if provider == TranscriptionProvider::LocalWhisper {
             // Fast path: raw samples -> whisper (no MP3 encode/decode)
             let samples = recording_data.finalize_raw();
@@ -222,13 +222,11 @@ impl Service {
                 .context("Failed to join task")??;
 
             match audio_result {
-                RecordingOutput::Single(audio_data) => {
-                    tokio::task::spawn_blocking(move || {
-                        transcribe_audio(&provider, &api_key, language.as_deref(), audio_data)
-                    })
-                    .await
-                    .context("Failed to join task")??
-                }
+                RecordingOutput::Single(audio_data) => tokio::task::spawn_blocking(move || {
+                    transcribe_audio(&provider, &api_key, language.as_deref(), audio_data)
+                })
+                .await
+                .context("Failed to join task")??,
                 RecordingOutput::Chunked(chunks) => {
                     parallel_transcribe(&provider, &api_key, language.as_deref(), chunks, None)
                         .await?
@@ -236,7 +234,7 @@ impl Service {
             }
         };
 
-        #[cfg(not(feature = "local-whisper"))]
+        #[cfg(not(feature = "local-transcription"))]
         let transcription = {
             // Finalize recording (blocking operation, run in tokio blocking task)
             let audio_result = tokio::task::spawn_blocking(move || recording_data.finalize())
@@ -244,13 +242,11 @@ impl Service {
                 .context("Failed to join task")??;
 
             match audio_result {
-                RecordingOutput::Single(audio_data) => {
-                    tokio::task::spawn_blocking(move || {
-                        transcribe_audio(&provider, &api_key, language.as_deref(), audio_data)
-                    })
-                    .await
-                    .context("Failed to join task")??
-                }
+                RecordingOutput::Single(audio_data) => tokio::task::spawn_blocking(move || {
+                    transcribe_audio(&provider, &api_key, language.as_deref(), audio_data)
+                })
+                .await
+                .context("Failed to join task")??,
                 RecordingOutput::Chunked(chunks) => {
                     parallel_transcribe(&provider, &api_key, language.as_deref(), chunks, None)
                         .await?

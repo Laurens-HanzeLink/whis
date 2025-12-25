@@ -28,6 +28,6 @@ ashpd = { version = "0.12", features = ["tokio"] }
 zbus = { version = "5", features = ["tokio"] }
 
 [features]
-default = ["custom-protocol", "local-whisper"]
+default = ["custom-protocol", "local-transcription"]
 custom-protocol = ["tauri/custom-protocol"]
-local-whisper = ["whis-core/local-whisper"]
+local-transcription = ["whis-core/local-transcription"]

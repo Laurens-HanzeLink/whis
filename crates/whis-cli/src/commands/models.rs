@@ -1,4 +1,4 @@
-//! Model listing commands for whisper and ollama
+//! Model listing commands for whisper, parakeet, and ollama
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -11,6 +11,7 @@ use crate::args::ModelsAction;
 pub fn run(action: Option<ModelsAction>) -> Result<()> {
     match action {
         None | Some(ModelsAction::Whisper) => list_whisper_models(),
+        Some(ModelsAction::Parakeet) => list_parakeet_models(),
         Some(ModelsAction::Ollama { url }) => list_ollama_models(url),
     }
 }
@@ -57,6 +58,55 @@ fn list_whisper_models() -> Result<()> {
     println!(
         "Models directory: {}",
         model::default_models_dir().display()
+    );
+    println!();
+    println!("To download a model, run: whis setup local");
+
+    Ok(())
+}
+
+/// List available Parakeet models with install status
+fn list_parakeet_models() -> Result<()> {
+    println!("Available Parakeet models:\n");
+
+    // Calculate column widths
+    let name_width = model::PARAKEET_MODELS
+        .iter()
+        .map(|(name, _, _, _)| name.len())
+        .max()
+        .unwrap_or(6)
+        .max(4);
+
+    // Print header
+    println!(
+        "{:<name_width$}  STATUS       DESCRIPTION",
+        "NAME",
+        name_width = name_width
+    );
+    println!("{}", "-".repeat(60));
+
+    // Print each model
+    for (name, _, desc, _) in model::PARAKEET_MODELS {
+        let path = model::default_parakeet_model_path(name);
+        let status = if model::parakeet_model_exists(&path) {
+            "[installed]"
+        } else {
+            ""
+        };
+
+        println!(
+            "{:<name_width$}  {:<11}  {}",
+            name,
+            status,
+            desc,
+            name_width = name_width
+        );
+    }
+
+    println!();
+    println!(
+        "Models directory: {}",
+        model::default_models_dir().join("parakeet").display()
     );
     println!();
     println!("To download a model, run: whis setup local");
