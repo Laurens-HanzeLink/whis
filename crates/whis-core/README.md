@@ -64,7 +64,7 @@ copy_to_clipboard(&text, ClipboardMethod::Auto)?;
 |---------|---------|-------------|
 | `ffmpeg` | Yes | Desktop audio encoding via FFmpeg subprocess |
 | `clipboard` | Yes | Clipboard support via arboard/xclip/wl-copy |
-| `local-whisper` | Yes | Local whisper.cpp transcription (requires model) |
+| `local-transcription` | Yes | Local transcription via Whisper/Parakeet (requires model) |
 | `embedded-encoder` | No | Mobile MP3 encoding via mp3lame (no FFmpeg) |
 
 ## Modules

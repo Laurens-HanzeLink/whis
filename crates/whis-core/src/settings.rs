@@ -31,6 +31,10 @@ pub struct Settings {
     /// (e.g., ~/.local/share/whis/models/ggml-small.bin)
     #[serde(default)]
     pub whisper_model_path: Option<String>,
+    /// Path to Parakeet model directory for local transcription
+    /// (e.g., ~/.local/share/whis/models/parakeet/parakeet-tdt-0.6b-v3-int8)
+    #[serde(default)]
+    pub parakeet_model_path: Option<String>,
     /// Ollama server URL for local LLM post-processing (default: http://localhost:11434)
     #[serde(default)]
     pub ollama_url: Option<String>,
@@ -69,6 +73,7 @@ impl Default for Settings {
             post_processor: PostProcessor::default(),
             post_processing_prompt: None,
             whisper_model_path: None,
+            parakeet_model_path: None,
             ollama_url: None,
             ollama_model: None,
             active_preset: None,
@@ -126,11 +131,16 @@ impl Settings {
     ///
     /// For cloud providers: checks for API key
     /// For LocalWhisper: checks for model path AND that file exists
+    /// For LocalParakeet: checks for model directory AND it's valid
     pub fn is_provider_configured(&self) -> bool {
         match self.provider {
             TranscriptionProvider::LocalWhisper => self
                 .get_whisper_model_path()
                 .map(|p| std::path::Path::new(&p).exists())
+                .unwrap_or(false),
+            TranscriptionProvider::LocalParakeet => self
+                .get_parakeet_model_path()
+                .map(|p| crate::model::parakeet_model_exists(std::path::Path::new(&p)))
                 .unwrap_or(false),
             _ => self.has_api_key(),
         }
@@ -151,6 +161,13 @@ impl Settings {
         self.whisper_model_path
             .clone()
             .or_else(|| std::env::var("LOCAL_WHISPER_MODEL_PATH").ok())
+    }
+
+    /// Get the Parakeet model path, falling back to environment variable
+    pub fn get_parakeet_model_path(&self) -> Option<String> {
+        self.parakeet_model_path
+            .clone()
+            .or_else(|| std::env::var("LOCAL_PARAKEET_MODEL_PATH").ok())
     }
 
     /// Get the Ollama server URL, falling back to environment variable

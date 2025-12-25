@@ -3,9 +3,10 @@ pub mod audio;
 pub mod clipboard;
 pub mod config;
 pub mod model;
-#[cfg(feature = "local-whisper")]
+#[cfg(feature = "local-transcription")]
 pub mod model_manager;
 pub mod ollama;
+pub mod ollama_manager;
 pub mod post_processing;
 pub mod preset;
 pub mod provider;
@@ -26,14 +27,17 @@ pub use audio::{
 #[cfg(feature = "clipboard")]
 pub use clipboard::{ClipboardMethod, copy_to_clipboard};
 pub use config::TranscriptionProvider;
+pub use ollama_manager::{clear_warmup_cache, preload_ollama};
 pub use post_processing::{DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, post_process};
 pub use preset::{Preset, PresetSource};
+#[cfg(feature = "local-transcription")]
+pub use provider::transcribe_raw;
+#[cfg(feature = "local-transcription")]
+pub use provider::transcribe_raw_parakeet;
 pub use provider::{
     DEFAULT_TIMEOUT_SECS, ProgressCallback, TranscriptionBackend, TranscriptionRequest,
     TranscriptionResult, TranscriptionStage, registry,
 };
-#[cfg(feature = "local-whisper")]
-pub use provider::transcribe_raw;
 pub use settings::Settings;
 pub use state::RecordingState;
 pub use transcribe::{

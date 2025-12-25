@@ -46,7 +46,9 @@ pub type ProgressCallback = Arc<dyn Fn(TranscriptionStage) + Send + Sync>;
 mod deepgram;
 mod elevenlabs;
 mod groq;
-#[cfg(feature = "local-whisper")]
+#[cfg(feature = "local-transcription")]
+mod local_parakeet;
+#[cfg(feature = "local-transcription")]
 mod local_whisper;
 mod mistral;
 mod openai;
@@ -57,9 +59,13 @@ pub const DEFAULT_TIMEOUT_SECS: u64 = 300;
 pub use deepgram::DeepgramProvider;
 pub use elevenlabs::ElevenLabsProvider;
 pub use groq::GroqProvider;
-#[cfg(feature = "local-whisper")]
+#[cfg(feature = "local-transcription")]
+pub use local_parakeet::LocalParakeetProvider;
+#[cfg(feature = "local-transcription")]
+pub use local_parakeet::transcribe_raw as transcribe_raw_parakeet;
+#[cfg(feature = "local-transcription")]
 pub use local_whisper::LocalWhisperProvider;
-#[cfg(feature = "local-whisper")]
+#[cfg(feature = "local-transcription")]
 pub use local_whisper::transcribe_raw;
 pub use mistral::MistralProvider;
 pub use openai::OpenAIProvider;
@@ -267,8 +273,10 @@ impl ProviderRegistry {
         providers.insert("groq", Arc::new(GroqProvider));
         providers.insert("deepgram", Arc::new(DeepgramProvider));
         providers.insert("elevenlabs", Arc::new(ElevenLabsProvider));
-        #[cfg(feature = "local-whisper")]
+        #[cfg(feature = "local-transcription")]
         providers.insert("local-whisper", Arc::new(LocalWhisperProvider));
+        #[cfg(feature = "local-transcription")]
+        providers.insert("local-parakeet", Arc::new(LocalParakeetProvider));
 
         Self { providers }
     }

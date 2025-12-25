@@ -132,7 +132,7 @@ impl FrameResampler {
 ///
 /// # Returns
 /// * 16kHz mono f32 samples ready for transcription
-#[cfg(feature = "local-whisper")]
+#[cfg(feature = "local-transcription")]
 pub fn resample_to_16k(samples: &[f32], source_rate: u32, channels: u16) -> Result<Vec<f32>> {
     // Convert to mono first if stereo/multichannel
     let mono_samples = if channels > 1 {

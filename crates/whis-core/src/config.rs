@@ -13,6 +13,8 @@ pub enum TranscriptionProvider {
     ElevenLabs,
     #[serde(rename = "local-whisper")]
     LocalWhisper,
+    #[serde(rename = "local-parakeet")]
+    LocalParakeet,
 }
 
 impl TranscriptionProvider {
@@ -25,6 +27,7 @@ impl TranscriptionProvider {
             TranscriptionProvider::Deepgram => "deepgram",
             TranscriptionProvider::ElevenLabs => "elevenlabs",
             TranscriptionProvider::LocalWhisper => "local-whisper",
+            TranscriptionProvider::LocalParakeet => "local-parakeet",
         }
     }
 
@@ -37,6 +40,7 @@ impl TranscriptionProvider {
             TranscriptionProvider::Deepgram => "DEEPGRAM_API_KEY",
             TranscriptionProvider::ElevenLabs => "ELEVENLABS_API_KEY",
             TranscriptionProvider::LocalWhisper => "LOCAL_WHISPER_MODEL_PATH",
+            TranscriptionProvider::LocalParakeet => "LOCAL_PARAKEET_MODEL_PATH",
         }
     }
 
@@ -49,6 +53,7 @@ impl TranscriptionProvider {
             TranscriptionProvider::Deepgram,
             TranscriptionProvider::ElevenLabs,
             TranscriptionProvider::LocalWhisper,
+            TranscriptionProvider::LocalParakeet,
         ]
     }
 
@@ -61,12 +66,24 @@ impl TranscriptionProvider {
             TranscriptionProvider::Deepgram => "Deepgram",
             TranscriptionProvider::ElevenLabs => "ElevenLabs",
             TranscriptionProvider::LocalWhisper => "Local Whisper",
+            TranscriptionProvider::LocalParakeet => "Local Parakeet",
         }
     }
 
     /// Whether this provider requires an API key (vs path/URL for local/remote)
     pub fn requires_api_key(&self) -> bool {
-        !matches!(self, TranscriptionProvider::LocalWhisper)
+        !matches!(
+            self,
+            TranscriptionProvider::LocalWhisper | TranscriptionProvider::LocalParakeet
+        )
+    }
+
+    /// Whether this is a local provider (no cloud API)
+    pub fn is_local(&self) -> bool {
+        matches!(
+            self,
+            TranscriptionProvider::LocalWhisper | TranscriptionProvider::LocalParakeet
+        )
     }
 }
 
@@ -87,8 +104,11 @@ impl std::str::FromStr for TranscriptionProvider {
             "deepgram" => Ok(TranscriptionProvider::Deepgram),
             "elevenlabs" => Ok(TranscriptionProvider::ElevenLabs),
             "local-whisper" | "localwhisper" | "whisper" => Ok(TranscriptionProvider::LocalWhisper),
+            "local-parakeet" | "localparakeet" | "parakeet" => {
+                Ok(TranscriptionProvider::LocalParakeet)
+            }
             _ => Err(format!(
-                "Unknown provider: {}. Available: openai, mistral, groq, deepgram, elevenlabs, local-whisper",
+                "Unknown provider: {}. Available: openai, mistral, groq, deepgram, elevenlabs, local-whisper, local-parakeet",
                 s
             )),
         }
