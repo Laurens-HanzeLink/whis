@@ -981,9 +981,9 @@ deps-all: deps-cli deps-desktop deps-mobile deps-website
 build-all: deps-all
     #!/usr/bin/env bash
     set -euo pipefail
-    cd crates/whis-desktop/ui && npm run build
-    cd crates/whis-mobile/ui && npm run build
-    cd website && npm run build
+    (cd crates/whis-desktop/ui && npm run build)
+    (cd crates/whis-mobile/ui && npm run build)
+    (cd website && npm run build)
     cargo build -p whis -p whis-desktop -p whis-mobile
 
 # Lint all code
@@ -992,9 +992,9 @@ lint-all: build-all
     #!/usr/bin/env bash
     set -euo pipefail
     cargo clippy --all-targets --all-features
-    cd crates/whis-desktop/ui && npm run lint
-    cd crates/whis-mobile/ui && npm run lint
-    cd website && npm run lint
+    (cd crates/whis-desktop/ui && npm run lint)
+    (cd crates/whis-mobile/ui && npm run lint)
+    (cd website && npm run lint)
 
 # Format all code
 [group('all')]
@@ -1002,9 +1002,9 @@ fmt-all:
     #!/usr/bin/env bash
     set -euo pipefail
     cargo fmt --all
-    cd crates/whis-desktop/ui && npm run lint:fix
-    cd crates/whis-mobile/ui && npm run lint:fix
-    cd website && npm run lint:fix
+    (cd crates/whis-desktop/ui && npm run lint:fix)
+    (cd crates/whis-mobile/ui && npm run lint:fix)
+    (cd website && npm run lint:fix)
 
 # Install CLI and desktop app
 [group('all')]
@@ -1021,9 +1021,9 @@ check-all: build-all
     set -euo pipefail
     cargo fmt --all -- --check
     cargo clippy --all-targets --all-features
-    cd crates/whis-desktop/ui && npm run lint
-    cd crates/whis-mobile/ui && npm run lint
-    cd website && npm run lint
+    (cd crates/whis-desktop/ui && npm run lint)
+    (cd crates/whis-mobile/ui && npm run lint)
+    (cd website && npm run lint)
 
 # Clean all build artifacts
 [group('all')]
