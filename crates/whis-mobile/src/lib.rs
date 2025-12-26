@@ -2,7 +2,6 @@ mod commands;
 mod state;
 
 use state::AppState;
-use std::sync::Mutex;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -12,9 +11,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            app.manage(AppState {
-                recording_state: Mutex::new(state::RecordingState::Idle),
-            });
+            app.manage(AppState::new());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -25,6 +22,12 @@ pub fn run() {
             commands::get_preset_details,
             commands::set_active_preset,
             commands::get_active_preset,
+            commands::create_preset,
+            commands::update_preset,
+            commands::delete_preset,
+            commands::transcribe_streaming_start,
+            commands::transcribe_streaming_send_chunk,
+            commands::transcribe_streaming_stop,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

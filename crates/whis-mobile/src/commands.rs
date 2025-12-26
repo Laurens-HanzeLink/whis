@@ -1,8 +1,20 @@
 use crate::state::{AppState, RecordingState};
-use tauri::State;
+use std::path::PathBuf;
+use tauri::{Emitter, Manager, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_store::StoreExt;
 use whis_core::config::TranscriptionProvider;
+use whis_core::preset::Preset;
+use whis_core::{post_process, OpenAIRealtimeProvider, PostProcessor};
+
+/// Get the presets directory for this app using Tauri's path API.
+/// This works correctly on Android where dirs::config_dir() returns None.
+fn get_presets_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_config_dir()
+        .map(|p| p.join("presets"))
+        .map_err(|e| format!("Failed to get app config dir: {}", e))
+}
 
 #[derive(serde::Serialize)]
 pub struct StatusResponse {
@@ -25,7 +37,7 @@ pub fn get_status(app: tauri::AppHandle, state: State<'_, AppState>) -> StatusRe
                 .unwrap_or_else(|| "openai".to_string());
 
             let key = match provider.as_str() {
-                "openai" => store.get("openai_api_key"),
+                "openai" | "openai-realtime" => store.get("openai_api_key"),
                 "mistral" => store.get("mistral_api_key"),
                 _ => None,
             };
@@ -43,9 +55,114 @@ pub fn get_status(app: tauri::AppHandle, state: State<'_, AppState>) -> StatusRe
 #[tauri::command]
 pub fn validate_api_key(key: String, provider: String) -> bool {
     match provider.as_str() {
-        "openai" => key.starts_with("sk-") && key.len() > 20,
+        "openai" | "openai-realtime" => key.starts_with("sk-") && key.len() > 20,
         "mistral" => key.len() > 20,
         _ => false,
+    }
+}
+
+/// Check if post-processing is enabled (has post-processor and active preset)
+fn is_post_processing_enabled(store: &tauri_plugin_store::Store<tauri::Wry>) -> bool {
+    // Check post-processor setting
+    let post_processor_str = store
+        .get("post_processor")
+        .and_then(|v| v.as_str().map(String::from))
+        .unwrap_or_else(|| "none".to_string());
+
+    if post_processor_str == "none" {
+        return false;
+    }
+
+    // Check active preset exists
+    store
+        .get("active_preset")
+        .and_then(|v| v.as_str().map(String::from))
+        .is_some()
+}
+
+/// Apply post-processing to transcription if enabled
+///
+/// Post-processing is applied when:
+/// 1. An active preset is set, AND
+/// 2. A post-processor is configured (not "none")
+///
+/// Returns the processed text, or original text on error/skip.
+async fn apply_post_processing(
+    app: &tauri::AppHandle,
+    text: String,
+    store: &tauri_plugin_store::Store<tauri::Wry>,
+) -> String {
+    // Get post-processor setting
+    let post_processor_str = store
+        .get("post_processor")
+        .and_then(|v| v.as_str().map(String::from))
+        .unwrap_or_else(|| "none".to_string());
+
+    let post_processor: PostProcessor = post_processor_str
+        .parse()
+        .unwrap_or(PostProcessor::None);
+
+    // Skip if disabled
+    if post_processor == PostProcessor::None {
+        return text;
+    }
+
+    // Get active preset - post-processing only works with a preset
+    let active_preset = store
+        .get("active_preset")
+        .and_then(|v| v.as_str().map(String::from));
+
+    let preset = match active_preset {
+        Some(name) => {
+            // Use Tauri's app config dir for presets (works on Android)
+            let presets_dir = match get_presets_dir(app) {
+                Ok(dir) => dir,
+                Err(e) => {
+                    eprintln!("Failed to get presets dir: {}", e);
+                    return text;
+                }
+            };
+            match Preset::load_from(&name, &presets_dir) {
+                Ok((preset, _)) => preset,
+                Err(e) => {
+                    eprintln!("Failed to load preset '{}': {}", name, e);
+                    return text;
+                }
+            }
+        }
+        None => {
+            // No preset active, skip post-processing
+            return text;
+        }
+    };
+
+    // Get API key for post-processor
+    let api_key = match post_processor {
+        PostProcessor::OpenAI => store.get("openai_api_key"),
+        PostProcessor::Mistral => store.get("mistral_api_key"),
+        _ => None,
+    }
+    .and_then(|v| v.as_str().map(String::from));
+
+    let api_key = match api_key {
+        Some(key) if !key.is_empty() => key,
+        _ => {
+            eprintln!(
+                "Post-processing: No API key configured for {}",
+                post_processor
+            );
+            return text;
+        }
+    };
+
+    // Apply post-processing with preset's prompt
+    match post_process(&text, &post_processor, &api_key, &preset.prompt, None).await {
+        Ok(processed) => processed,
+        Err(e) => {
+            eprintln!("Post-processing failed: {}", e);
+            let _ = app.emit("post-process-warning", e.to_string());
+            text // Return original on error
+        }
     }
 }
 
@@ -79,7 +196,7 @@ pub async fn transcribe_audio(
         .unwrap_or(TranscriptionProvider::OpenAI);
 
     let api_key = match provider_str.as_str() {
-        "openai" => store.get("openai_api_key"),
+        "openai" | "openai-realtime" => store.get("openai_api_key"),
         "mistral" => store.get("mistral_api_key"),
         _ => None,
     }
@@ -116,9 +233,15 @@ pub async fn transcribe_audio(
     .map_err(|e| e.to_string())?
     .map_err(|e| e.to_string())?;
 
+    // Apply post-processing if enabled (requires active preset + post-processor)
+    if is_post_processing_enabled(&store) {
+        let _ = app.emit("post-processing-started", ());
+    }
+    let final_text = apply_post_processing(&app, text, &store).await;
+
     // Copy to clipboard using Tauri plugin
     app.clipboard()
-        .write_text(&text)
+        .write_text(&final_text)
         .map_err(|e| e.to_string())?;
 
     // Reset state
@@ -127,7 +250,7 @@ pub async fn transcribe_audio(
         *recording_state = RecordingState::Idle;
     }
 
-    Ok(text)
+    Ok(final_text)
 }
 
 // ========== Preset Commands ==========
@@ -162,7 +285,19 @@ pub fn list_presets(app: tauri::AppHandle) -> Vec<PresetInfo> {
             .and_then(|v| v.as_str().map(String::from))
     });
 
-    Preset::list_all()
+    // Use Tauri's app config dir for presets (works on Android)
+    let presets = match get_presets_dir(&app) {
+        Ok(dir) => Preset::list_all_from(&dir),
+        Err(_) => {
+            // Fall back to built-ins only if we can't get the dir
+            Preset::builtins()
+                .into_iter()
+                .map(|p| (p, PresetSource::BuiltIn))
+                .collect()
+        }
+    };
+
+    presets
         .into_iter()
         .map(|(p, source)| PresetInfo {
             is_active: active_preset.as_ref().is_some_and(|a| a == &p.name),
@@ -175,10 +310,11 @@ pub fn list_presets(app: tauri::AppHandle) -> Vec<PresetInfo> {
 
 /// Get full details of a preset
 #[tauri::command]
-pub fn get_preset_details(name: String) -> Result<PresetDetails, String> {
+pub fn get_preset_details(app: tauri::AppHandle, name: String) -> Result<PresetDetails, String> {
     use whis_core::preset::{Preset, PresetSource};
 
-    let (preset, source) = Preset::load(&name)?;
+    let presets_dir = get_presets_dir(&app)?;
+    let (preset, source) = Preset::load_from(&name, &presets_dir)?;
 
     Ok(PresetDetails {
         name: preset.name,
@@ -211,4 +347,237 @@ pub fn get_active_preset(app: tauri::AppHandle) -> Option<String> {
             .get("active_preset")
             .and_then(|v| v.as_str().map(String::from))
     })
+}
+
+// ========== Preset CRUD Commands ==========
+
+/// Input for creating a new preset
+#[derive(serde::Deserialize)]
+pub struct CreatePresetInput {
+    pub name: String,
+    pub description: String,
+    pub prompt: String,
+}
+
+/// Input for updating an existing preset
+#[derive(serde::Deserialize)]
+pub struct UpdatePresetInput {
+    pub description: String,
+    pub prompt: String,
+}
+
+/// Create a new user preset
+#[tauri::command]
+pub fn create_preset(app: tauri::AppHandle, input: CreatePresetInput) -> Result<PresetInfo, String> {
+    use whis_core::preset::Preset;
+
+    let presets_dir = get_presets_dir(&app)?;
+
+    // Validate name
+    Preset::validate_name(&input.name, false)?;
+
+    // Check if preset already exists (check user preset in custom dir)
+    if Preset::load_user_from(&input.name, &presets_dir).is_some() {
+        return Err(format!("Preset '{}' already exists", input.name));
+    }
+
+    // Create and save the preset
+    let preset = Preset {
+        name: input.name.clone(),
+        description: input.description.clone(),
+        prompt: input.prompt,
+        post_processor: None,
+        model: None,
+    };
+
+    preset.save_to(&presets_dir)?;
+
+    Ok(PresetInfo {
+        name: input.name,
+        description: input.description,
+        is_builtin: false,
+        is_active: false,
+    })
+}
+
+/// Update an existing user preset
+#[tauri::command]
+pub fn update_preset(app: tauri::AppHandle, name: String, input: UpdatePresetInput) -> Result<(), String> {
+    use whis_core::preset::Preset;
+
+    let presets_dir = get_presets_dir(&app)?;
+
+    // Check it's not a built-in
+    if Preset::is_builtin(&name) {
+        return Err(format!("Cannot edit built-in preset '{}'", name));
+    }
+
+    // Check preset exists
+    let (mut preset, _) = Preset::load_from(&name, &presets_dir)?;
+
+    // Update fields
+    preset.description = input.description;
+    preset.prompt = input.prompt;
+
+    // Save
+    preset.save_to(&presets_dir)?;
+
+    Ok(())
+}
+
+/// Delete a user preset
+#[tauri::command]
+pub fn delete_preset(app: tauri::AppHandle, name: String) -> Result<(), String> {
+    use whis_core::preset::Preset;
+
+    let presets_dir = get_presets_dir(&app)?;
+
+    // Delete the preset file
+    Preset::delete_from(&name, &presets_dir)?;
+
+    // If this was the active preset, clear it
+    if let Ok(store) = app.store("settings.json") {
+        if let Some(active) = store
+            .get("active_preset")
+            .and_then(|v| v.as_str().map(String::from))
+        {
+            if active == name {
+                store.delete("active_preset");
+                let _ = store.save();
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// ========== Streaming Transcription Commands ==========
+
+/// Start streaming transcription with OpenAI Realtime API
+///
+/// Creates a WebSocket connection and audio channel for real-time streaming.
+/// Frontend sends audio chunks via transcribe_streaming_send_chunk.
+#[tauri::command]
+pub async fn transcribe_streaming_start(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let store = app.store("settings.json").map_err(|e| e.to_string())?;
+
+    // Normalize provider for API key lookup (openai-realtime uses openai key)
+    let provider_str = store
+        .get("provider")
+        .and_then(|v| v.as_str().map(String::from))
+        .unwrap_or_else(|| "openai".to_string());
+
+    let api_key = if provider_str == "openai-realtime" || provider_str == "openai" {
+        store.get("openai_api_key")
+    } else {
+        None
+    }
+    .and_then(|v| v.as_str().map(String::from))
+    .ok_or("No OpenAI API key configured")?;
+
+    // Set state to transcribing
+    {
+        let mut recording_state = state.recording_state.lock().unwrap();
+        *recording_state = RecordingState::Transcribing;
+    }
+
+    // Create channel for audio samples
+    let (audio_tx, audio_rx) = tokio::sync::mpsc::channel::<Vec<f32>>(64);
+
+    // Store sender in state so frontend can send chunks
+    {
+        let mut state_tx = state.audio_tx.lock().unwrap();
+        *state_tx = Some(audio_tx);
+    }
+
+    // Get language setting
+    let language: Option<String> = store
+        .get("language")
+        .and_then(|v| v.as_str().map(String::from));
+
+    // Spawn transcription task
+    let recording_state_arc = state.recording_state.clone();
+    let audio_tx_arc = state.audio_tx.clone();
+    tokio::spawn(async move {
+        match OpenAIRealtimeProvider::transcribe_stream(&api_key, audio_rx, language).await {
+            Ok(transcript) => {
+                // Apply post-processing if enabled
+                let final_text = if let Ok(store) = app.store("settings.json") {
+                    if is_post_processing_enabled(&store) {
+                        let _ = app.emit("post-processing-started", ());
+                    }
+                    apply_post_processing(&app, transcript, &store).await
+                } else {
+                    transcript
+                };
+
+                // Copy to clipboard
+                if let Err(e) = app.clipboard().write_text(&final_text) {
+                    let _ = app.emit("transcription-error", format!("Clipboard error: {}", e));
+                    return;
+                }
+
+                // Emit event with result
+                let _ = app.emit("transcription-complete", final_text);
+            }
+            Err(e) => {
+                let _ = app.emit("transcription-error", e.to_string());
+            }
+        }
+
+        // Reset state
+        {
+            let mut recording_state = recording_state_arc.lock().unwrap();
+            *recording_state = RecordingState::Idle;
+        }
+
+        // Clear audio_tx
+        {
+            let mut state_tx = audio_tx_arc.lock().unwrap();
+            *state_tx = None;
+        }
+    });
+
+    Ok(())
+}
+
+/// Send audio chunk to ongoing streaming transcription
+///
+/// Frontend calls this continuously with audio samples from Web Audio API.
+#[tauri::command]
+pub async fn transcribe_streaming_send_chunk(
+    state: State<'_, AppState>,
+    chunk: Vec<f32>,
+) -> Result<(), String> {
+    let audio_tx = state.audio_tx.lock().unwrap();
+
+    if let Some(tx) = audio_tx.as_ref() {
+        // Send chunk with error handling
+        // Use try_send to avoid blocking if channel is full
+        if tx.try_send(chunk).is_err() {
+            return Err("Audio channel closed or full".to_string());
+        }
+    } else {
+        return Err("No active streaming transcription".to_string());
+    }
+
+    Ok(())
+}
+
+/// Stop streaming transcription
+///
+/// Drops the audio_tx to signal end of stream, causing WebSocket to commit
+/// and request final transcription from OpenAI.
+#[tauri::command]
+pub async fn transcribe_streaming_stop(state: State<'_, AppState>) -> Result<(), String> {
+    // Drop audio_tx to signal end of stream
+    {
+        let mut audio_tx = state.audio_tx.lock().unwrap();
+        *audio_tx = None;
+    }
+
+    Ok(())
 }
