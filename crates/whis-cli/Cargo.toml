@@ -26,7 +26,7 @@ global-hotkey.workspace = true
 crossbeam-channel.workspace = true
 interprocess.workspace = true
 reqwest.workspace = true
-dirs = "5"
+dirs = "6"
 crossterm = "0.29"
 
 [features]

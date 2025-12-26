@@ -187,7 +187,7 @@ impl AudioRecorder {
         let device = if let Some(name) = device_name {
             // Try to find device by name
             host.input_devices()?
-                .find(|d| d.name().map(|n| n == name).unwrap_or(false))
+                .find(|d| d.description().map(|n| n.to_string() == name).unwrap_or(false))
                 .with_context(|| format!("Audio device '{}' not found", name))?
         } else {
             // Use default device
@@ -195,7 +195,7 @@ impl AudioRecorder {
                 .context("No input device available")?
         };
 
-        let actual_device_name = device.name().unwrap_or_else(|_| "<unknown>".to_string());
+        let actual_device_name = device.description().map(|d| d.to_string()).unwrap_or_else(|_| "<unknown>".to_string());
         crate::verbose!("Audio device: {}", actual_device_name);
 
         let config = device
@@ -208,7 +208,7 @@ impl AudioRecorder {
         #[cfg(not(target_os = "android"))]
         let device_channels = config.channels();
 
-        let device_sample_rate = config.sample_rate().0;
+        let device_sample_rate = config.sample_rate();
 
         crate::verbose!(
             "Audio device: {} Hz, {} channel(s) -> resampling to {} Hz mono",
@@ -915,11 +915,12 @@ pub struct AudioDeviceInfo {
 pub fn list_audio_devices() -> Result<Vec<AudioDeviceInfo>> {
     alsa_suppress::init();
     let host = cpal::default_host();
-    let default_device_name = host.default_input_device().and_then(|d| d.name().ok());
+    let default_device_name = host.default_input_device().and_then(|d| d.description().ok()).map(|d| d.to_string());
 
     let mut devices = Vec::new();
     for device in host.input_devices()? {
-        if let Ok(name) = device.name() {
+        if let Ok(desc) = device.description() {
+            let name = desc.to_string();
             devices.push(AudioDeviceInfo {
                 name: name.clone(),
                 is_default: default_device_name.as_ref() == Some(&name),
