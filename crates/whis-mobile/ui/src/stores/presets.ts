@@ -1,4 +1,4 @@
-import type { PresetDetails, PresetInfo } from '../types'
+import type { CreatePresetInput, PresetDetails, PresetInfo, UpdatePresetInput } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 import { reactive, readonly } from 'vue'
 
@@ -62,5 +62,28 @@ export const presetsStore = {
 
   clearSelectedPreset() {
     state.selectedPreset = null
+  },
+
+  async createPreset(input: CreatePresetInput) {
+    await invoke('create_preset', { input })
+    await this.loadPresets()
+  },
+
+  async updatePreset(name: string, input: UpdatePresetInput) {
+    await invoke('update_preset', { name, input })
+    await this.loadPresets()
+    // Refresh details if viewing this preset
+    if (state.selectedPreset?.name === name) {
+      await this.loadPresetDetails(name)
+    }
+  },
+
+  async deletePreset(name: string) {
+    await invoke('delete_preset', { name })
+    await this.loadPresets()
+    // Clear selection if deleted preset was selected
+    if (state.selectedPreset?.name === name) {
+      state.selectedPreset = null
+    }
   },
 }

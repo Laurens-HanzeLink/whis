@@ -125,7 +125,8 @@ body {
   color: white;
 }
 
-.btn.btn-secondary.transcribing {
+.btn.btn-secondary.transcribing,
+.btn.btn-secondary.post-processing {
   background: var(--bg-weak);
   border-color: var(--border);
   color: var(--text-weak);
@@ -147,8 +148,8 @@ body {
   animation: indicator-pulse 1s ease-in-out infinite;
 }
 
-.btn.btn-secondary.transcribing .record-indicator {
-  background: var(--accent);
+.btn.btn-secondary.transcribing .record-indicator,
+.btn.btn-secondary.post-processing .record-indicator {
   opacity: 1;
 }
 

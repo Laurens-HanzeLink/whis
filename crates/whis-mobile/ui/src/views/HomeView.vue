@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import type { StatusResponse } from '../types'
 import { invoke } from '@tauri-apps/api/core'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { listen } from '@tauri-apps/api/event'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { settingsStore } from '../stores/settings'
+import { AudioStreamer } from '../utils/audioStreamer'
 
 const router = useRouter()
 
@@ -11,24 +14,33 @@ const router = useRouter()
 const configValid = ref(false)
 const isRecording = ref(false)
 const isTranscribing = ref(false)
+const isPostProcessing = ref(false)
 const error = ref<string | null>(null)
 const lastTranscription = ref<string | null>(null)
-const showCopied = ref(false)
+const isStreaming = ref(false)
 
-// MediaRecorder
+// MediaRecorder for non-streaming providers
 let mediaRecorder: MediaRecorder | null = null
 let audioChunks: Blob[] = []
 
+// Audio streamer for Realtime
+let audioStreamer: AudioStreamer | null = null
+
+// Provider (to determine if using streaming)
+const provider = computed(() => settingsStore.state.provider)
+
 const buttonText = computed(() => {
+  if (isPostProcessing.value)
+    return 'Post-processing...'
   if (isTranscribing.value)
     return 'Transcribing...'
   if (isRecording.value)
-    return 'Stop Recording'
+    return 'Recording...'
   return 'Start Recording'
 })
 
 const canRecord = computed(() => {
-  return configValid.value && !isTranscribing.value
+  return configValid.value && !isTranscribing.value && !isPostProcessing.value
 })
 
 async function checkConfig() {
@@ -44,50 +56,90 @@ async function checkConfig() {
 async function startRecording() {
   try {
     error.value = null
-    audioChunks = []
-
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
-    // Try to use webm/opus, fall back to whatever is available
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus'
-      : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
-          ? 'audio/ogg;codecs=opus'
-          : ''
-
-    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
-
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        audioChunks.push(event.data)
-      }
-    }
-
-    mediaRecorder.onstop = async () => {
-      // Stop all tracks to release the microphone
-      stream.getTracks().forEach(track => track.stop())
-
-      if (audioChunks.length === 0) {
-        error.value = 'No audio recorded'
-        isRecording.value = false
-        return
-      }
-
-      const audioBlob = new Blob(audioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' })
-      await transcribeAudio(audioBlob)
-    }
-
-    mediaRecorder.onerror = (event) => {
-      console.error('MediaRecorder error:', event)
-      error.value = 'Recording error occurred'
-      isRecording.value = false
-      stream.getTracks().forEach(track => track.stop())
-    }
-
-    mediaRecorder.start()
     isRecording.value = true
+
+    const storeProvider = settingsStore.state.provider
+    const isRealtime = storeProvider === 'openai-realtime'
+
+    const apiKeyProvider = isRealtime ? 'openai' : storeProvider
+    const apiKey = settingsStore.state[`${apiKeyProvider}_api_key` as keyof typeof settingsStore.state] as string | null
+
+    if (!apiKey) {
+      throw new Error('No API key configured')
+    }
+
+    if (isRealtime) {
+      // Start streaming transcription
+      isStreaming.value = true
+
+      // Start backend transcription
+      await invoke('transcribe_streaming_start')
+
+      // Start audio streamer
+      audioStreamer = new AudioStreamer({
+        onChunk: async (chunk) => {
+          try {
+            await invoke('transcribe_streaming_send_chunk', {
+              chunk: Array.from(chunk),
+            })
+          }
+          catch (e) {
+            console.error('Failed to send chunk:', e)
+          }
+        },
+        onError: (err) => {
+          console.error('Audio streamer error:', err)
+          error.value = err.message
+          stopRecording()
+        },
+      })
+
+      await audioStreamer.start()
+    }
+    else {
+      // Use existing MediaRecorder approach for non-streaming providers
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+            ? 'audio/ogg;codecs=opus'
+            : ''
+
+      mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+      audioChunks = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop())
+
+        if (audioChunks.length === 0) {
+          error.value = 'No audio recorded'
+          resetState()
+          return
+        }
+
+        isTranscribing.value = true
+        const audioBlob = new Blob(audioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' })
+        await transcribeAudio(audioBlob)
+      }
+
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event)
+        error.value = 'Recording error occurred'
+        resetState()
+        stream.getTracks().forEach(track => track.stop())
+      }
+
+      mediaRecorder.start()
+    }
   }
   catch (e) {
     console.error('Failed to start recording:', e)
@@ -97,22 +149,32 @@ async function startRecording() {
     else {
       error.value = String(e)
     }
+    resetState()
   }
 }
 
 function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+  if (isStreaming.value && audioStreamer) {
+    // Stop streaming
+    audioStreamer.stop()
+    audioStreamer = null
+
+    // Signal backend to stop
+    invoke('transcribe_streaming_stop').catch(console.error)
+
+    isStreaming.value = false
+    isTranscribing.value = true
+  }
+  else if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    // Stop MediaRecorder
     mediaRecorder.stop()
   }
+
   isRecording.value = false
 }
 
 async function transcribeAudio(audioBlob: Blob) {
-  isTranscribing.value = true
-  error.value = null
-
   try {
-    // Convert blob to Uint8Array
     const arrayBuffer = await audioBlob.arrayBuffer()
     const audioData = Array.from(new Uint8Array(arrayBuffer))
 
@@ -122,14 +184,27 @@ async function transcribeAudio(audioBlob: Blob) {
     })
 
     lastTranscription.value = text
-    showCopied.value = true
-    setTimeout(() => showCopied.value = false, 2000)
   }
   catch (e) {
     error.value = String(e)
   }
   finally {
-    isTranscribing.value = false
+    resetState()
+  }
+}
+
+function resetState() {
+  isRecording.value = false
+  isTranscribing.value = false
+  isPostProcessing.value = false
+  isStreaming.value = false
+  mediaRecorder = null
+  audioChunks = []
+}
+
+async function copyLastTranscription() {
+  if (lastTranscription.value) {
+    await writeText(lastTranscription.value)
   }
 }
 
@@ -149,16 +224,49 @@ async function toggleRecording() {
   }
 }
 
+// Listen for transcription events
 onMounted(async () => {
   await settingsStore.initialize()
   await checkConfig()
+
+  // Listen for post-processing started event
+  const unlistenPostProcess = await listen('post-processing-started', () => {
+    isTranscribing.value = false
+    isPostProcessing.value = true
+  })
+
+  // Listen for transcription complete event
+  const unlistenComplete = await listen<string>('transcription-complete', (event) => {
+    lastTranscription.value = event.payload
+    resetState()
+  })
+
+  // Listen for transcription error event
+  const unlistenError = await listen<string>('transcription-error', (event) => {
+    error.value = event.payload
+    resetState()
+  })
+
+  // Cleanup on unmount
+  onUnmounted(() => {
+    unlistenPostProcess()
+    unlistenComplete()
+    unlistenError()
+
+    if (audioStreamer) {
+      audioStreamer.stop()
+    }
+
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop()
+    }
+  })
 })
 
-onUnmounted(() => {
-  // Clean up recording if component unmounts
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop()
-  }
+// Watch provider changes
+watch(provider, async () => {
+  // Update config validity when provider changes
+  await checkConfig()
 })
 </script>
 
@@ -168,18 +276,17 @@ onUnmounted(() => {
       <!-- Record Button -->
       <button
         class="btn btn-secondary"
-        :class="{ recording: isRecording, transcribing: isTranscribing }"
+        :class="{
+          recording: isRecording,
+          transcribing: isTranscribing,
+          'post-processing': isPostProcessing
+        }"
         :disabled="!canRecord"
         @click="toggleRecording"
       >
         <span class="record-indicator" />
         <span>{{ buttonText }}</span>
       </button>
-
-      <!-- Copied Toast -->
-      <div v-if="showCopied" class="toast">
-        Copied to clipboard!
-      </div>
 
       <!-- Error -->
       <p v-if="error" class="error">
@@ -193,7 +300,13 @@ onUnmounted(() => {
 
       <!-- Last Transcription Preview -->
       <div v-if="lastTranscription && !error" class="preview">
-        <p>{{ lastTranscription.substring(0, 100) }}{{ lastTranscription.length > 100 ? '...' : '' }}</p>
+        <p>{{ lastTranscription.substring(0, 20) }}{{ lastTranscription.length > 20 ? '...' : '' }}</p>
+        <button class="copy-btn" @click="copyLastTranscription">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        </button>
       </div>
     </main>
   </div>
@@ -207,7 +320,6 @@ onUnmounted(() => {
   min-height: 100%;
 }
 
-/* Content */
 .content {
   flex: 1;
   display: flex;
@@ -219,23 +331,51 @@ onUnmounted(() => {
   gap: 24px;
 }
 
-/* Record Button - aligned with desktop */
+/* Button needs inline-flex for indicator */
 .btn.btn-secondary {
-  gap: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* Toast */
-.toast {
-  position: fixed;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--accent);
-  color: var(--text-inverted);
-  padding: 12px 24px;
-  border-radius: var(--radius);
-  font-weight: 500;
-  animation: fadeIn 0.2s ease;
+/* Recording state - red */
+.btn.btn-secondary.recording {
+  background: var(--recording);
+  border-color: var(--recording);
+  color: white;
+}
+
+/* Transcribing and Post-processing states - same muted style */
+.btn.btn-secondary.transcribing,
+.btn.btn-secondary.post-processing {
+  background: var(--bg-weak);
+  border-color: var(--border);
+  color: var(--text-weak);
+  cursor: wait;
+}
+
+/* Status indicator dot inside button */
+.record-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+.btn.btn-secondary.recording .record-indicator {
+  opacity: 1;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.btn.btn-secondary.transcribing .record-indicator,
+.btn.btn-secondary.post-processing .record-indicator {
+  opacity: 1;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 /* Error */
@@ -259,11 +399,25 @@ onUnmounted(() => {
 /* Preview */
 .preview {
   max-width: 300px;
-  padding: 16px;
+  padding: 8px 12px;
   background: var(--bg-weak);
   border-radius: var(--radius);
   font-size: 14px;
   color: var(--text-weak);
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-weak);
+  padding: 6px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

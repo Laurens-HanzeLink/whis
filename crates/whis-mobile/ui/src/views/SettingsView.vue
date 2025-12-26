@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import type { SelectOption } from '../types'
+import type { PostProcessor, Provider, SelectOption, TranscriptionMethod } from '../types'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
+import ToggleSwitch from '../components/ToggleSwitch.vue'
+import { presetsStore } from '../stores/presets'
 import { settingsStore } from '../stores/settings'
 
-// Provider options
+// Provider options (expanded)
 const providerOptions: SelectOption[] = [
   { value: 'openai', label: 'OpenAI Whisper' },
   { value: 'mistral', label: 'Mistral Voxtral' },
+  { value: 'groq', label: 'Groq' },
+  { value: 'deepgram', label: 'Deepgram' },
+  { value: 'elevenlabs', label: 'ElevenLabs' },
 ]
 
 // Language options
@@ -26,6 +31,13 @@ const languageOptions: SelectOption[] = [
   { value: 'ja', label: 'Japanese' },
   { value: 'zh', label: 'Chinese' },
   { value: 'ko', label: 'Korean' },
+]
+
+// Post-processor options
+const postProcessorOptions: SelectOption[] = [
+  { value: 'none', label: 'Disabled' },
+  { value: 'openai', label: 'OpenAI' },
+  { value: 'mistral', label: 'Mistral' },
 ]
 
 // Computed bindings to store
@@ -48,21 +60,83 @@ const mistralApiKey = computed({
   get: () => settingsStore.state.mistral_api_key ?? '',
   set: val => settingsStore.setMistralApiKey(val || null),
 })
+
+const groqApiKey = computed({
+  get: () => settingsStore.state.groq_api_key ?? '',
+  set: val => settingsStore.setGroqApiKey(val || null),
+})
+
+const deepgramApiKey = computed({
+  get: () => settingsStore.state.deepgram_api_key ?? '',
+  set: val => settingsStore.setDeepgramApiKey(val || null),
+})
+
+const elevenlabsApiKey = computed({
+  get: () => settingsStore.state.elevenlabs_api_key ?? '',
+  set: val => settingsStore.setElevenlabsApiKey(val || null),
+})
+
+// OpenAI streaming method
+const openaiMethod = computed<TranscriptionMethod>({
+  get: () => provider.value === 'openai-realtime' ? 'streaming' : 'standard',
+  set: (val) => {
+    const newProvider = val === 'streaming' ? 'openai-realtime' : 'openai'
+    settingsStore.setProvider(newProvider)
+  },
+})
+
+// Show streaming toggle only for OpenAI
+const showStreamingToggle = computed(() => {
+  return provider.value === 'openai' || provider.value === 'openai-realtime'
+})
+
+// Streaming toggle state (convert TranscriptionMethod to boolean)
+const isStreamingEnabled = computed({
+  get: () => openaiMethod.value === 'streaming',
+  set: (value: boolean) => {
+    openaiMethod.value = value ? 'streaming' : 'standard'
+  },
+})
+
+// Normalize provider for display (openai-realtime shows as openai)
+const displayProvider = computed<Provider>(() => {
+  return provider.value === 'openai-realtime' ? 'openai' : provider.value
+})
+
+// Post-processor binding
+const postProcessor = computed({
+  get: () => settingsStore.state.post_processor,
+  set: val => settingsStore.setPostProcessor(val as PostProcessor),
+})
+
+// Active preset (read-only display)
+const activePresetName = computed(() => {
+  const active = presetsStore.state.presets.find(p => p.is_active)
+  return active?.name ?? 'None'
+})
+
+// Load presets on mount to get active preset
+onMounted(() => {
+  presetsStore.loadPresets()
+})
 </script>
 
 <template>
   <div class="settings-view">
     <main class="settings-content">
+      <!-- Provider -->
       <div class="field">
         <label>provider</label>
         <AppSelect
-          v-model="provider"
+          :model-value="displayProvider"
           :options="providerOptions"
           aria-label="Select provider"
+          @update:model-value="(val) => provider = val as Provider"
         />
       </div>
 
-      <div v-if="provider === 'openai'" class="field">
+      <!-- OpenAI API Key -->
+      <div v-if="provider === 'openai' || provider === 'openai-realtime'" class="field">
         <label>openai api key</label>
         <AppInput
           v-model="openaiApiKey"
@@ -74,6 +148,24 @@ const mistralApiKey = computed({
         </span>
       </div>
 
+      <!-- Streaming Toggle (OpenAI only) -->
+      <div v-if="showStreamingToggle" class="field streaming-field">
+        <label>streaming mode</label>
+        <div class="field-row">
+          <ToggleSwitch v-model="isStreamingEnabled" />
+          <span class="method-description">
+            {{ openaiMethod === 'streaming' ? 'Real-time' : 'Standard' }}
+          </span>
+        </div>
+        <span v-if="openaiMethod === 'streaming'" class="hint">
+          Lower latency via WebSocket. Transcription begins as you speak.
+        </span>
+        <span v-else class="hint">
+          Upload audio after recording. More reliable for longer recordings.
+        </span>
+      </div>
+
+      <!-- Mistral API Key -->
       <div v-if="provider === 'mistral'" class="field">
         <label>mistral api key</label>
         <AppInput
@@ -86,6 +178,46 @@ const mistralApiKey = computed({
         </span>
       </div>
 
+      <!-- Groq API Key -->
+      <div v-if="provider === 'groq'" class="field">
+        <label>groq api key</label>
+        <AppInput
+          v-model="groqApiKey"
+          type="password"
+          placeholder="gsk_..."
+        />
+        <span class="hint">
+          Get your key at <span class="link" @click="openUrl('https://console.groq.com/keys')">console.groq.com</span>
+        </span>
+      </div>
+
+      <!-- Deepgram API Key -->
+      <div v-if="provider === 'deepgram'" class="field">
+        <label>deepgram api key</label>
+        <AppInput
+          v-model="deepgramApiKey"
+          type="password"
+          placeholder="Enter API key"
+        />
+        <span class="hint">
+          Get your key at <span class="link" @click="openUrl('https://console.deepgram.com')">console.deepgram.com</span>
+        </span>
+      </div>
+
+      <!-- ElevenLabs API Key -->
+      <div v-if="provider === 'elevenlabs'" class="field">
+        <label>elevenlabs api key</label>
+        <AppInput
+          v-model="elevenlabsApiKey"
+          type="password"
+          placeholder="Enter API key"
+        />
+        <span class="hint">
+          Get your key at <span class="link" @click="openUrl('https://elevenlabs.io/app/settings/api-keys')">elevenlabs.io</span>
+        </span>
+      </div>
+
+      <!-- Language -->
       <div class="field">
         <label>language</label>
         <AppSelect
@@ -94,10 +226,27 @@ const mistralApiKey = computed({
           aria-label="Select language"
         />
         <span class="hint">
-          Language of the audio being transcribed
+          Language of audio being transcribed
         </span>
       </div>
 
+      <!-- Active Preset (read-only) -->
+      <div class="field">
+        <label>active preset</label>
+        <div class="field-value">{{ activePresetName }}</div>
+      </div>
+
+      <!-- Post-Processing -->
+      <div class="field">
+        <label>post-processing</label>
+        <AppSelect
+          v-model="postProcessor"
+          :options="postProcessorOptions"
+          aria-label="Select post-processor"
+        />
+      </div>
+
+      <!-- Auto-save notice -->
       <div class="auto-save-notice">
         <span class="notice-marker">[*]</span>
         <span>Settings are saved automatically</span>
@@ -114,7 +263,6 @@ const mistralApiKey = computed({
   min-height: 100%;
 }
 
-/* Content */
 .settings-content {
   flex: 1;
   padding: 20px;
@@ -124,7 +272,28 @@ const mistralApiKey = computed({
   gap: 24px;
 }
 
-/* Auto-save notice */
+/* Streaming field styling */
+.streaming-field .field-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.method-description {
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* Read-only field value (for preset display) */
+.field-value {
+  padding: 12px 14px;
+  background: var(--bg-weak);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  color: var(--text);
+}
+
 .auto-save-notice {
   display: flex;
   align-items: center;
@@ -148,5 +317,13 @@ const mistralApiKey = computed({
 
 .link:active {
   color: var(--accent);
+}
+
+.hint {
+  display: block;
+  font-size: 13px;
+  color: var(--text-weak);
+  margin-top: 8px;
+  line-height: 1.4;
 }
 </style>

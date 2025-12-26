@@ -5,8 +5,14 @@ export interface SelectOption<T = string | null> {
   disabled?: boolean
 }
 
-// Mobile supports subset of providers
-export type Provider = 'openai' | 'mistral'
+// Mobile transcription providers
+export type Provider = 'openai' | 'openai-realtime' | 'mistral' | 'groq' | 'deepgram' | 'elevenlabs'
+
+// OpenAI transcription method
+export type TranscriptionMethod = 'standard' | 'streaming'
+
+// Post-processing provider (LLM for transcript cleanup)
+export type PostProcessor = 'none' | 'openai' | 'mistral'
 
 // Settings keys used by Tauri Store plugin
 export interface SettingsKeys {
@@ -14,6 +20,9 @@ export interface SettingsKeys {
   language: string | null
   openai_api_key: string | null
   mistral_api_key: string | null
+  groq_api_key: string | null
+  deepgram_api_key: string | null
+  elevenlabs_api_key: string | null
 }
 
 // Status response from backend
@@ -36,4 +45,23 @@ export interface PresetDetails {
   description: string
   prompt: string
   is_builtin: boolean
+}
+
+// Audio chunk for streaming
+export interface AudioChunk {
+  samples: Float32Array
+  timestamp: number
+}
+
+// Preset creation input
+export interface CreatePresetInput {
+  name: string
+  description: string
+  prompt: string
+}
+
+// Preset update input
+export interface UpdatePresetInput {
+  description: string
+  prompt: string
 }

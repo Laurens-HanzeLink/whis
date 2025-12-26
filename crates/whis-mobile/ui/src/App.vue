@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { headerStore } from './stores/header'
 import { settingsStore } from './stores/settings'
 
 const route = useRoute()
@@ -18,6 +19,8 @@ const currentPageLabel = computed(() => {
   const item = navItems.find(i => i.name === route.name)
   return item?.label ?? 'whis'
 })
+
+const headerAction = computed(() => headerStore.state.action)
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value
@@ -50,6 +53,14 @@ onMounted(() => {
         <span>{{ sidebarOpen ? '[x]' : '[=]' }}</span>
       </button>
       <span class="mobile-brand">{{ currentPageLabel }}</span>
+      <button
+        v-if="headerAction"
+        class="header-action"
+        :aria-label="headerAction.ariaLabel"
+        @click="headerAction.onClick"
+      >
+        {{ headerAction.label }}
+      </button>
     </header>
 
     <!-- Backdrop -->
@@ -142,6 +153,26 @@ onMounted(() => {
   font-weight: 700;
   color: var(--text-strong);
   letter-spacing: -0.03em;
+  flex: 1;
+}
+
+.header-action {
+  all: unset;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text-weak);
+  cursor: pointer;
+  padding: 8px 4px;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.header-action:active {
+  color: var(--accent);
 }
 
 /* Backdrop */

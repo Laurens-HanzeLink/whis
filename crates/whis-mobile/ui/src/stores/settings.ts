@@ -1,4 +1,4 @@
-import type { Provider } from '../types'
+import type { PostProcessor, Provider } from '../types'
 import { Store } from '@tauri-apps/plugin-store'
 import { reactive, readonly } from 'vue'
 
@@ -8,6 +8,10 @@ const state = reactive({
   language: null as string | null,
   openai_api_key: null as string | null,
   mistral_api_key: null as string | null,
+  groq_api_key: null as string | null,
+  deepgram_api_key: null as string | null,
+  elevenlabs_api_key: null as string | null,
+  post_processor: 'none' as PostProcessor,
   loaded: false,
 })
 
@@ -23,6 +27,10 @@ async function getStore(): Promise<Store> {
         language: null,
         openai_api_key: null,
         mistral_api_key: null,
+        groq_api_key: null,
+        deepgram_api_key: null,
+        elevenlabs_api_key: null,
+        post_processor: 'none',
       },
     })
   }
@@ -39,6 +47,10 @@ async function initialize() {
     state.language = (await s.get<string | null>('language')) ?? null
     state.openai_api_key = (await s.get<string | null>('openai_api_key')) ?? null
     state.mistral_api_key = (await s.get<string | null>('mistral_api_key')) ?? null
+    state.groq_api_key = (await s.get<string | null>('groq_api_key')) ?? null
+    state.deepgram_api_key = (await s.get<string | null>('deepgram_api_key')) ?? null
+    state.elevenlabs_api_key = (await s.get<string | null>('elevenlabs_api_key')) ?? null
+    state.post_processor = (await s.get<PostProcessor>('post_processor')) || 'none'
     state.loaded = true
   }
   catch (e) {
@@ -71,6 +83,30 @@ async function setMistralApiKey(value: string | null) {
   await s.set('mistral_api_key', value)
 }
 
+async function setGroqApiKey(value: string | null) {
+  state.groq_api_key = value
+  const s = await getStore()
+  await s.set('groq_api_key', value)
+}
+
+async function setDeepgramApiKey(value: string | null) {
+  state.deepgram_api_key = value
+  const s = await getStore()
+  await s.set('deepgram_api_key', value)
+}
+
+async function setElevenlabsApiKey(value: string | null) {
+  state.elevenlabs_api_key = value
+  const s = await getStore()
+  await s.set('elevenlabs_api_key', value)
+}
+
+async function setPostProcessor(value: PostProcessor) {
+  state.post_processor = value
+  const s = await getStore()
+  await s.set('post_processor', value)
+}
+
 // Export reactive state and actions
 export const settingsStore = {
   // Readonly state for reading
@@ -84,4 +120,8 @@ export const settingsStore = {
   setLanguage,
   setOpenaiApiKey,
   setMistralApiKey,
+  setGroqApiKey,
+  setDeepgramApiKey,
+  setElevenlabsApiKey,
+  setPostProcessor,
 }
