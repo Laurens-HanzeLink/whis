@@ -51,10 +51,11 @@ fn main() {
         println!("    whis-desktop [OPTIONS]");
         println!();
         println!("OPTIONS:");
-        println!("    -t, --toggle    Toggle recording in running instance");
-        println!("        --install   Install desktop file and icons for app menu");
-        println!("        --uninstall Remove desktop file and icons");
-        println!("    -h, --help      Print this help message");
+        println!("    -t, --toggle          Toggle recording in running instance");
+        println!("        --install         Install desktop file and icons for app menu");
+        println!("        --uninstall       Remove desktop file and icons");
+        println!("        --start-in-tray   Launch application in background without window");
+        println!("    -h, --help            Print this help message");
         println!();
         println!("GLOBAL SHORTCUT:");
         println!("    Ctrl+Alt+W      Toggle recording (Linux: X11/Portal)");
@@ -73,8 +74,11 @@ fn main() {
         eprintln!("   Then launch from your app menu.\n");
     }
 
+    // Check for start-in-tray flag
+    let start_in_tray = args.contains(&"--start-in-tray".to_string());
+
     // Start the GUI application
-    whis_desktop::run();
+    whis_desktop::run(start_in_tray);
 }
 
 /// Check if we're running as an AppImage launched from a terminal
