@@ -41,7 +41,7 @@ jobs:
           fi
           # Strip 'v' prefix if present for version number
           VERSION_NUM="${VERSION#v}"
-          COMMIT=$(git rev-parse "$VERSION")
+          COMMIT=$(git rev-parse "$VERSION^{commit}")
           DATE=$(date +%Y-%m-%d)
 
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
