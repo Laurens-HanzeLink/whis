@@ -7,10 +7,10 @@ mod window;
 use tauri::Manager;
 use whis_core::Settings;
 
-pub fn run() {
+pub fn run(start_in_tray: bool) {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
-        .setup(|app| {
+        .setup(move |app| {
             // Load settings from disk
             let loaded_settings = Settings::load();
 
@@ -32,8 +32,10 @@ pub fn run() {
             // Start IPC listener for --toggle CLI commands
             shortcuts::start_ipc_listener(app.handle().clone());
 
-            // Always show main window on startup
-            window::show_main_window(app)?;
+            // Only show main window if NOT starting in tray
+            if !start_in_tray {
+                window::show_main_window(app)?;
+            }
 
             Ok(())
         })
