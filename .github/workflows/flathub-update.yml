@@ -61,7 +61,7 @@ jobs:
 
       - name: Install Flatpak generators
         run: |
-          pip install flatpak-node-generator aiohttp toml
+          pip install flatpak-node-generator aiohttp tomlkit
           git clone --depth 1 https://github.com/flatpak/flatpak-builder-tools.git /tmp/flatpak-builder-tools
 
       - name: Checkout Flathub repository
