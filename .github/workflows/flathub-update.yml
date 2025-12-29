@@ -95,9 +95,9 @@ jobs:
           COMMIT="${{ steps.version.outputs.commit }}"
 
           # Update ONLY the whis git source (not wl-clipboard dependency)
-          # Use sed range: from URL line to commit line, replace tag within that range
+          # Use sed range: from URL line to commit line, replace within that range
           sed -i "/url:.*frankdierolf\/whis/,/commit:/{s/tag: v[0-9.]*/tag: $TAG/}" ink.whis.Whis.yaml
-          sed -i "/url:.*frankdierolf\/whis/,/tag:/{s/commit: [a-f0-9]*/commit: $COMMIT/}" ink.whis.Whis.yaml
+          sed -i "/url:.*frankdierolf\/whis/,/commit:/{s/commit: [a-f0-9]*/commit: $COMMIT/}" ink.whis.Whis.yaml
 
           echo "Updated manifest:"
           grep -B2 -A2 "frankdierolf/whis" ink.whis.Whis.yaml
