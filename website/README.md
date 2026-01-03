@@ -49,3 +49,13 @@ app/
 public/        # Static files
 .nuxt/         # Auto-generated (temporary)
 ```
+
+## Notes
+
+The installation count shown on [whis.ink](https://whis.ink) aggregates downloads from three sources:
+
+- **[Crates.io](https://crates.io/crates/whis)** - Rust crate downloads
+- **[GitHub Releases](https://github.com/frankdierolf/whis/releases)** - Binary downloads (AppImage, deb, rpm, DMG, MSI, etc.)
+- **[Flathub](https://flathub.org/apps/ink.whis.Whis)** - Flatpak installs
+
+Implementation: [`app/composables/useDownloadStats.ts`](app/composables/useDownloadStats.ts)

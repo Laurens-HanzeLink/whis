@@ -27,7 +27,7 @@ useHead({
 })
 
 const stars = ref<number | null>(null)
-const downloads = ref<number | null>(null)
+const { total: downloads } = useDownloadStats()
 const contributors = ref<{ login: string, avatar_url: string }[]>([])
 
 onMounted(async () => {
@@ -37,18 +37,6 @@ onMounted(async () => {
     if (gh.ok) {
       const data = await gh.json()
       stars.value = data.stargazers_count
-    }
-  }
-  catch {
-    /* silent fail */
-  }
-
-  // Fetch cargo downloads
-  try {
-    const cargo = await fetch('https://crates.io/api/v1/crates/whis')
-    if (cargo.ok) {
-      const data = await cargo.json()
-      downloads.value = data.crate.downloads
     }
   }
   catch {
@@ -106,11 +94,31 @@ function formatNumber(n: number): string {
     </div>
 
     <div class="proof">
-      <span class="stat">{{ $t('home.proof.stars', { count: stars ?? '—' }) }}</span>
+      <a
+        href="https://github.com/frankdierolf/whis"
+        target="_blank"
+        rel="noopener"
+        class="stat stat-link"
+      >
+        {{ $t('home.proof.stars', { count: stars ?? '—' }) }}
+      </a>
       <span class="divider">·</span>
-      <span class="stat">{{ $t('home.proof.installs', { count: downloads ? formatNumber(downloads) : '—' }) }}</span>
+      <a
+        href="https://github.com/frankdierolf/whis/tree/main/website#notes"
+        target="_blank"
+        rel="noopener"
+        class="stat stat-link"
+      >
+        {{ $t('home.proof.installs', { count: downloads ? formatNumber(downloads) : '—' }) }}
+      </a>
       <span class="divider">·</span>
-      <span v-if="contributors.length" class="stat contributors">
+      <a
+        v-if="contributors.length"
+        href="https://github.com/frankdierolf/whis/graphs/contributors"
+        target="_blank"
+        rel="noopener"
+        class="stat stat-link contributors"
+      >
         <span class="avatars">
           <img
             v-for="c in contributors"
@@ -120,7 +128,7 @@ function formatNumber(n: number): string {
           >
         </span>
         {{ $t('home.proof.contributors', { count: contributors.length }) }}
-      </span>
+      </a>
       <span v-if="contributors.length" class="divider">·</span>
       <span class="stat">{{ $t('home.proof.license') }}</span>
     </div>
@@ -273,6 +281,23 @@ function formatNumber(n: number): string {
 
 .avatars img:first-child {
   margin-left: 0;
+}
+
+.stat-link {
+  color: var(--text-weak);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.stat-link:hover {
+  color: var(--accent);
+}
+
+.stat-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 @media (max-width: 768px) {
