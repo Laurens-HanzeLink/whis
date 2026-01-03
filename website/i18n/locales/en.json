@@ -1,0 +1,247 @@
+{
+  "nav": {
+    "home": "home",
+    "downloads": "downloads",
+    "cli": "cli",
+    "desktop": "desktop",
+    "mobile": "mobile",
+    "faq": "faq"
+  },
+  "common": {
+    "version": "v{version}",
+    "license": "MIT"
+  },
+  "home": {
+    "title": "whis | Voice-to-text for Linux",
+    "metaDescription": "Voice-to-text for Linux. CLI for terminal workflows, Desktop app for system-wide access.",
+    "tagline": {
+      "speak": "Speak.",
+      "paste": "Paste.",
+      "ship": "Ship."
+    },
+    "subtitle": "Voice → clipboard. Zero friction.",
+    "description": "Record anywhere. Transcribe fast. Paste instantly.",
+    "cta": {
+      "download": "Download",
+      "github": "View on GitHub"
+    },
+    "proof": {
+      "stars": "★ {count} stars",
+      "installs": "{count} installs",
+      "contributors": "{count} contributors",
+      "license": "MIT license"
+    }
+  },
+  "downloads": {
+    "title": "Downloads - whis",
+    "subtitle": "Get Whis for your platform",
+    "metaDescription": "Download whis for Linux, macOS, Windows, and Android. Multiple formats available.",
+    "recommendedTitle": "Download for {platform}",
+    "moreOptions": "More options →",
+    "platforms": {
+      "linux": "Linux",
+      "macos": "macOS",
+      "windows": "Windows",
+      "android": "Android",
+      "unknown": "your system"
+    },
+    "sections": {
+      "desktop": "Desktop",
+      "cli": "CLI",
+      "mobile": "Mobile"
+    },
+    "formats": {
+      "flatpak": "Flatpak",
+      "appimage": "AppImage",
+      "deb": "deb",
+      "rpm": "rpm",
+      "dmg": "dmg",
+      "exe": "exe",
+      "msi": "msi",
+      "zip": "zip",
+      "apk": "apk",
+      "tarGz": "tar.gz"
+    },
+    "arch": {
+      "x86_64": "x86_64",
+      "arm64": "arm64",
+      "appleSilicon": "Apple Silicon",
+      "intel": "Intel"
+    },
+    "note": {
+      "earlyDevelopment": "Early development — feedback welcome!"
+    }
+  },
+  "cli": {
+    "title": "CLI - whis",
+    "subtitle": "Voice-to-text for terminal workflows",
+    "metaDescription": "whis command-line interface. Pipe your voice to clipboard in terminal workflows.",
+    "install": {
+      "tabs": {
+        "cargo": "cargo",
+        "aur": "aur",
+        "source": "source"
+      },
+      "moreOptions": "More options →"
+    },
+    "features": {
+      "title": "What is whis?",
+      "subtitle": "A minimal CLI that pipes your voice straight to the clipboard.",
+      "items": {
+        "oneCommand": {
+          "title": "One command",
+          "description": "Run whis. Speak. Done."
+        },
+        "providers": {
+          "title": "6 providers",
+          "description": "OpenAI, Groq, Deepgram, Mistral, ElevenLabs, or local whisper.cpp"
+        },
+        "runLocally": {
+          "title": "Run locally",
+          "description": "Fully offline with whisper.cpp — private and free"
+        },
+        "postProcessing": {
+          "title": "AI post-processing",
+          "description": "Clean up filler words and grammar with LLMs"
+        },
+        "presets": {
+          "title": "Presets",
+          "description": "ai-prompt, email, default — or create your own"
+        },
+        "hotkey": {
+          "title": "Hotkey mode",
+          "description": "Ctrl+Alt+W toggles recording from anywhere"
+        }
+      }
+    },
+    "demo": {
+      "caption": "Record → Transcribe → Paste",
+      "altText": "whis demo: run whis command, speak, press Enter, text is copied to clipboard"
+    },
+    "quickStart": {
+      "title": "Quick Start",
+      "comments": {
+        "cloudSetup": "# Cloud setup (guided wizard)",
+        "localSetup": "# Or go fully local (private, free)",
+        "thenRun": "# Then just run:",
+        "pressEnter": "# Press Enter to stop — text is copied!",
+        "postProcess": "# Post-process your transcript with AI:"
+      }
+    }
+  },
+  "desktop": {
+    "title": "Desktop App - whis",
+    "subtitle": "System tray app for voice-to-text anywhere",
+    "metaDescription": "whis desktop application with system tray for system-wide voice-to-text access.",
+    "install": {
+      "title": "Download for {platform}",
+      "moreOptions": "More options →"
+    },
+    "features": {
+      "title": "What is Whis Desktop?",
+      "subtitle": "A system tray app that brings voice-to-text to your entire desktop.",
+      "items": {
+        "systemTray": {
+          "title": "System tray",
+          "description": "Lives in your panel, always ready"
+        },
+        "globalHotkey": {
+          "title": "Global hotkey",
+          "description": "Ctrl+Alt+W from anywhere (configurable)"
+        },
+        "providers": {
+          "title": "6 providers",
+          "description": "OpenAI, Groq, Deepgram, Mistral, ElevenLabs, or local"
+        },
+        "runLocally": {
+          "title": "Run locally",
+          "description": "Download whisper models in-app — private and free"
+        },
+        "postProcessing": {
+          "title": "AI post-processing",
+          "description": "Clean up transcripts with presets"
+        },
+        "crossPlatform": {
+          "title": "Cross-platform",
+          "description": "Linux, macOS, Windows (experimental)"
+        }
+      }
+    },
+    "screenshots": {
+      "about": "About",
+      "tray": "System tray",
+      "home": "Home",
+      "shortcuts": "Shortcuts",
+      "cloudMode": "Cloud mode",
+      "localMode": "Local mode",
+      "presets": "Presets"
+    },
+    "quickStart": {
+      "title": "Quick Start",
+      "comments": {
+        "download": "# 1. Download and install using the button above",
+        "launch": "# 2. Launch \"Whis\" from your app menu",
+        "configure": "# 3. Tray icon → Settings → Configure provider",
+        "use": "# 4. Use Ctrl+Alt+W or tray menu to record!"
+      }
+    }
+  },
+  "mobile": {
+    "title": "Mobile App - whis",
+    "subtitle": "Voice-to-text on the go",
+    "metaDescription": "whis mobile application for Android. Voice-to-text on the go.",
+    "install": {
+      "title": "Download for Android",
+      "statusBadge": "[experimental]",
+      "moreOptions": "More options →"
+    },
+    "features": {
+      "title": "What is Whis Mobile?",
+      "subtitle": "Same whis experience, from your phone.",
+      "items": {
+        "voiceToText": "Voice-to-text from your phone",
+        "cloudTranscription": "Cloud transcription (OpenAI, Mistral)",
+        "clipboard": "Text straight to clipboard"
+      }
+    },
+    "demo": {
+      "caption": "Home · Presets · Settings · About",
+      "altText": "Whis mobile app screenshots showing home, presets, settings, and about screens"
+    }
+  },
+  "faq": {
+    "title": "FAQ - whis",
+    "subtitle": "Common questions about whis",
+    "metaDescription": "Frequently asked questions about whis voice-to-text tool.",
+    "items": {
+      "postProcessing": {
+        "question": "What is post-processing?",
+        "answer": "AI-powered cleanup of your transcript. It removes filler words (um, uh, like) and fixes grammar while keeping technical terms. Use <code>--post-process</code> flag or enable in Desktop settings."
+      },
+      "requirements": {
+        "question": "What do I need?",
+        "answer": "<strong>Cloud mode:</strong> An API key from your chosen provider.<br><strong>Local mode:</strong> Just run <code>whis setup local</code> (downloads ~500MB model).<br><strong>CLI only:</strong> Requires FFmpeg for audio encoding."
+      },
+      "privacy": {
+        "question": "What about my data?",
+        "answer": "<strong>Cloud:</strong> Audio is sent to your provider's servers for processing.<br><strong>Local:</strong> Everything stays on your machine—never leaves.<br>whis doesn't store recordings or transcripts."
+      },
+      "presets": {
+        "question": "What are presets?",
+        "answer": "Output formats for different use cases. Built-in: <code>ai-prompt</code>, <code>email</code>, <code>default</code>. Use with <code>whis --as email</code> or create your own with <code>whis presets new</code>."
+      },
+      "configLocation": {
+        "question": "Where is my config stored?",
+        "answer": "Settings: <code>~/.config/whis/settings.json</code><br>Presets: <code>~/.config/whis/presets/</code><br>Models: <code>~/.local/share/whis/models/</code><br>View current config: <code>whis config --show</code>"
+      },
+      "piping": {
+        "question": "Can I pipe output to other tools?",
+        "answer": "Yes! Use <code>--print</code> to output to stdout instead of clipboard:<br><code>whis --print | pbcopy</code><br><code>whis -f audio.mp3 --print > transcript.txt</code>"
+      },
+      "uninstall": {
+        "question": "How do I uninstall?",
+        "answer": "<strong>Flatpak:</strong> <code>flatpak uninstall ink.whis.Whis</code><br><strong>AppImage:</strong> Run with <code>--uninstall</code> flag, then delete the file.<br><strong>Other:</strong> Remove the binary and <code>~/.config/whis/</code> folder."
+      }
+    }
+  }
+}

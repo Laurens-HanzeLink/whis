@@ -2,21 +2,26 @@
 import type { Platform } from '@/composables/usePlatformDetection'
 import { computed, ref, watch } from 'vue'
 
+const { t } = useI18n()
+const route = useRoute()
+
+const canonicalUrl = computed(() => `https://whis.ink${route.path}`)
+
 useHead({
-  title: 'Downloads - whis',
+  title: t('downloads.title'),
   link: [
-    { rel: 'canonical', href: 'https://whis.ink/downloads' },
+    { rel: 'canonical', href: canonicalUrl },
   ],
   meta: [
-    { name: 'description', content: 'Download whis for Linux, macOS, Windows, and Android. Multiple formats available.' },
-    { property: 'og:title', content: 'Downloads - whis' },
-    { property: 'og:description', content: 'Download whis for Linux, macOS, Windows, and Android. Multiple formats available.' },
-    { property: 'og:url', content: 'https://whis.ink/downloads' },
+    { name: 'description', content: t('downloads.metaDescription') },
+    { property: 'og:title', content: t('downloads.title') },
+    { property: 'og:description', content: t('downloads.metaDescription') },
+    { property: 'og:url', content: canonicalUrl },
     { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
     { property: 'og:type', content: 'website' },
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'Downloads - whis' },
-    { name: 'twitter:description', content: 'Download whis for Linux, macOS, Windows, and Android. Multiple formats available.' },
+    { name: 'twitter:title', content: t('downloads.title') },
+    { name: 'twitter:description', content: t('downloads.metaDescription') },
     { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
   ],
 })
@@ -85,11 +90,11 @@ const downloads = computed(() => {
 
 const platformLabel = computed(() => {
   const labels: Record<Platform, string> = {
-    linux: 'Linux',
-    macos: 'macOS',
-    windows: 'Windows',
-    android: 'Android',
-    unknown: 'your system',
+    linux: t('downloads.platforms.linux'),
+    macos: t('downloads.platforms.macos'),
+    windows: t('downloads.platforms.windows'),
+    android: t('downloads.platforms.android'),
+    unknown: t('downloads.platforms.unknown'),
   }
   return labels[platform.value]
 })
@@ -100,22 +105,22 @@ const recommendedDownload = computed(() => {
   switch (platform.value) {
     case 'linux':
       return {
-        label: 'AppImage',
+        label: t('downloads.formats.appimage'),
         url: arch.value === 'arm64' ? d.linux.appimage_arm : d.linux.appimage_x86,
       }
     case 'macos':
       return {
-        label: 'DMG',
+        label: t('downloads.formats.dmg'),
         url: arch.value === 'arm64' ? d.macos.dmg_arm : d.macos.dmg_intel,
       }
     case 'windows':
       return {
-        label: 'exe',
+        label: t('downloads.formats.exe'),
         url: d.windows.exe,
       }
     case 'android':
       return {
-        label: 'APK',
+        label: t('downloads.formats.apk'),
         url: d.android.apk,
       }
     default:
@@ -126,12 +131,12 @@ const recommendedDownload = computed(() => {
 
 <template>
   <div class="downloads-content">
-    <ViewHeader title="Downloads" subtitle="Get Whis for your platform" />
+    <ViewHeader :title="$t('downloads.title').replace(' - whis', '')" :subtitle="$t('downloads.subtitle')" />
 
     <!-- Recommended Download -->
     <section v-if="recommendedDownload" class="recommended">
       <h2 class="recommended-title">
-        Download for {{ platformLabel }}
+        {{ $t('downloads.recommendedTitle', { platform: platformLabel }) }}
       </h2>
       <a :href="recommendedDownload.url" class="download-button">
         <span class="download-icon">↓</span>
@@ -145,16 +150,16 @@ const recommendedDownload = computed(() => {
       <TabPanel
         v-model:selected="platformTab"
         :tabs="[
-          { value: 'linux', label: 'Linux' },
-          { value: 'macos', label: 'macOS' },
-          { value: 'windows', label: 'Windows' },
-          { value: 'android', label: 'Android' },
+          { value: 'linux', label: $t('downloads.platforms.linux') },
+          { value: 'macos', label: $t('downloads.platforms.macos') },
+          { value: 'windows', label: $t('downloads.platforms.windows') },
+          { value: 'android', label: $t('downloads.platforms.android') },
         ]"
       >
         <!-- Linux -->
         <div v-if="platformTab === 'linux'" class="download-grid two-col">
           <div class="download-section">
-            <h3>Desktop</h3>
+            <h3>{{ $t('downloads.sections.desktop') }}</h3>
             <div class="download-links">
               <a
                 href="https://flathub.org/apps/ink.whis.Whis"
@@ -162,44 +167,44 @@ const recommendedDownload = computed(() => {
                 rel="noopener"
                 class="download-link"
               >
-                <span class="link-label">Flatpak</span>
+                <span class="link-label">{{ $t('downloads.formats.flatpak') }}</span>
                 <span class="link-arrow">→</span>
               </a>
               <div class="download-row">
-                <span class="row-label">AppImage</span>
+                <span class="row-label">{{ $t('downloads.formats.appimage') }}</span>
                 <span class="arch-links">
-                  <a :href="downloads.linux.appimage_x86">x86_64</a>
+                  <a :href="downloads.linux.appimage_x86">{{ $t('downloads.arch.x86_64') }}</a>
                   <span class="arch-sep">·</span>
-                  <a :href="downloads.linux.appimage_arm">arm64</a>
+                  <a :href="downloads.linux.appimage_arm">{{ $t('downloads.arch.arm64') }}</a>
                 </span>
               </div>
               <div class="download-row">
-                <span class="row-label">deb</span>
+                <span class="row-label">{{ $t('downloads.formats.deb') }}</span>
                 <span class="arch-links">
-                  <a :href="downloads.linux.deb_x86">x86_64</a>
+                  <a :href="downloads.linux.deb_x86">{{ $t('downloads.arch.x86_64') }}</a>
                   <span class="arch-sep">·</span>
-                  <a :href="downloads.linux.deb_arm">arm64</a>
+                  <a :href="downloads.linux.deb_arm">{{ $t('downloads.arch.arm64') }}</a>
                 </span>
               </div>
               <div class="download-row">
-                <span class="row-label">rpm</span>
+                <span class="row-label">{{ $t('downloads.formats.rpm') }}</span>
                 <span class="arch-links">
-                  <a :href="downloads.linux.rpm_x86">x86_64</a>
+                  <a :href="downloads.linux.rpm_x86">{{ $t('downloads.arch.x86_64') }}</a>
                   <span class="arch-sep">·</span>
-                  <a :href="downloads.linux.rpm_arm">arm64</a>
+                  <a :href="downloads.linux.rpm_arm">{{ $t('downloads.arch.arm64') }}</a>
                 </span>
               </div>
             </div>
           </div>
           <div class="download-section">
-            <h3>CLI</h3>
+            <h3>{{ $t('downloads.sections.cli') }}</h3>
             <div class="download-links">
               <a :href="downloads.linux.cli_x86" class="download-link">
-                <span class="link-label">x86_64 (tar.gz)</span>
+                <span class="link-label">{{ $t('downloads.arch.x86_64') }} ({{ $t('downloads.formats.tarGz') }})</span>
                 <span class="link-arrow">→</span>
               </a>
               <a :href="downloads.linux.cli_arm" class="download-link">
-                <span class="link-label">arm64 (tar.gz)</span>
+                <span class="link-label">{{ $t('downloads.arch.arm64') }} ({{ $t('downloads.formats.tarGz') }})</span>
                 <span class="link-arrow">→</span>
               </a>
             </div>
@@ -209,27 +214,27 @@ const recommendedDownload = computed(() => {
         <!-- macOS -->
         <div v-else-if="platformTab === 'macos'" class="download-grid two-col">
           <div class="download-section">
-            <h3>Desktop</h3>
+            <h3>{{ $t('downloads.sections.desktop') }}</h3>
             <div class="download-links">
               <div class="download-row">
-                <span class="row-label">dmg</span>
+                <span class="row-label">{{ $t('downloads.formats.dmg') }}</span>
                 <span class="arch-links">
-                  <a :href="downloads.macos.dmg_arm">Apple Silicon</a>
+                  <a :href="downloads.macos.dmg_arm">{{ $t('downloads.arch.appleSilicon') }}</a>
                   <span class="arch-sep">·</span>
-                  <a :href="downloads.macos.dmg_intel">Intel</a>
+                  <a :href="downloads.macos.dmg_intel">{{ $t('downloads.arch.intel') }}</a>
                 </span>
               </div>
             </div>
           </div>
           <div class="download-section">
-            <h3>CLI</h3>
+            <h3>{{ $t('downloads.sections.cli') }}</h3>
             <div class="download-links">
               <div class="download-row">
-                <span class="row-label">tar.gz</span>
+                <span class="row-label">{{ $t('downloads.formats.tarGz') }}</span>
                 <span class="arch-links">
-                  <a :href="downloads.macos.cli_arm">Apple Silicon</a>
+                  <a :href="downloads.macos.cli_arm">{{ $t('downloads.arch.appleSilicon') }}</a>
                   <span class="arch-sep">·</span>
-                  <a :href="downloads.macos.cli_intel">Intel</a>
+                  <a :href="downloads.macos.cli_intel">{{ $t('downloads.arch.intel') }}</a>
                 </span>
               </div>
             </div>
@@ -239,23 +244,23 @@ const recommendedDownload = computed(() => {
         <!-- Windows -->
         <div v-else-if="platformTab === 'windows'" class="download-grid two-col">
           <div class="download-section">
-            <h3>Desktop</h3>
+            <h3>{{ $t('downloads.sections.desktop') }}</h3>
             <div class="download-links">
               <a :href="downloads.windows.exe" class="download-link">
-                <span class="link-label">exe</span>
+                <span class="link-label">{{ $t('downloads.formats.exe') }}</span>
                 <span class="link-arrow">→</span>
               </a>
               <a :href="downloads.windows.msi" class="download-link">
-                <span class="link-label">msi</span>
+                <span class="link-label">{{ $t('downloads.formats.msi') }}</span>
                 <span class="link-arrow">→</span>
               </a>
             </div>
           </div>
           <div class="download-section">
-            <h3>CLI</h3>
+            <h3>{{ $t('downloads.sections.cli') }}</h3>
             <div class="download-links">
               <a :href="downloads.windows.cli" class="download-link">
-                <span class="link-label">zip</span>
+                <span class="link-label">{{ $t('downloads.formats.zip') }}</span>
                 <span class="link-arrow">→</span>
               </a>
             </div>
@@ -265,15 +270,15 @@ const recommendedDownload = computed(() => {
         <!-- Android -->
         <div v-else-if="platformTab === 'android'" class="download-grid two-col">
           <div class="download-section">
-            <h3>Mobile</h3>
+            <h3>{{ $t('downloads.sections.mobile') }}</h3>
             <div class="download-links">
               <a :href="downloads.android.apk" class="download-link">
-                <span class="link-label">apk</span>
+                <span class="link-label">{{ $t('downloads.formats.apk') }}</span>
                 <span class="link-arrow">→</span>
               </a>
             </div>
             <p class="section-note">
-              Early development — feedback welcome!
+              {{ $t('downloads.note.earlyDevelopment') }}
             </p>
           </div>
         </div>

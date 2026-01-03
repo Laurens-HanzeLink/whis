@@ -1,0 +1,247 @@
+{
+  "nav": {
+    "home": "ホーム",
+    "downloads": "ダウンロード",
+    "cli": "CLI",
+    "desktop": "デスクトップ",
+    "mobile": "モバイル",
+    "faq": "よくある質問"
+  },
+  "common": {
+    "version": "v{version}",
+    "license": "MIT"
+  },
+  "home": {
+    "title": "whis | Linux向け音声入力ツール",
+    "metaDescription": "Linux向け音声入力ツール。ターミナルワークフロー用CLI、システム全体で使えるデスクトップアプリ。",
+    "tagline": {
+      "speak": "話す。",
+      "paste": "貼り付け。",
+      "ship": "完了。"
+    },
+    "subtitle": "音声をクリップボードへ。ストレスフリー。",
+    "description": "どこでも録音。高速で文字起こし。すぐに貼り付け。",
+    "cta": {
+      "download": "ダウンロード",
+      "github": "GitHubで見る"
+    },
+    "proof": {
+      "stars": "★ {count} スター",
+      "installs": "{count} インストール",
+      "contributors": "{count} コントリビューター",
+      "license": "MITライセンス"
+    }
+  },
+  "downloads": {
+    "title": "ダウンロード - whis",
+    "subtitle": "お使いのプラットフォーム向けwhisを入手",
+    "metaDescription": "Linux、macOS、Windows、Android向けwhisをダウンロード。複数のフォーマットに対応。",
+    "recommendedTitle": "{platform}向けダウンロード",
+    "moreOptions": "その他のオプション →",
+    "platforms": {
+      "linux": "Linux",
+      "macos": "macOS",
+      "windows": "Windows",
+      "android": "Android",
+      "unknown": "お使いのシステム"
+    },
+    "sections": {
+      "desktop": "デスクトップ",
+      "cli": "CLI",
+      "mobile": "モバイル"
+    },
+    "formats": {
+      "flatpak": "Flatpak",
+      "appimage": "AppImage",
+      "deb": "deb",
+      "rpm": "rpm",
+      "dmg": "dmg",
+      "exe": "exe",
+      "msi": "msi",
+      "zip": "zip",
+      "apk": "apk",
+      "tarGz": "tar.gz"
+    },
+    "arch": {
+      "x86_64": "x86_64",
+      "arm64": "arm64",
+      "appleSilicon": "Apple Silicon",
+      "intel": "Intel"
+    },
+    "note": {
+      "earlyDevelopment": "開発初期段階 — フィードバック歓迎！"
+    }
+  },
+  "cli": {
+    "title": "CLI - whis",
+    "subtitle": "ターミナルワークフロー向け音声入力",
+    "metaDescription": "whisコマンドラインインターフェース。ターミナルワークフローで音声をクリップボードに送信。",
+    "install": {
+      "tabs": {
+        "cargo": "cargo",
+        "aur": "aur",
+        "source": "ソース"
+      },
+      "moreOptions": "その他のオプション →"
+    },
+    "features": {
+      "title": "whisとは？",
+      "subtitle": "音声を直接クリップボードに送るシンプルなCLI。",
+      "items": {
+        "oneCommand": {
+          "title": "コマンドひとつ",
+          "description": "whisを実行。話す。完了。"
+        },
+        "providers": {
+          "title": "6つのプロバイダー",
+          "description": "OpenAI、Groq、Deepgram、Mistral、ElevenLabs、またはローカルのwhisper.cpp"
+        },
+        "runLocally": {
+          "title": "ローカル実行",
+          "description": "whisper.cppで完全オフライン — プライベートで無料"
+        },
+        "postProcessing": {
+          "title": "AIによる後処理",
+          "description": "LLMでフィラーワードや文法を修正"
+        },
+        "presets": {
+          "title": "プリセット",
+          "description": "ai-prompt、email、default — または独自に作成"
+        },
+        "hotkey": {
+          "title": "ホットキーモード",
+          "description": "Ctrl+Alt+Wでどこからでも録音を切り替え"
+        }
+      }
+    },
+    "demo": {
+      "caption": "録音 → 文字起こし → 貼り付け",
+      "altText": "whisデモ：whisコマンドを実行、話す、Enterを押す、テキストがクリップボードにコピーされる"
+    },
+    "quickStart": {
+      "title": "クイックスタート",
+      "comments": {
+        "cloudSetup": "# クラウドセットアップ（ガイド付きウィザード）",
+        "localSetup": "# または完全ローカル（プライベート、無料）",
+        "thenRun": "# あとは実行するだけ：",
+        "pressEnter": "# Enterで停止 — テキストがコピーされます！",
+        "postProcess": "# AIで文字起こしを後処理："
+      }
+    }
+  },
+  "desktop": {
+    "title": "デスクトップアプリ - whis",
+    "subtitle": "どこでも使えるシステムトレイ音声入力アプリ",
+    "metaDescription": "whisデスクトップアプリケーション。システムトレイからシステム全体で音声入力。",
+    "install": {
+      "title": "{platform}向けダウンロード",
+      "moreOptions": "その他のオプション →"
+    },
+    "features": {
+      "title": "Whis Desktopとは？",
+      "subtitle": "デスクトップ全体で音声入力を使えるシステムトレイアプリ。",
+      "items": {
+        "systemTray": {
+          "title": "システムトレイ",
+          "description": "パネルに常駐、いつでも準備完了"
+        },
+        "globalHotkey": {
+          "title": "グローバルホットキー",
+          "description": "どこからでもCtrl+Alt+W（設定可能）"
+        },
+        "providers": {
+          "title": "6つのプロバイダー",
+          "description": "OpenAI、Groq、Deepgram、Mistral、ElevenLabs、またはローカル"
+        },
+        "runLocally": {
+          "title": "ローカル実行",
+          "description": "アプリ内でwhisperモデルをダウンロード — プライベートで無料"
+        },
+        "postProcessing": {
+          "title": "AIによる後処理",
+          "description": "プリセットで文字起こしを整形"
+        },
+        "crossPlatform": {
+          "title": "クロスプラットフォーム",
+          "description": "Linux、macOS、Windows（実験的）"
+        }
+      }
+    },
+    "screenshots": {
+      "about": "バージョン情報",
+      "tray": "システムトレイ",
+      "home": "ホーム",
+      "shortcuts": "ショートカット",
+      "cloudMode": "クラウドモード",
+      "localMode": "ローカルモード",
+      "presets": "プリセット"
+    },
+    "quickStart": {
+      "title": "クイックスタート",
+      "comments": {
+        "download": "# 1. 上のボタンからダウンロードしてインストール",
+        "launch": "# 2. アプリメニューから「Whis」を起動",
+        "configure": "# 3. トレイアイコン → 設定 → プロバイダーを設定",
+        "use": "# 4. Ctrl+Alt+Wまたはトレイメニューで録音！"
+      }
+    }
+  },
+  "mobile": {
+    "title": "モバイルアプリ - whis",
+    "subtitle": "外出先でも音声入力",
+    "metaDescription": "Android向けwhisモバイルアプリケーション。外出先でも音声入力。",
+    "install": {
+      "title": "Android向けダウンロード",
+      "statusBadge": "[実験的]",
+      "moreOptions": "その他のオプション →"
+    },
+    "features": {
+      "title": "Whis Mobileとは？",
+      "subtitle": "同じwhis体験を、スマートフォンから。",
+      "items": {
+        "voiceToText": "スマートフォンから音声入力",
+        "cloudTranscription": "クラウド文字起こし（OpenAI、Mistral）",
+        "clipboard": "テキストを直接クリップボードへ"
+      }
+    },
+    "demo": {
+      "caption": "ホーム・プリセット・設定・バージョン情報",
+      "altText": "Whisモバイルアプリのスクリーンショット：ホーム、プリセット、設定、バージョン情報画面"
+    }
+  },
+  "faq": {
+    "title": "よくある質問 - whis",
+    "subtitle": "whisについてのよくある質問",
+    "metaDescription": "whis音声入力ツールについてのよくある質問。",
+    "items": {
+      "postProcessing": {
+        "question": "後処理とは何ですか？",
+        "answer": "AIによる文字起こしのクリーンアップ機能です。フィラーワード（えーと、あのー など）を削除し、専門用語を保持しながら文法を修正します。<code>--post-process</code>フラグを使用するか、デスクトップ設定で有効にしてください。"
+      },
+      "requirements": {
+        "question": "必要なものは何ですか？",
+        "answer": "<strong>クラウドモード：</strong>選択したプロバイダーのAPIキー。<br><strong>ローカルモード：</strong><code>whis setup local</code>を実行するだけ（約500MBのモデルをダウンロード）。<br><strong>CLIのみ：</strong>音声エンコードにFFmpegが必要。"
+      },
+      "privacy": {
+        "question": "データはどうなりますか？",
+        "answer": "<strong>クラウド：</strong>音声はプロバイダーのサーバーに送信されて処理されます。<br><strong>ローカル：</strong>すべてがお使いのマシン内で完結 — 外部に送信されません。<br>whisは録音や文字起こしを保存しません。"
+      },
+      "presets": {
+        "question": "プリセットとは何ですか？",
+        "answer": "用途に応じた出力フォーマットです。組み込み：<code>ai-prompt</code>、<code>email</code>、<code>default</code>。<code>whis --as email</code>で使用するか、<code>whis presets new</code>で独自に作成できます。"
+      },
+      "configLocation": {
+        "question": "設定ファイルはどこにありますか？",
+        "answer": "設定：<code>~/.config/whis/settings.json</code><br>プリセット：<code>~/.config/whis/presets/</code><br>モデル：<code>~/.local/share/whis/models/</code><br>現在の設定を表示：<code>whis config --show</code>"
+      },
+      "piping": {
+        "question": "出力を他のツールにパイプできますか？",
+        "answer": "はい！<code>--print</code>を使用すると、クリップボードではなく標準出力に出力されます：<br><code>whis --print | pbcopy</code><br><code>whis -f audio.mp3 --print > transcript.txt</code>"
+      },
+      "uninstall": {
+        "question": "アンインストール方法は？",
+        "answer": "<strong>Flatpak：</strong><code>flatpak uninstall ink.whis.Whis</code><br><strong>AppImage：</strong><code>--uninstall</code>フラグ付きで実行後、ファイルを削除。<br><strong>その他：</strong>バイナリと<code>~/.config/whis/</code>フォルダを削除。"
+      }
+    }
+  }
+}

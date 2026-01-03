@@ -1,21 +1,27 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+
+const { t } = useI18n()
+const localePath = useLocalePath()
+const route = useRoute()
+
+const canonicalUrl = computed(() => `https://whis.ink${route.path}`)
 
 useHead({
-  title: 'whis | Voice-to-text for Linux',
+  title: t('home.title'),
   link: [
-    { rel: 'canonical', href: 'https://whis.ink' },
+    { rel: 'canonical', href: canonicalUrl },
   ],
   meta: [
-    { name: 'description', content: 'Voice-to-text for Linux. CLI for terminal workflows, Desktop app for system-wide access.' },
-    { property: 'og:title', content: 'whis | Voice-to-text for Linux' },
-    { property: 'og:description', content: 'Voice-to-text for Linux. CLI for terminal workflows, Desktop app for system-wide access.' },
-    { property: 'og:url', content: 'https://whis.ink' },
+    { name: 'description', content: t('home.metaDescription') },
+    { property: 'og:title', content: t('home.title') },
+    { property: 'og:description', content: t('home.metaDescription') },
+    { property: 'og:url', content: canonicalUrl },
     { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
     { property: 'og:type', content: 'website' },
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'whis | Voice-to-text for Linux' },
-    { name: 'twitter:description', content: 'Voice-to-text for Linux. CLI for terminal workflows, Desktop app for system-wide access.' },
+    { name: 'twitter:title', content: t('home.title') },
+    { name: 'twitter:description', content: t('home.metaDescription') },
     { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
   ],
 })
@@ -72,22 +78,22 @@ function formatNumber(n: number): string {
   <div class="home">
     <div class="hero">
       <h1 class="tagline">
-        <span>Speak.</span>
-        <span>Paste.</span>
-        <span>Ship.</span>
+        <span>{{ $t('home.tagline.speak') }}</span>
+        <span>{{ $t('home.tagline.paste') }}</span>
+        <span>{{ $t('home.tagline.ship') }}</span>
       </h1>
       <p class="subtitle">
-        Voice → clipboard. Zero friction.
+        {{ $t('home.subtitle') }}
       </p>
       <p class="description">
-        Record anywhere. Transcribe fast. Paste instantly.
+        {{ $t('home.description') }}
       </p>
     </div>
 
     <div class="cta-group">
-      <NuxtLink to="/downloads" class="cta-primary">
+      <NuxtLink :to="localePath('downloads')" class="cta-primary">
         <span class="cta-icon">↓</span>
-        Download
+        {{ $t('home.cta.download') }}
       </NuxtLink>
       <a
         href="https://github.com/frankdierolf/whis"
@@ -95,14 +101,14 @@ function formatNumber(n: number): string {
         rel="noopener"
         class="cta-secondary"
       >
-        View on GitHub
+        {{ $t('home.cta.github') }}
       </a>
     </div>
 
     <div class="proof">
-      <span class="stat">★ {{ stars ?? '—' }} stars</span>
+      <span class="stat">{{ $t('home.proof.stars', { count: stars ?? '—' }) }}</span>
       <span class="divider">·</span>
-      <span class="stat">{{ downloads ? formatNumber(downloads) : '—' }} installs</span>
+      <span class="stat">{{ $t('home.proof.installs', { count: downloads ? formatNumber(downloads) : '—' }) }}</span>
       <span class="divider">·</span>
       <span v-if="contributors.length" class="stat contributors">
         <span class="avatars">
@@ -113,10 +119,10 @@ function formatNumber(n: number): string {
             :alt="c.login"
           >
         </span>
-        {{ contributors.length }} contributors
+        {{ $t('home.proof.contributors', { count: contributors.length }) }}
       </span>
       <span v-if="contributors.length" class="divider">·</span>
-      <span class="stat">MIT license</span>
+      <span class="stat">{{ $t('home.proof.license') }}</span>
     </div>
 
     <ClientOnly>

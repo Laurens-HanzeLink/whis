@@ -1,0 +1,247 @@
+{
+  "nav": {
+    "home": "inicio",
+    "downloads": "transferencias",
+    "cli": "cli",
+    "desktop": "desktop",
+    "mobile": "mobile",
+    "faq": "perguntas frequentes"
+  },
+  "common": {
+    "version": "v{version}",
+    "license": "MIT"
+  },
+  "home": {
+    "title": "whis | Voz para texto no Linux",
+    "metaDescription": "Voz para texto no Linux. CLI para fluxos de trabalho no terminal, aplicacao Desktop para acesso em todo o sistema.",
+    "tagline": {
+      "speak": "Fala.",
+      "paste": "Cola.",
+      "ship": "Envia."
+    },
+    "subtitle": "Voz → area de transferencia. Sem atrito.",
+    "description": "Grava em qualquer lugar. Transcreve rapidamente. Cola instantaneamente.",
+    "cta": {
+      "download": "Transferir",
+      "github": "Ver no GitHub"
+    },
+    "proof": {
+      "stars": "★ {count} estrelas",
+      "installs": "{count} instalacoes",
+      "contributors": "{count} contribuidores",
+      "license": "Licenca MIT"
+    }
+  },
+  "downloads": {
+    "title": "Transferencias - whis",
+    "subtitle": "Obtem o Whis para a tua plataforma",
+    "metaDescription": "Transfere o whis para Linux, macOS, Windows e Android. Multiplos formatos disponiveis.",
+    "recommendedTitle": "Transferir para {platform}",
+    "moreOptions": "Mais opcoes →",
+    "platforms": {
+      "linux": "Linux",
+      "macos": "macOS",
+      "windows": "Windows",
+      "android": "Android",
+      "unknown": "o teu sistema"
+    },
+    "sections": {
+      "desktop": "Desktop",
+      "cli": "CLI",
+      "mobile": "Mobile"
+    },
+    "formats": {
+      "flatpak": "Flatpak",
+      "appimage": "AppImage",
+      "deb": "deb",
+      "rpm": "rpm",
+      "dmg": "dmg",
+      "exe": "exe",
+      "msi": "msi",
+      "zip": "zip",
+      "apk": "apk",
+      "tarGz": "tar.gz"
+    },
+    "arch": {
+      "x86_64": "x86_64",
+      "arm64": "arm64",
+      "appleSilicon": "Apple Silicon",
+      "intel": "Intel"
+    },
+    "note": {
+      "earlyDevelopment": "Em desenvolvimento inicial — feedback e bem-vindo!"
+    }
+  },
+  "cli": {
+    "title": "CLI - whis",
+    "subtitle": "Voz para texto em fluxos de trabalho no terminal",
+    "metaDescription": "Interface de linha de comandos do whis. Envia a tua voz para a area de transferencia em fluxos de trabalho no terminal.",
+    "install": {
+      "tabs": {
+        "cargo": "cargo",
+        "aur": "aur",
+        "source": "fonte"
+      },
+      "moreOptions": "Mais opcoes →"
+    },
+    "features": {
+      "title": "O que e o whis?",
+      "subtitle": "Uma CLI minimalista que envia a tua voz diretamente para a area de transferencia.",
+      "items": {
+        "oneCommand": {
+          "title": "Um comando",
+          "description": "Executa whis. Fala. Feito."
+        },
+        "providers": {
+          "title": "6 fornecedores",
+          "description": "OpenAI, Groq, Deepgram, Mistral, ElevenLabs, ou whisper.cpp local"
+        },
+        "runLocally": {
+          "title": "Executa localmente",
+          "description": "Totalmente offline com whisper.cpp — privado e gratuito"
+        },
+        "postProcessing": {
+          "title": "Pos-processamento com IA",
+          "description": "Remove palavras de preenchimento e corrige gramatica com LLMs"
+        },
+        "presets": {
+          "title": "Predefinicoes",
+          "description": "ai-prompt, email, default — ou cria as tuas proprias"
+        },
+        "hotkey": {
+          "title": "Modo de tecla de atalho",
+          "description": "Ctrl+Alt+W alterna a gravacao a partir de qualquer lugar"
+        }
+      }
+    },
+    "demo": {
+      "caption": "Grava → Transcreve → Cola",
+      "altText": "Demonstracao do whis: executa o comando whis, fala, prime Enter, o texto e copiado para a area de transferencia"
+    },
+    "quickStart": {
+      "title": "Inicio Rapido",
+      "comments": {
+        "cloudSetup": "# Configuracao na nuvem (assistente guiado)",
+        "localSetup": "# Ou executa totalmente local (privado, gratuito)",
+        "thenRun": "# Depois basta executar:",
+        "pressEnter": "# Prime Enter para parar — o texto e copiado!",
+        "postProcess": "# Pos-processa a tua transcricao com IA:"
+      }
+    }
+  },
+  "desktop": {
+    "title": "Aplicacao Desktop - whis",
+    "subtitle": "Aplicacao na bandeja do sistema para voz para texto em qualquer lugar",
+    "metaDescription": "Aplicacao desktop do whis com bandeja do sistema para acesso a voz para texto em todo o sistema.",
+    "install": {
+      "title": "Transferir para {platform}",
+      "moreOptions": "Mais opcoes →"
+    },
+    "features": {
+      "title": "O que e o Whis Desktop?",
+      "subtitle": "Uma aplicacao na bandeja do sistema que traz voz para texto para todo o teu desktop.",
+      "items": {
+        "systemTray": {
+          "title": "Bandeja do sistema",
+          "description": "Fica no teu painel, sempre pronta"
+        },
+        "globalHotkey": {
+          "title": "Tecla de atalho global",
+          "description": "Ctrl+Alt+W a partir de qualquer lugar (configuravel)"
+        },
+        "providers": {
+          "title": "6 fornecedores",
+          "description": "OpenAI, Groq, Deepgram, Mistral, ElevenLabs, ou local"
+        },
+        "runLocally": {
+          "title": "Executa localmente",
+          "description": "Transfere modelos whisper na aplicacao — privado e gratuito"
+        },
+        "postProcessing": {
+          "title": "Pos-processamento com IA",
+          "description": "Limpa transcricoes com predefinicoes"
+        },
+        "crossPlatform": {
+          "title": "Multiplataforma",
+          "description": "Linux, macOS, Windows (experimental)"
+        }
+      }
+    },
+    "screenshots": {
+      "about": "Sobre",
+      "tray": "Bandeja do sistema",
+      "home": "Inicio",
+      "shortcuts": "Atalhos",
+      "cloudMode": "Modo nuvem",
+      "localMode": "Modo local",
+      "presets": "Predefinicoes"
+    },
+    "quickStart": {
+      "title": "Inicio Rapido",
+      "comments": {
+        "download": "# 1. Transfere e instala usando o botao acima",
+        "launch": "# 2. Abre \"Whis\" a partir do menu de aplicacoes",
+        "configure": "# 3. Icone da bandeja → Definicoes → Configura o fornecedor",
+        "use": "# 4. Usa Ctrl+Alt+W ou o menu da bandeja para gravar!"
+      }
+    }
+  },
+  "mobile": {
+    "title": "Aplicacao Mobile - whis",
+    "subtitle": "Voz para texto em movimento",
+    "metaDescription": "Aplicacao mobile do whis para Android. Voz para texto em movimento.",
+    "install": {
+      "title": "Transferir para Android",
+      "statusBadge": "[experimental]",
+      "moreOptions": "Mais opcoes →"
+    },
+    "features": {
+      "title": "O que e o Whis Mobile?",
+      "subtitle": "A mesma experiencia whis, a partir do teu telemovel.",
+      "items": {
+        "voiceToText": "Voz para texto a partir do teu telemovel",
+        "cloudTranscription": "Transcricao na nuvem (OpenAI, Mistral)",
+        "clipboard": "Texto diretamente para a area de transferencia"
+      }
+    },
+    "demo": {
+      "caption": "Inicio · Predefinicoes · Definicoes · Sobre",
+      "altText": "Capturas de ecra da aplicacao mobile Whis mostrando inicio, predefinicoes, definicoes e sobre"
+    }
+  },
+  "faq": {
+    "title": "Perguntas Frequentes - whis",
+    "subtitle": "Questoes comuns sobre o whis",
+    "metaDescription": "Perguntas frequentes sobre a ferramenta de voz para texto whis.",
+    "items": {
+      "postProcessing": {
+        "question": "O que e o pos-processamento?",
+        "answer": "Limpeza da tua transcricao com IA. Remove palavras de preenchimento (hum, ah, tipo) e corrige a gramatica mantendo os termos tecnicos. Usa a flag <code>--post-process</code> ou ativa nas definicoes do Desktop."
+      },
+      "requirements": {
+        "question": "O que preciso?",
+        "answer": "<strong>Modo nuvem:</strong> Uma chave API do teu fornecedor escolhido.<br><strong>Modo local:</strong> Basta executar <code>whis setup local</code> (transfere modelo de ~500MB).<br><strong>Apenas CLI:</strong> Requer FFmpeg para codificacao de audio."
+      },
+      "privacy": {
+        "question": "E quanto aos meus dados?",
+        "answer": "<strong>Nuvem:</strong> O audio e enviado para os servidores do teu fornecedor para processamento.<br><strong>Local:</strong> Tudo fica na tua maquina — nunca sai.<br>O whis nao armazena gravacoes nem transcricoes."
+      },
+      "presets": {
+        "question": "O que sao predefinicoes?",
+        "answer": "Formatos de saida para diferentes casos de uso. Incluidos: <code>ai-prompt</code>, <code>email</code>, <code>default</code>. Usa com <code>whis --as email</code> ou cria as tuas proprias com <code>whis presets new</code>."
+      },
+      "configLocation": {
+        "question": "Onde esta a minha configuracao guardada?",
+        "answer": "Definicoes: <code>~/.config/whis/settings.json</code><br>Predefinicoes: <code>~/.config/whis/presets/</code><br>Modelos: <code>~/.local/share/whis/models/</code><br>Ver configuracao atual: <code>whis config --show</code>"
+      },
+      "piping": {
+        "question": "Posso redirecionar a saida para outras ferramentas?",
+        "answer": "Sim! Usa <code>--print</code> para enviar para stdout em vez da area de transferencia:<br><code>whis --print | pbcopy</code><br><code>whis -f audio.mp3 --print > transcript.txt</code>"
+      },
+      "uninstall": {
+        "question": "Como desinstalo?",
+        "answer": "<strong>Flatpak:</strong> <code>flatpak uninstall ink.whis.Whis</code><br><strong>AppImage:</strong> Executa com a flag <code>--uninstall</code>, depois apaga o ficheiro.<br><strong>Outros:</strong> Remove o binario e a pasta <code>~/.config/whis/</code>."
+      }
+    }
+  }
+}

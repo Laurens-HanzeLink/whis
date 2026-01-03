@@ -1,0 +1,247 @@
+{
+  "nav": {
+    "home": "главная",
+    "downloads": "загрузки",
+    "cli": "cli",
+    "desktop": "десктоп",
+    "mobile": "мобильное",
+    "faq": "вопросы"
+  },
+  "common": {
+    "version": "v{version}",
+    "license": "MIT"
+  },
+  "home": {
+    "title": "whis | Голос в текст для Linux",
+    "metaDescription": "Голос в текст для Linux. CLI для терминала, десктоп-приложение для системного доступа.",
+    "tagline": {
+      "speak": "Говори.",
+      "paste": "Вставляй.",
+      "ship": "Готово."
+    },
+    "subtitle": "Голос в буфер обмена. Без лишних действий.",
+    "description": "Записывай где угодно. Расшифровывай быстро. Вставляй мгновенно.",
+    "cta": {
+      "download": "Скачать",
+      "github": "Смотреть на GitHub"
+    },
+    "proof": {
+      "stars": "{count} звёзд",
+      "installs": "{count} установок",
+      "contributors": "{count} контрибьюторов",
+      "license": "Лицензия MIT"
+    }
+  },
+  "downloads": {
+    "title": "Загрузки - whis",
+    "subtitle": "Скачайте Whis для вашей платформы",
+    "metaDescription": "Скачайте whis для Linux, macOS, Windows и Android. Доступны различные форматы.",
+    "recommendedTitle": "Скачать для {platform}",
+    "moreOptions": "Другие варианты",
+    "platforms": {
+      "linux": "Linux",
+      "macos": "macOS",
+      "windows": "Windows",
+      "android": "Android",
+      "unknown": "вашей системы"
+    },
+    "sections": {
+      "desktop": "Десктоп",
+      "cli": "CLI",
+      "mobile": "Мобильное"
+    },
+    "formats": {
+      "flatpak": "Flatpak",
+      "appimage": "AppImage",
+      "deb": "deb",
+      "rpm": "rpm",
+      "dmg": "dmg",
+      "exe": "exe",
+      "msi": "msi",
+      "zip": "zip",
+      "apk": "apk",
+      "tarGz": "tar.gz"
+    },
+    "arch": {
+      "x86_64": "x86_64",
+      "arm64": "arm64",
+      "appleSilicon": "Apple Silicon",
+      "intel": "Intel"
+    },
+    "note": {
+      "earlyDevelopment": "Ранняя версия — ждём обратную связь!"
+    }
+  },
+  "cli": {
+    "title": "CLI - whis",
+    "subtitle": "Голос в текст для терминала",
+    "metaDescription": "Интерфейс командной строки whis. Направляйте голос в буфер обмена в терминальных сценариях.",
+    "install": {
+      "tabs": {
+        "cargo": "cargo",
+        "aur": "aur",
+        "source": "исходники"
+      },
+      "moreOptions": "Другие варианты"
+    },
+    "features": {
+      "title": "Что такое whis?",
+      "subtitle": "Минималистичный CLI, который направляет вашу речь прямо в буфер обмена.",
+      "items": {
+        "oneCommand": {
+          "title": "Одна команда",
+          "description": "Запустите whis. Говорите. Готово."
+        },
+        "providers": {
+          "title": "6 провайдеров",
+          "description": "OpenAI, Groq, Deepgram, Mistral, ElevenLabs или локальный whisper.cpp"
+        },
+        "runLocally": {
+          "title": "Работа офлайн",
+          "description": "Полностью автономно с whisper.cpp — приватно и бесплатно"
+        },
+        "postProcessing": {
+          "title": "ИИ-постобработка",
+          "description": "Удаление слов-паразитов и исправление грамматики с помощью LLM"
+        },
+        "presets": {
+          "title": "Пресеты",
+          "description": "ai-prompt, email, default — или создайте свои"
+        },
+        "hotkey": {
+          "title": "Режим горячих клавиш",
+          "description": "Ctrl+Alt+W переключает запись из любого места"
+        }
+      }
+    },
+    "demo": {
+      "caption": "Запись -> Расшифровка -> Вставка",
+      "altText": "Демо whis: запустите команду whis, говорите, нажмите Enter, текст скопирован в буфер обмена"
+    },
+    "quickStart": {
+      "title": "Быстрый старт",
+      "comments": {
+        "cloudSetup": "# Облачная настройка (пошаговый мастер)",
+        "localSetup": "# Или полностью локально (приватно, бесплатно)",
+        "thenRun": "# Затем просто запустите:",
+        "pressEnter": "# Нажмите Enter для остановки — текст скопирован!",
+        "postProcess": "# Постобработка транскрипта с помощью ИИ:"
+      }
+    }
+  },
+  "desktop": {
+    "title": "Десктоп-приложение - whis",
+    "subtitle": "Приложение в системном трее для голоса в текст",
+    "metaDescription": "Десктоп-приложение whis с системным треем для общесистемного доступа к голосу в текст.",
+    "install": {
+      "title": "Скачать для {platform}",
+      "moreOptions": "Другие варианты"
+    },
+    "features": {
+      "title": "Что такое Whis Desktop?",
+      "subtitle": "Приложение в системном трее, которое добавляет голос в текст на весь рабочий стол.",
+      "items": {
+        "systemTray": {
+          "title": "Системный трей",
+          "description": "Находится в панели, всегда наготове"
+        },
+        "globalHotkey": {
+          "title": "Глобальная горячая клавиша",
+          "description": "Ctrl+Alt+W из любого места (настраивается)"
+        },
+        "providers": {
+          "title": "6 провайдеров",
+          "description": "OpenAI, Groq, Deepgram, Mistral, ElevenLabs или локально"
+        },
+        "runLocally": {
+          "title": "Работа офлайн",
+          "description": "Скачивайте модели whisper в приложении — приватно и бесплатно"
+        },
+        "postProcessing": {
+          "title": "ИИ-постобработка",
+          "description": "Улучшение транскриптов с помощью пресетов"
+        },
+        "crossPlatform": {
+          "title": "Кроссплатформенность",
+          "description": "Linux, macOS, Windows (экспериментально)"
+        }
+      }
+    },
+    "screenshots": {
+      "about": "О программе",
+      "tray": "Системный трей",
+      "home": "Главная",
+      "shortcuts": "Горячие клавиши",
+      "cloudMode": "Облачный режим",
+      "localMode": "Локальный режим",
+      "presets": "Пресеты"
+    },
+    "quickStart": {
+      "title": "Быстрый старт",
+      "comments": {
+        "download": "# 1. Скачайте и установите, используя кнопку выше",
+        "launch": "# 2. Запустите \"Whis\" из меню приложений",
+        "configure": "# 3. Иконка в трее -> Настройки -> Настроить провайдер",
+        "use": "# 4. Используйте Ctrl+Alt+W или меню трея для записи!"
+      }
+    }
+  },
+  "mobile": {
+    "title": "Мобильное приложение - whis",
+    "subtitle": "Голос в текст на ходу",
+    "metaDescription": "Мобильное приложение whis для Android. Голос в текст на ходу.",
+    "install": {
+      "title": "Скачать для Android",
+      "statusBadge": "[экспериментально]",
+      "moreOptions": "Другие варианты"
+    },
+    "features": {
+      "title": "Что такое Whis Mobile?",
+      "subtitle": "Тот же whis, но с телефона.",
+      "items": {
+        "voiceToText": "Голос в текст с телефона",
+        "cloudTranscription": "Облачная транскрипция (OpenAI, Mistral)",
+        "clipboard": "Текст сразу в буфер обмена"
+      }
+    },
+    "demo": {
+      "caption": "Главная - Пресеты - Настройки - О программе",
+      "altText": "Скриншоты мобильного приложения Whis: главная, пресеты, настройки и о программе"
+    }
+  },
+  "faq": {
+    "title": "Вопросы и ответы - whis",
+    "subtitle": "Частые вопросы о whis",
+    "metaDescription": "Часто задаваемые вопросы об инструменте голоса в текст whis.",
+    "items": {
+      "postProcessing": {
+        "question": "Что такое постобработка?",
+        "answer": "Улучшение транскрипта с помощью ИИ. Удаляет слова-паразиты (эм, ну, типа) и исправляет грамматику, сохраняя технические термины. Используйте флаг <code>--post-process</code> или включите в настройках Desktop."
+      },
+      "requirements": {
+        "question": "Что нужно для работы?",
+        "answer": "<strong>Облачный режим:</strong> API-ключ от выбранного провайдера.<br><strong>Локальный режим:</strong> Просто запустите <code>whis setup local</code> (скачает модель ~500 МБ).<br><strong>Только CLI:</strong> Требуется FFmpeg для кодирования аудио."
+      },
+      "privacy": {
+        "question": "Как обрабатываются мои данные?",
+        "answer": "<strong>Облако:</strong> Аудио отправляется на серверы провайдера для обработки.<br><strong>Локально:</strong> Всё остаётся на вашем компьютере — никуда не уходит.<br>whis не сохраняет записи и транскрипты."
+      },
+      "presets": {
+        "question": "Что такое пресеты?",
+        "answer": "Форматы вывода для разных сценариев. Встроенные: <code>ai-prompt</code>, <code>email</code>, <code>default</code>. Используйте с <code>whis --as email</code> или создайте свои с помощью <code>whis presets new</code>."
+      },
+      "configLocation": {
+        "question": "Где хранятся настройки?",
+        "answer": "Настройки: <code>~/.config/whis/settings.json</code><br>Пресеты: <code>~/.config/whis/presets/</code><br>Модели: <code>~/.local/share/whis/models/</code><br>Просмотр конфига: <code>whis config --show</code>"
+      },
+      "piping": {
+        "question": "Можно ли передать вывод другим инструментам?",
+        "answer": "Да! Используйте <code>--print</code> для вывода в stdout вместо буфера обмена:<br><code>whis --print | pbcopy</code><br><code>whis -f audio.mp3 --print > transcript.txt</code>"
+      },
+      "uninstall": {
+        "question": "Как удалить программу?",
+        "answer": "<strong>Flatpak:</strong> <code>flatpak uninstall ink.whis.Whis</code><br><strong>AppImage:</strong> Запустите с флагом <code>--uninstall</code>, затем удалите файл.<br><strong>Другое:</strong> Удалите исполняемый файл и папку <code>~/.config/whis/</code>."
+      }
+    }
+  }
+}

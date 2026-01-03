@@ -1,20 +1,52 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import type { LocaleCode } from '~/types/i18n'
+import { computed, ref } from 'vue'
 
-const config = useRuntimeConfig()
-const version = config.public.appVersion
+const { t, locale, locales } = useI18n()
+const localePath = useLocalePath()
+const switchLocalePath = useSwitchLocalePath()
 
 const route = useRoute()
 const sidebarOpen = ref(false)
 
-const navItems = [
-  { path: '/', name: 'index', label: 'home' },
-  { path: '/downloads', name: 'downloads', label: 'downloads' },
-  { path: '/cli', name: 'cli', label: 'cli' },
-  { path: '/desktop', name: 'desktop', label: 'desktop' },
-  { path: '/mobile', name: 'mobile', label: 'mobile' },
-  { path: '/faq', name: 'faq', label: 'faq' },
-]
+// Add hreflang tags for SEO
+const hreflangLinks = computed(() => {
+  const links = (locales.value as Array<{ code: string, iso: string }>).map((loc) => {
+    const path = switchLocalePath(loc.code as LocaleCode)
+    return {
+      rel: 'alternate',
+      hreflang: loc.iso,
+      href: `https://whis.ink${path}`,
+    }
+  })
+
+  // Add x-default pointing to English (default locale, no prefix)
+  const enPath = switchLocalePath('en')
+  links.push({
+    rel: 'alternate',
+    hreflang: 'x-default',
+    href: `https://whis.ink${enPath}`,
+  })
+
+  return links
+})
+
+// Set dynamic HTML lang attribute
+useHead({
+  htmlAttrs: {
+    lang: () => locale.value,
+  },
+  link: hreflangLinks,
+})
+
+const navItems = computed(() => [
+  { path: localePath('index'), name: 'index', label: t('nav.home') },
+  { path: localePath('downloads'), name: 'downloads', label: t('nav.downloads') },
+  { path: localePath('cli'), name: 'cli', label: t('nav.cli') },
+  { path: localePath('desktop'), name: 'desktop', label: t('nav.desktop') },
+  { path: localePath('mobile'), name: 'mobile', label: t('nav.mobile') },
+  { path: localePath('faq'), name: 'faq', label: t('nav.faq') },
+])
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value
@@ -55,20 +87,18 @@ function closeSidebar() {
           :key="item.name"
           :to="item.path"
           class="nav-item"
-          :class="{ active: route.name === item.name }"
+          :class="{ active: route.path === item.path }"
           @click="closeSidebar"
         >
           <span class="nav-marker" aria-hidden="true">{{
-            route.name === item.name ? '>' : ' '
+            route.path === item.path ? '>' : ' '
           }}</span>
           <span>{{ item.label }}</span>
         </NuxtLink>
       </nav>
 
       <div class="sidebar-footer">
-        <NuxtLink to="/downloads" class="version-badge">
-          v{{ version }} · MIT
-        </NuxtLink>
+        <LanguageSwitcher />
       </div>
     </aside>
 
@@ -207,19 +237,6 @@ function closeSidebar() {
   padding: 16px;
   border-top: 1px solid var(--border);
   margin-top: auto;
-}
-
-.version-badge {
-  font-size: 11px;
-  color: var(--text-weak);
-  text-decoration: none;
-  opacity: 0.6;
-  transition: opacity 0.15s ease;
-}
-
-.version-badge:hover {
-  opacity: 1;
-  color: var(--text);
 }
 
 /* Content */

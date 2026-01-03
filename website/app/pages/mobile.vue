@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
+const { t } = useI18n()
+const localePath = useLocalePath()
+const route = useRoute()
+
+const canonicalUrl = computed(() => `https://whis.ink${route.path}`)
+
 useHead({
-  title: 'Mobile App - whis',
+  title: t('mobile.title'),
   link: [
-    { rel: 'canonical', href: 'https://whis.ink/mobile' },
+    { rel: 'canonical', href: canonicalUrl },
   ],
   meta: [
-    { name: 'description', content: 'whis mobile application for Android. Voice-to-text on the go.' },
-    { property: 'og:title', content: 'Mobile App - whis' },
-    { property: 'og:description', content: 'whis mobile application for Android. Voice-to-text on the go.' },
-    { property: 'og:url', content: 'https://whis.ink/mobile' },
+    { name: 'description', content: t('mobile.metaDescription') },
+    { property: 'og:title', content: t('mobile.title') },
+    { property: 'og:description', content: t('mobile.metaDescription') },
+    { property: 'og:url', content: canonicalUrl },
     { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
     { property: 'og:type', content: 'website' },
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'Mobile App - whis' },
-    { name: 'twitter:description', content: 'whis mobile application for Android. Voice-to-text on the go.' },
+    { name: 'twitter:title', content: t('mobile.title') },
+    { name: 'twitter:description', content: t('mobile.metaDescription') },
     { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
   ],
 })
@@ -24,9 +30,9 @@ const { version, findAsset } = useGitHubRelease()
 
 const lightboxOpen = ref(false)
 
-const demoImage = [
-  { src: '/mobile-demo.png', alt: 'Whis mobile app', caption: 'Home · Presets · Settings · About' },
-]
+const demoImage = computed(() => [
+  { src: '/mobile-demo.png', alt: t('mobile.demo.altText'), caption: t('mobile.demo.caption') },
+])
 
 const apkUrl = computed(() => {
   const asset = findAsset(/\.apk$/)
@@ -39,21 +45,21 @@ const apkUrl = computed(() => {
 
 <template>
   <div class="mobile-content">
-    <ViewHeader title="Mobile" subtitle="Voice-to-text on the go" />
+    <ViewHeader :title="$t('mobile.title').replace(' App - whis', '')" :subtitle="$t('mobile.subtitle')" />
 
     <!-- Install -->
     <section class="install">
       <h2 class="install-title">
-        Download for Android <span class="status-badge">[experimental]</span>
+        {{ $t('mobile.install.title') }} <span class="status-badge">{{ $t('mobile.install.statusBadge') }}</span>
       </h2>
       <a :href="apkUrl" class="download-button">
         <span class="download-icon">↓</span>
-        <span class="download-label">APK</span>
+        <span class="download-label">{{ $t('downloads.formats.apk') }}</span>
         <span class="download-version">{{ version }}</span>
       </a>
       <p class="install-note">
-        <NuxtLink to="/downloads">
-          More options →
+        <NuxtLink :to="localePath('downloads')">
+          {{ $t('mobile.install.moreOptions') }}
         </NuxtLink>
       </p>
     </section>
@@ -61,21 +67,21 @@ const apkUrl = computed(() => {
     <!-- Features -->
     <section class="features">
       <div class="section-header">
-        <h2>What is Whis Mobile?</h2>
-        <p>Same whis experience, from your phone.</p>
+        <h2>{{ $t('mobile.features.title') }}</h2>
+        <p>{{ $t('mobile.features.subtitle') }}</p>
       </div>
       <ul>
         <li>
           <span class="marker">[*]</span>
-          <div>Voice-to-text from your phone</div>
+          <div>{{ $t('mobile.features.items.voiceToText') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div>Cloud transcription (OpenAI, Mistral)</div>
+          <div>{{ $t('mobile.features.items.cloudTranscription') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div>Text straight to clipboard</div>
+          <div>{{ $t('mobile.features.items.clipboard') }}</div>
         </li>
       </ul>
     </section>
@@ -84,13 +90,13 @@ const apkUrl = computed(() => {
     <section class="demo">
       <figure>
         <img
-          src="/mobile-demo.png"
-          alt="Whis mobile app screenshots showing home, presets, settings, and about screens"
+          :src="demoImage[0]!.src"
+          :alt="$t('mobile.demo.altText')"
           loading="lazy"
           class="clickable"
           @click="lightboxOpen = true"
         >
-        <figcaption>Home · Presets · Settings · About</figcaption>
+        <figcaption>{{ $t('mobile.demo.caption') }}</figcaption>
       </figure>
     </section>
 

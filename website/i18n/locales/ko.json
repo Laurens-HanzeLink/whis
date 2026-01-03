@@ -1,0 +1,247 @@
+{
+  "nav": {
+    "home": "홈",
+    "downloads": "다운로드",
+    "cli": "CLI",
+    "desktop": "데스크톱",
+    "mobile": "모바일",
+    "faq": "FAQ"
+  },
+  "common": {
+    "version": "v{version}",
+    "license": "MIT"
+  },
+  "home": {
+    "title": "whis | Linux 음성-텍스트 변환",
+    "metaDescription": "Linux용 음성-텍스트 변환. 터미널 워크플로우를 위한 CLI, 시스템 전체 접근을 위한 데스크톱 앱.",
+    "tagline": {
+      "speak": "말하세요.",
+      "paste": "붙여넣으세요.",
+      "ship": "완료."
+    },
+    "subtitle": "음성 → 클립보드. 빠르고 간편하게.",
+    "description": "어디서든 녹음하고. 빠르게 변환하고. 바로 붙여넣으세요.",
+    "cta": {
+      "download": "다운로드",
+      "github": "GitHub에서 보기"
+    },
+    "proof": {
+      "stars": "★ {count}개의 스타",
+      "installs": "{count}회 설치",
+      "contributors": "{count}명의 기여자",
+      "license": "MIT 라이선스"
+    }
+  },
+  "downloads": {
+    "title": "다운로드 - whis",
+    "subtitle": "사용 중인 플랫폼에서 Whis 받기",
+    "metaDescription": "Linux, macOS, Windows, Android용 whis를 다운로드하세요. 다양한 형식으로 제공됩니다.",
+    "recommendedTitle": "{platform}용 다운로드",
+    "moreOptions": "더 많은 옵션 →",
+    "platforms": {
+      "linux": "Linux",
+      "macos": "macOS",
+      "windows": "Windows",
+      "android": "Android",
+      "unknown": "사용 중인 시스템"
+    },
+    "sections": {
+      "desktop": "데스크톱",
+      "cli": "CLI",
+      "mobile": "모바일"
+    },
+    "formats": {
+      "flatpak": "Flatpak",
+      "appimage": "AppImage",
+      "deb": "deb",
+      "rpm": "rpm",
+      "dmg": "dmg",
+      "exe": "exe",
+      "msi": "msi",
+      "zip": "zip",
+      "apk": "apk",
+      "tarGz": "tar.gz"
+    },
+    "arch": {
+      "x86_64": "x86_64",
+      "arm64": "arm64",
+      "appleSilicon": "Apple Silicon",
+      "intel": "Intel"
+    },
+    "note": {
+      "earlyDevelopment": "초기 개발 단계 — 피드백을 환영합니다!"
+    }
+  },
+  "cli": {
+    "title": "CLI - whis",
+    "subtitle": "터미널 워크플로우를 위한 음성-텍스트 변환",
+    "metaDescription": "whis 명령줄 인터페이스. 터미널 워크플로우에서 음성을 클립보드로 바로 전달합니다.",
+    "install": {
+      "tabs": {
+        "cargo": "cargo",
+        "aur": "aur",
+        "source": "source"
+      },
+      "moreOptions": "더 많은 옵션 →"
+    },
+    "features": {
+      "title": "whis란?",
+      "subtitle": "음성을 클립보드로 바로 전달하는 미니멀한 CLI입니다.",
+      "items": {
+        "oneCommand": {
+          "title": "단일 명령어",
+          "description": "whis 실행. 말하기. 끝."
+        },
+        "providers": {
+          "title": "6개 제공업체",
+          "description": "OpenAI, Groq, Deepgram, Mistral, ElevenLabs 또는 로컬 whisper.cpp"
+        },
+        "runLocally": {
+          "title": "로컬 실행",
+          "description": "whisper.cpp로 완전 오프라인 — 프라이버시 보장, 무료"
+        },
+        "postProcessing": {
+          "title": "AI 후처리",
+          "description": "LLM으로 추임새와 문법 오류 정리"
+        },
+        "presets": {
+          "title": "프리셋",
+          "description": "ai-prompt, email, default — 또는 직접 만들기"
+        },
+        "hotkey": {
+          "title": "단축키 모드",
+          "description": "어디서든 Ctrl+Alt+W로 녹음 전환"
+        }
+      }
+    },
+    "demo": {
+      "caption": "녹음 → 변환 → 붙여넣기",
+      "altText": "whis 데모: whis 명령어 실행, 말하기, Enter 누르기, 텍스트가 클립보드에 복사됨"
+    },
+    "quickStart": {
+      "title": "빠른 시작",
+      "comments": {
+        "cloudSetup": "# 클라우드 설정 (가이드 마법사)",
+        "localSetup": "# 또는 완전 로컬 모드 (프라이버시 보장, 무료)",
+        "thenRun": "# 그 다음 실행:",
+        "pressEnter": "# Enter를 눌러 종료 — 텍스트가 복사됩니다!",
+        "postProcess": "# AI로 텍스트 후처리:"
+      }
+    }
+  },
+  "desktop": {
+    "title": "데스크톱 앱 - whis",
+    "subtitle": "어디서든 음성-텍스트 변환을 위한 시스템 트레이 앱",
+    "metaDescription": "시스템 전체에서 음성-텍스트 변환에 접근할 수 있는 whis 데스크톱 애플리케이션과 시스템 트레이.",
+    "install": {
+      "title": "{platform}용 다운로드",
+      "moreOptions": "더 많은 옵션 →"
+    },
+    "features": {
+      "title": "Whis Desktop이란?",
+      "subtitle": "데스크톱 전체에서 음성-텍스트 변환을 사용할 수 있는 시스템 트레이 앱입니다.",
+      "items": {
+        "systemTray": {
+          "title": "시스템 트레이",
+          "description": "패널에 상주하며 항상 준비 완료"
+        },
+        "globalHotkey": {
+          "title": "전역 단축키",
+          "description": "어디서든 Ctrl+Alt+W (설정 가능)"
+        },
+        "providers": {
+          "title": "6개 제공업체",
+          "description": "OpenAI, Groq, Deepgram, Mistral, ElevenLabs 또는 로컬"
+        },
+        "runLocally": {
+          "title": "로컬 실행",
+          "description": "앱 내에서 whisper 모델 다운로드 — 프라이버시 보장, 무료"
+        },
+        "postProcessing": {
+          "title": "AI 후처리",
+          "description": "프리셋으로 텍스트 정리"
+        },
+        "crossPlatform": {
+          "title": "크로스 플랫폼",
+          "description": "Linux, macOS, Windows (실험적)"
+        }
+      }
+    },
+    "screenshots": {
+      "about": "정보",
+      "tray": "시스템 트레이",
+      "home": "홈",
+      "shortcuts": "단축키",
+      "cloudMode": "클라우드 모드",
+      "localMode": "로컬 모드",
+      "presets": "프리셋"
+    },
+    "quickStart": {
+      "title": "빠른 시작",
+      "comments": {
+        "download": "# 1. 위 버튼을 사용하여 다운로드 및 설치",
+        "launch": "# 2. 앱 메뉴에서 \"Whis\" 실행",
+        "configure": "# 3. 트레이 아이콘 → 설정 → 제공업체 구성",
+        "use": "# 4. Ctrl+Alt+W 또는 트레이 메뉴로 녹음!"
+      }
+    }
+  },
+  "mobile": {
+    "title": "모바일 앱 - whis",
+    "subtitle": "이동 중 음성-텍스트 변환",
+    "metaDescription": "Android용 whis 모바일 애플리케이션. 이동 중에도 음성-텍스트 변환.",
+    "install": {
+      "title": "Android용 다운로드",
+      "statusBadge": "[실험적]",
+      "moreOptions": "더 많은 옵션 →"
+    },
+    "features": {
+      "title": "Whis Mobile이란?",
+      "subtitle": "동일한 whis 경험을 스마트폰에서.",
+      "items": {
+        "voiceToText": "스마트폰에서 음성-텍스트 변환",
+        "cloudTranscription": "클라우드 변환 (OpenAI, Mistral)",
+        "clipboard": "텍스트를 클립보드로 바로 전달"
+      }
+    },
+    "demo": {
+      "caption": "홈 · 프리셋 · 설정 · 정보",
+      "altText": "Whis 모바일 앱 스크린샷: 홈, 프리셋, 설정, 정보 화면"
+    }
+  },
+  "faq": {
+    "title": "FAQ - whis",
+    "subtitle": "whis에 대한 자주 묻는 질문",
+    "metaDescription": "whis 음성-텍스트 변환 도구에 대한 자주 묻는 질문.",
+    "items": {
+      "postProcessing": {
+        "question": "후처리란 무엇인가요?",
+        "answer": "AI 기반 텍스트 정리 기능입니다. 추임새(음, 어, 그)를 제거하고 기술 용어는 유지하면서 문법을 교정합니다. <code>--post-process</code> 플래그를 사용하거나 데스크톱 설정에서 활성화하세요."
+      },
+      "requirements": {
+        "question": "무엇이 필요한가요?",
+        "answer": "<strong>클라우드 모드:</strong> 선택한 제공업체의 API 키.<br><strong>로컬 모드:</strong> <code>whis setup local</code>만 실행하세요 (~500MB 모델 다운로드).<br><strong>CLI 전용:</strong> 오디오 인코딩을 위해 FFmpeg 필요."
+      },
+      "privacy": {
+        "question": "제 데이터는 어떻게 되나요?",
+        "answer": "<strong>클라우드:</strong> 오디오가 제공업체 서버로 전송되어 처리됩니다.<br><strong>로컬:</strong> 모든 것이 로컬 컴퓨터에서 처리되며 외부로 전송되지 않습니다.<br>whis는 녹음이나 텍스트 변환 결과를 저장하지 않습니다."
+      },
+      "presets": {
+        "question": "프리셋이란 무엇인가요?",
+        "answer": "다양한 용도에 맞는 출력 형식입니다. 기본 제공: <code>ai-prompt</code>, <code>email</code>, <code>default</code>. <code>whis --as email</code>로 사용하거나 <code>whis presets new</code>로 직접 만드세요."
+      },
+      "configLocation": {
+        "question": "설정 파일은 어디에 저장되나요?",
+        "answer": "설정: <code>~/.config/whis/settings.json</code><br>프리셋: <code>~/.config/whis/presets/</code><br>모델: <code>~/.local/share/whis/models/</code><br>현재 설정 보기: <code>whis config --show</code>"
+      },
+      "piping": {
+        "question": "다른 도구로 출력을 파이프할 수 있나요?",
+        "answer": "네! <code>--print</code>를 사용하면 클립보드 대신 stdout으로 출력합니다:<br><code>whis --print | pbcopy</code><br><code>whis -f audio.mp3 --print > transcript.txt</code>"
+      },
+      "uninstall": {
+        "question": "어떻게 제거하나요?",
+        "answer": "<strong>Flatpak:</strong> <code>flatpak uninstall ink.whis.Whis</code><br><strong>AppImage:</strong> <code>--uninstall</code> 플래그로 실행한 후 파일을 삭제하세요.<br><strong>기타:</strong> 바이너리와 <code>~/.config/whis/</code> 폴더를 삭제하세요."
+      }
+    }
+  }
+}

@@ -1,21 +1,27 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+
+const { t } = useI18n()
+const localePath = useLocalePath()
+const route = useRoute()
+
+const canonicalUrl = computed(() => `https://whis.ink${route.path}`)
 
 useHead({
-  title: 'CLI - whis',
+  title: t('cli.title'),
   link: [
-    { rel: 'canonical', href: 'https://whis.ink/cli' },
+    { rel: 'canonical', href: canonicalUrl },
   ],
   meta: [
-    { name: 'description', content: 'whis command-line interface. Pipe your voice to clipboard in terminal workflows.' },
-    { property: 'og:title', content: 'CLI - whis' },
-    { property: 'og:description', content: 'whis command-line interface. Pipe your voice to clipboard in terminal workflows.' },
-    { property: 'og:url', content: 'https://whis.ink/cli' },
+    { name: 'description', content: t('cli.metaDescription') },
+    { property: 'og:title', content: t('cli.title') },
+    { property: 'og:description', content: t('cli.metaDescription') },
+    { property: 'og:url', content: canonicalUrl },
     { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
     { property: 'og:type', content: 'website' },
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'CLI - whis' },
-    { name: 'twitter:description', content: 'whis command-line interface. Pipe your voice to clipboard in terminal workflows.' },
+    { name: 'twitter:title', content: t('cli.title') },
+    { name: 'twitter:description', content: t('cli.metaDescription') },
     { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
   ],
 })
@@ -23,23 +29,23 @@ useHead({
 const installTab = ref('cargo')
 const lightboxOpen = ref(false)
 
-const demoImage = [
-  { src: '/demo.gif', alt: 'whis CLI demo', caption: 'Record → Transcribe → Paste' },
-]
+const demoImage = computed(() => [
+  { src: '/demo.gif', alt: t('cli.demo.altText'), caption: t('cli.demo.caption') },
+])
 </script>
 
 <template>
   <div class="cli-content">
-    <ViewHeader title="CLI" subtitle="Voice-to-text for terminal workflows" />
+    <ViewHeader :title="$t('cli.title').replace(' - whis', '')" :subtitle="$t('cli.subtitle')" />
 
     <!-- Install -->
     <section id="install" class="install">
       <TabPanel
         v-model:selected="installTab"
         :tabs="[
-          { value: 'cargo', label: 'cargo' },
-          { value: 'aur', label: 'aur' },
-          { value: 'source', label: 'source' },
+          { value: 'cargo', label: $t('cli.install.tabs.cargo') },
+          { value: 'aur', label: $t('cli.install.tabs.aur') },
+          { value: 'source', label: $t('cli.install.tabs.source') },
         ]"
       >
         <div v-if="installTab === 'cargo'" class="panel">
@@ -70,8 +76,8 @@ const demoImage = [
         </div>
       </TabPanel>
       <p class="install-note">
-        <NuxtLink to="/downloads">
-          More options →
+        <NuxtLink :to="localePath('downloads')">
+          {{ $t('cli.install.moreOptions') }}
         </NuxtLink>
       </p>
     </section>
@@ -79,33 +85,33 @@ const demoImage = [
     <!-- Features -->
     <section class="features">
       <div class="section-header">
-        <h2>What is whis?</h2>
-        <p>A minimal CLI that pipes your voice straight to the clipboard.</p>
+        <h2>{{ $t('cli.features.title') }}</h2>
+        <p>{{ $t('cli.features.subtitle') }}</p>
       </div>
       <ul>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>One command</strong> Run whis. Speak. Done.</div>
+          <div><strong>{{ $t('cli.features.items.oneCommand.title') }}</strong> {{ $t('cli.features.items.oneCommand.description') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>6 providers</strong> OpenAI, Groq, Deepgram, Mistral, ElevenLabs, or local whisper.cpp</div>
+          <div><strong>{{ $t('cli.features.items.providers.title') }}</strong> {{ $t('cli.features.items.providers.description') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>Run locally</strong> Fully offline with whisper.cpp — private and free</div>
+          <div><strong>{{ $t('cli.features.items.runLocally.title') }}</strong> {{ $t('cli.features.items.runLocally.description') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>AI post-processing</strong> Clean up filler words and grammar with LLMs</div>
+          <div><strong>{{ $t('cli.features.items.postProcessing.title') }}</strong> {{ $t('cli.features.items.postProcessing.description') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>Presets</strong> ai-prompt, email, default — or create your own</div>
+          <div><strong>{{ $t('cli.features.items.presets.title') }}</strong> {{ $t('cli.features.items.presets.description') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>Hotkey mode</strong> Ctrl+Alt+W toggles recording from anywhere</div>
+          <div><strong>{{ $t('cli.features.items.hotkey.title') }}</strong> {{ $t('cli.features.items.hotkey.description') }}</div>
         </li>
       </ul>
     </section>
@@ -114,13 +120,13 @@ const demoImage = [
     <section class="demo">
       <figure>
         <img
-          src="/demo.gif"
-          alt="whis demo: run whis command, speak, press Enter, text is copied to clipboard"
+          :src="demoImage[0]!.src"
+          :alt="$t('cli.demo.altText')"
           loading="lazy"
           class="clickable"
           @click="lightboxOpen = true"
         >
-        <figcaption>Record &rarr; Transcribe &rarr; Paste</figcaption>
+        <figcaption>{{ $t('cli.demo.caption') }}</figcaption>
       </figure>
     </section>
 
@@ -129,18 +135,18 @@ const demoImage = [
 
     <!-- Quick Start -->
     <section class="quickstart">
-      <h2>Quick Start</h2>
-      <pre><code><span class="comment"># Cloud setup (guided wizard)</span>
+      <h2>{{ $t('cli.quickStart.title') }}</h2>
+      <pre><code><span class="comment">{{ $t('cli.quickStart.comments.cloudSetup') }}</span>
 <span class="highlight">whis setup cloud</span>
 
-<span class="comment"># Or go fully local (private, free)</span>
+<span class="comment">{{ $t('cli.quickStart.comments.localSetup') }}</span>
 <span class="highlight">whis setup local</span>
 
-<span class="comment"># Then just run:</span>
+<span class="comment">{{ $t('cli.quickStart.comments.thenRun') }}</span>
 <span class="highlight">whis</span>
-<span class="comment"># Press Enter to stop — text is copied!</span>
+<span class="comment">{{ $t('cli.quickStart.comments.pressEnter') }}</span>
 
-<span class="comment"># Post-process your transcript with AI:</span>
+<span class="comment">{{ $t('cli.quickStart.comments.postProcess') }}</span>
 <span class="highlight">whis --post-process</span></code></pre>
     </section>
   </div>

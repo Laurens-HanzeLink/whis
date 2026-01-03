@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import FaqAnswer from './FaqAnswer.vue'
 import FaqItem from './FaqItem.vue'
 
 defineProps<{
@@ -26,7 +27,7 @@ function setExpanded(index: number, value: boolean) {
       :expanded="isExpanded(index)"
       @update:expanded="setExpanded(index, $event)"
     >
-      <p v-html="item.answer" />
+      <FaqAnswer :answer="item.answer" />
     </FaqItem>
   </ul>
 </template>

@@ -2,21 +2,27 @@
 import type { Platform } from '@/composables/usePlatformDetection'
 import { computed, ref } from 'vue'
 
+const { t } = useI18n()
+const localePath = useLocalePath()
+const route = useRoute()
+
+const canonicalUrl = computed(() => `https://whis.ink${route.path}`)
+
 useHead({
-  title: 'Desktop App - whis',
+  title: t('desktop.title'),
   link: [
-    { rel: 'canonical', href: 'https://whis.ink/desktop' },
+    { rel: 'canonical', href: canonicalUrl },
   ],
   meta: [
-    { name: 'description', content: 'whis desktop application with system tray for system-wide voice-to-text access.' },
-    { property: 'og:title', content: 'Desktop App - whis' },
-    { property: 'og:description', content: 'whis desktop application with system tray for system-wide voice-to-text access.' },
-    { property: 'og:url', content: 'https://whis.ink/desktop' },
+    { name: 'description', content: t('desktop.metaDescription') },
+    { property: 'og:title', content: t('desktop.title') },
+    { property: 'og:description', content: t('desktop.metaDescription') },
+    { property: 'og:url', content: canonicalUrl },
     { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
     { property: 'og:type', content: 'website' },
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'Desktop App - whis' },
-    { name: 'twitter:description', content: 'whis desktop application with system tray for system-wide voice-to-text access.' },
+    { name: 'twitter:title', content: t('desktop.title') },
+    { name: 'twitter:description', content: t('desktop.metaDescription') },
     { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
   ],
 })
@@ -27,23 +33,23 @@ const { version, versionNum, findAsset } = useGitHubRelease()
 const lightboxOpen = ref(false)
 const lightboxIndex = ref(0)
 
-const screenshots = [
-  { src: '/screenshot-01-about.png', alt: 'About page showing Whis version and description', caption: 'About' },
-  { src: '/screenshot-02-tray.png', alt: 'Whis running in system tray', caption: 'System tray' },
-  { src: '/screenshot-03-home.png', alt: 'Whis home screen with Start Recording button', caption: 'Home' },
-  { src: '/screenshot-04-shortcuts.png', alt: 'Global shortcut configuration', caption: 'Shortcuts' },
-  { src: '/screenshot-05-settings-cloud.png', alt: 'Cloud provider settings with OpenAI, Groq, Deepgram options', caption: 'Cloud mode' },
-  { src: '/screenshot-06-settings-local.png', alt: 'Local whisper model selection for offline transcription', caption: 'Local mode' },
-  { src: '/screenshot-07-presets.png', alt: 'Preset configurations for AI prompts, email, and notes', caption: 'Presets' },
-]
+const screenshots = computed(() => [
+  { src: '/screenshot-01-about.png', alt: 'About page showing Whis version and description', caption: t('desktop.screenshots.about') },
+  { src: '/screenshot-02-tray.png', alt: 'Whis running in system tray', caption: t('desktop.screenshots.tray') },
+  { src: '/screenshot-03-home.png', alt: 'Whis home screen with Start Recording button', caption: t('desktop.screenshots.home') },
+  { src: '/screenshot-04-shortcuts.png', alt: 'Global shortcut configuration', caption: t('desktop.screenshots.shortcuts') },
+  { src: '/screenshot-05-settings-cloud.png', alt: 'Cloud provider settings with OpenAI, Groq, Deepgram options', caption: t('desktop.screenshots.cloudMode') },
+  { src: '/screenshot-06-settings-local.png', alt: 'Local whisper model selection for offline transcription', caption: t('desktop.screenshots.localMode') },
+  { src: '/screenshot-07-presets.png', alt: 'Preset configurations for AI prompts, email, and notes', caption: t('desktop.screenshots.presets') },
+])
 
 const platformLabel = computed(() => {
   const labels: Record<Platform, string> = {
-    linux: 'Linux',
-    macos: 'macOS',
-    windows: 'Windows',
-    android: 'Android',
-    unknown: 'your system',
+    linux: t('downloads.platforms.linux'),
+    macos: t('downloads.platforms.macos'),
+    windows: t('downloads.platforms.windows'),
+    android: t('downloads.platforms.android'),
+    unknown: t('downloads.platforms.unknown'),
   }
   return labels[platform.value]
 })
@@ -56,24 +62,24 @@ const recommendedDownload = computed(() => {
   switch (platform.value) {
     case 'linux':
       return {
-        label: 'AppImage',
+        label: t('downloads.formats.appimage'),
         url: findAsset(/Whis_.*_amd64\.AppImage$/)?.browser_download_url || `${base}/Whis_${vn}_amd64.AppImage`,
       }
     case 'macos':
       return {
-        label: 'DMG',
+        label: t('downloads.formats.dmg'),
         url: arch.value === 'arm64'
           ? (findAsset(/Whis_.*_aarch64\.dmg$/)?.browser_download_url || `${base}/Whis_${vn}_aarch64.dmg`)
           : (findAsset(/Whis_.*_x64\.dmg$/)?.browser_download_url || `${base}/Whis_${vn}_x64.dmg`),
       }
     case 'windows':
       return {
-        label: 'exe',
+        label: t('downloads.formats.exe'),
         url: findAsset(/Whis_.*_x64-setup\.exe$/)?.browser_download_url || `${base}/Whis_${vn}_x64-setup.exe`,
       }
     default:
       return {
-        label: 'AppImage',
+        label: t('downloads.formats.appimage'),
         url: findAsset(/Whis_.*_amd64\.AppImage$/)?.browser_download_url || `${base}/Whis_${vn}_amd64.AppImage`,
       }
   }
@@ -87,12 +93,12 @@ function openLightbox(index: number) {
 
 <template>
   <div class="desktop-content">
-    <ViewHeader title="Desktop" subtitle="System tray app for voice-to-text anywhere" />
+    <ViewHeader :title="$t('desktop.title').replace(' App - whis', '')" :subtitle="$t('desktop.subtitle')" />
 
     <!-- Install -->
     <section class="install">
       <h2 class="install-title">
-        Download for {{ platformLabel }}
+        {{ $t('desktop.install.title', { platform: platformLabel }) }}
       </h2>
       <a :href="recommendedDownload.url" class="download-button">
         <span class="download-icon">↓</span>
@@ -100,8 +106,8 @@ function openLightbox(index: number) {
         <span class="download-version">{{ version }}</span>
       </a>
       <p class="install-note">
-        <NuxtLink to="/downloads">
-          More options →
+        <NuxtLink :to="localePath('downloads')">
+          {{ $t('desktop.install.moreOptions') }}
         </NuxtLink>
       </p>
     </section>
@@ -109,33 +115,33 @@ function openLightbox(index: number) {
     <!-- Features -->
     <section class="features">
       <div class="section-header">
-        <h2>What is Whis Desktop?</h2>
-        <p>A system tray app that brings voice-to-text to your entire desktop.</p>
+        <h2>{{ $t('desktop.features.title') }}</h2>
+        <p>{{ $t('desktop.features.subtitle') }}</p>
       </div>
       <ul>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>System tray</strong> Lives in your panel, always ready</div>
+          <div><strong>{{ $t('desktop.features.items.systemTray.title') }}</strong> {{ $t('desktop.features.items.systemTray.description') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>Global hotkey</strong> Ctrl+Alt+W from anywhere (configurable)</div>
+          <div><strong>{{ $t('desktop.features.items.globalHotkey.title') }}</strong> {{ $t('desktop.features.items.globalHotkey.description') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>6 providers</strong> OpenAI, Groq, Deepgram, Mistral, ElevenLabs, or local</div>
+          <div><strong>{{ $t('desktop.features.items.providers.title') }}</strong> {{ $t('desktop.features.items.providers.description') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>Run locally</strong> Download whisper models in-app — private and free</div>
+          <div><strong>{{ $t('desktop.features.items.runLocally.title') }}</strong> {{ $t('desktop.features.items.runLocally.description') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>AI post-processing</strong> Clean up transcripts with presets</div>
+          <div><strong>{{ $t('desktop.features.items.postProcessing.title') }}</strong> {{ $t('desktop.features.items.postProcessing.description') }}</div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>Cross-platform</strong> Linux, macOS, Windows (experimental)</div>
+          <div><strong>{{ $t('desktop.features.items.crossPlatform.title') }}</strong> {{ $t('desktop.features.items.crossPlatform.description') }}</div>
         </li>
       </ul>
     </section>
@@ -149,14 +155,14 @@ function openLightbox(index: number) {
 
     <!-- Quick Start -->
     <section class="quickstart">
-      <h2>Quick Start</h2>
-      <pre><code><span class="comment"># 1. Download and install using the button above</span>
+      <h2>{{ $t('desktop.quickStart.title') }}</h2>
+      <pre><code><span class="comment">{{ $t('desktop.quickStart.comments.download') }}</span>
 
-<span class="comment"># 2. Launch "Whis" from your app menu</span>
+<span class="comment">{{ $t('desktop.quickStart.comments.launch') }}</span>
 
-<span class="comment"># 3. Tray icon → Settings → Configure provider</span>
+<span class="comment">{{ $t('desktop.quickStart.comments.configure') }}</span>
 
-<span class="comment"># 4. Use Ctrl+Alt+W or tray menu to record!</span></code></pre>
+<span class="comment">{{ $t('desktop.quickStart.comments.use') }}</span></code></pre>
     </section>
 
     <!-- Lightbox -->

@@ -1,0 +1,247 @@
+{
+  "nav": {
+    "home": "首页",
+    "downloads": "下载",
+    "cli": "命令行",
+    "desktop": "桌面版",
+    "mobile": "移动版",
+    "faq": "常见问题"
+  },
+  "common": {
+    "version": "v{version}",
+    "license": "MIT"
+  },
+  "home": {
+    "title": "whis | Linux 语音转文字工具",
+    "metaDescription": "Linux 语音转文字工具。CLI 适用于终端工作流，桌面应用可在全系统使用。",
+    "tagline": {
+      "speak": "说话。",
+      "paste": "粘贴。",
+      "ship": "发布。"
+    },
+    "subtitle": "语音 → 剪贴板。零阻力。",
+    "description": "随时录音。快速转写。即时粘贴。",
+    "cta": {
+      "download": "下载",
+      "github": "在 GitHub 上查看"
+    },
+    "proof": {
+      "stars": "★ {count} 星标",
+      "installs": "{count} 次安装",
+      "contributors": "{count} 位贡献者",
+      "license": "MIT 许可证"
+    }
+  },
+  "downloads": {
+    "title": "下载 - whis",
+    "subtitle": "获取适合您平台的 Whis",
+    "metaDescription": "下载适用于 Linux、macOS、Windows 和 Android 的 whis。提供多种格式。",
+    "recommendedTitle": "下载 {platform} 版",
+    "moreOptions": "更多选项 →",
+    "platforms": {
+      "linux": "Linux",
+      "macos": "macOS",
+      "windows": "Windows",
+      "android": "Android",
+      "unknown": "您的系统"
+    },
+    "sections": {
+      "desktop": "桌面版",
+      "cli": "CLI",
+      "mobile": "移动版"
+    },
+    "formats": {
+      "flatpak": "Flatpak",
+      "appimage": "AppImage",
+      "deb": "deb",
+      "rpm": "rpm",
+      "dmg": "dmg",
+      "exe": "exe",
+      "msi": "msi",
+      "zip": "zip",
+      "apk": "apk",
+      "tarGz": "tar.gz"
+    },
+    "arch": {
+      "x86_64": "x86_64",
+      "arm64": "arm64",
+      "appleSilicon": "Apple Silicon",
+      "intel": "Intel"
+    },
+    "note": {
+      "earlyDevelopment": "早期开发阶段 — 欢迎反馈！"
+    }
+  },
+  "cli": {
+    "title": "CLI - whis",
+    "subtitle": "终端工作流的语音转文字工具",
+    "metaDescription": "whis 命令行界面。在终端工作流中将语音输送到剪贴板。",
+    "install": {
+      "tabs": {
+        "cargo": "cargo",
+        "aur": "aur",
+        "source": "源码"
+      },
+      "moreOptions": "更多选项 →"
+    },
+    "features": {
+      "title": "什么是 whis？",
+      "subtitle": "一个极简的 CLI 工具，将您的语音直接传输到剪贴板。",
+      "items": {
+        "oneCommand": {
+          "title": "一条命令",
+          "description": "运行 whis。说话。完成。"
+        },
+        "providers": {
+          "title": "6 个服务商",
+          "description": "OpenAI、Groq、Deepgram、Mistral、ElevenLabs 或本地 whisper.cpp"
+        },
+        "runLocally": {
+          "title": "本地运行",
+          "description": "使用 whisper.cpp 完全离线运行 — 私密且免费"
+        },
+        "postProcessing": {
+          "title": "AI 后处理",
+          "description": "使用 LLM 清理填充词和语法错误"
+        },
+        "presets": {
+          "title": "预设配置",
+          "description": "ai-prompt、email、default — 或创建您自己的"
+        },
+        "hotkey": {
+          "title": "快捷键模式",
+          "description": "Ctrl+Alt+W 可在任何地方切换录音"
+        }
+      }
+    },
+    "demo": {
+      "caption": "录音 → 转写 → 粘贴",
+      "altText": "whis 演示：运行 whis 命令，说话，按 Enter，文字即被复制到剪贴板"
+    },
+    "quickStart": {
+      "title": "快速开始",
+      "comments": {
+        "cloudSetup": "# 云端设置（引导向导）",
+        "localSetup": "# 或完全本地运行（私密、免费）",
+        "thenRun": "# 然后只需运行：",
+        "pressEnter": "# 按 Enter 停止 — 文字已复制！",
+        "postProcess": "# 使用 AI 后处理您的转录："
+      }
+    }
+  },
+  "desktop": {
+    "title": "桌面应用 - whis",
+    "subtitle": "系统托盘应用，随时随地语音转文字",
+    "metaDescription": "whis 桌面应用程序，通过系统托盘实现全系统语音转文字访问。",
+    "install": {
+      "title": "下载 {platform} 版",
+      "moreOptions": "更多选项 →"
+    },
+    "features": {
+      "title": "什么是 Whis 桌面版？",
+      "subtitle": "一个系统托盘应用，为您的整个桌面带来语音转文字功能。",
+      "items": {
+        "systemTray": {
+          "title": "系统托盘",
+          "description": "常驻在面板中，随时待命"
+        },
+        "globalHotkey": {
+          "title": "全局快捷键",
+          "description": "在任何地方按 Ctrl+Alt+W（可自定义）"
+        },
+        "providers": {
+          "title": "6 个服务商",
+          "description": "OpenAI、Groq、Deepgram、Mistral、ElevenLabs 或本地模式"
+        },
+        "runLocally": {
+          "title": "本地运行",
+          "description": "在应用内下载 whisper 模型 — 私密且免费"
+        },
+        "postProcessing": {
+          "title": "AI 后处理",
+          "description": "使用预设清理转录文本"
+        },
+        "crossPlatform": {
+          "title": "跨平台",
+          "description": "Linux、macOS、Windows（实验性）"
+        }
+      }
+    },
+    "screenshots": {
+      "about": "关于",
+      "tray": "系统托盘",
+      "home": "主页",
+      "shortcuts": "快捷键",
+      "cloudMode": "云端模式",
+      "localMode": "本地模式",
+      "presets": "预设配置"
+    },
+    "quickStart": {
+      "title": "快速开始",
+      "comments": {
+        "download": "# 1. 使用上方按钮下载并安装",
+        "launch": "# 2. 从应用菜单启动 \"Whis\"",
+        "configure": "# 3. 托盘图标 → 设置 → 配置服务商",
+        "use": "# 4. 使用 Ctrl+Alt+W 或托盘菜单录音！"
+      }
+    }
+  },
+  "mobile": {
+    "title": "移动应用 - whis",
+    "subtitle": "随时随地语音转文字",
+    "metaDescription": "whis Android 移动应用程序。随时随地语音转文字。",
+    "install": {
+      "title": "下载 Android 版",
+      "statusBadge": "[实验性]",
+      "moreOptions": "更多选项 →"
+    },
+    "features": {
+      "title": "什么是 Whis 移动版？",
+      "subtitle": "同样的 whis 体验，在您的手机上。",
+      "items": {
+        "voiceToText": "在手机上语音转文字",
+        "cloudTranscription": "云端转录（OpenAI、Mistral）",
+        "clipboard": "文字直接复制到剪贴板"
+      }
+    },
+    "demo": {
+      "caption": "主页 · 预设 · 设置 · 关于",
+      "altText": "Whis 移动应用截图，展示主页、预设、设置和关于界面"
+    }
+  },
+  "faq": {
+    "title": "常见问题 - whis",
+    "subtitle": "关于 whis 的常见问题",
+    "metaDescription": "关于 whis 语音转文字工具的常见问题解答。",
+    "items": {
+      "postProcessing": {
+        "question": "什么是后处理？",
+        "answer": "AI 驱动的转录文本清理功能。它可以移除填充词（嗯、啊、那个）并修正语法，同时保留专业术语。使用 <code>--post-process</code> 参数或在桌面版设置中启用。"
+      },
+      "requirements": {
+        "question": "我需要准备什么？",
+        "answer": "<strong>云端模式：</strong>您所选服务商的 API 密钥。<br><strong>本地模式：</strong>只需运行 <code>whis setup local</code>（下载约 500MB 模型）。<br><strong>仅限 CLI：</strong>需要 FFmpeg 进行音频编码。"
+      },
+      "privacy": {
+        "question": "我的数据安全吗？",
+        "answer": "<strong>云端：</strong>音频会发送到您选择的服务商服务器进行处理。<br><strong>本地：</strong>一切都在您的设备上处理，绝不外传。<br>whis 不会存储录音或转录文本。"
+      },
+      "presets": {
+        "question": "什么是预设？",
+        "answer": "针对不同使用场景的输出格式。内置预设：<code>ai-prompt</code>、<code>email</code>、<code>default</code>。使用方式：<code>whis --as email</code>，或通过 <code>whis presets new</code> 创建您自己的预设。"
+      },
+      "configLocation": {
+        "question": "配置文件存储在哪里？",
+        "answer": "设置：<code>~/.config/whis/settings.json</code><br>预设：<code>~/.config/whis/presets/</code><br>模型：<code>~/.local/share/whis/models/</code><br>查看当前配置：<code>whis config --show</code>"
+      },
+      "piping": {
+        "question": "可以将输出管道传输到其他工具吗？",
+        "answer": "可以！使用 <code>--print</code> 将内容输出到标准输出而非剪贴板：<br><code>whis --print | pbcopy</code><br><code>whis -f audio.mp3 --print > transcript.txt</code>"
+      },
+      "uninstall": {
+        "question": "如何卸载？",
+        "answer": "<strong>Flatpak：</strong> <code>flatpak uninstall ink.whis.Whis</code><br><strong>AppImage：</strong>使用 <code>--uninstall</code> 参数运行，然后删除文件。<br><strong>其他：</strong>删除二进制文件和 <code>~/.config/whis/</code> 文件夹。"
+      }
+    }
+  }
+}
