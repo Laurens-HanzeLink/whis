@@ -2,6 +2,7 @@ use std::sync::Mutex;
 use tauri::menu::MenuItem;
 pub use whis_core::RecordingState;
 use whis_core::{AudioRecorder, Settings, TranscriptionProvider};
+use tokio::sync::oneshot;
 
 /// Cached transcription configuration (provider + API key + language)
 pub struct TranscriptionConfig {
@@ -33,6 +34,8 @@ pub struct AppState {
     pub tray_available: Mutex<bool>,
     /// Active model download (if any)
     pub active_download: Mutex<Option<DownloadState>>,
+    /// Progressive transcription result receiver (if progressive mode active)
+    pub transcription_rx: Mutex<Option<oneshot::Receiver<Result<String, String>>>>,
 }
 
 impl AppState {
@@ -47,6 +50,7 @@ impl AppState {
             portal_bind_error: Mutex::new(None),
             tray_available: Mutex::new(tray_available),
             active_download: Mutex::new(None),
+            transcription_rx: Mutex::new(None),
         }
     }
 }
