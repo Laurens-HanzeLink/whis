@@ -4,7 +4,7 @@ use anyhow::Result;
 pub fn run() -> Result<()> {
     if !ipc::is_service_running() {
         println!("Status: Not running");
-        println!("Start with: whis listen");
+        println!("Start with: whis start");
         return Ok(());
     }
 

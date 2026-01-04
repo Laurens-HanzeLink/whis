@@ -56,7 +56,7 @@ pub fn get_provider_status(
     let mut unconfigured = Vec::new();
 
     for provider in CLOUD_PROVIDERS {
-        if let Some(key) = settings.get_api_key_for(provider) {
+        if let Some(key) = settings.transcription.api_key_for(provider) {
             configured.push((provider.clone(), key));
         } else {
             unconfigured.push(provider.clone());

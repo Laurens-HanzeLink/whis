@@ -151,7 +151,7 @@ impl IpcClient {
             if !path.exists() {
                 anyhow::bail!(
                     "whis service is not running.\n\
-                    Start it with: whis listen"
+                    Start it with: whis start"
                 );
             }
         }
@@ -166,12 +166,12 @@ impl IpcClient {
                 "Failed to connect to whis service.\n\
                 The service may have crashed. Try removing stale files:\n\
                   rm -f $XDG_RUNTIME_DIR/whis.*\n\
-                Then start the service again with: whis listen"
+                Then start the service again with: whis start"
             }
             #[cfg(windows)]
             {
                 "Failed to connect to whis service.\n\
-                The service may not be running. Start it with: whis listen"
+                The service may not be running. Start it with: whis start"
             }
         })?;
 
@@ -232,8 +232,8 @@ pub fn is_service_running() -> bool {
     }
 }
 
-/// Write PID file
-pub fn write_pid_file() -> Result<()> {
+/// Write PID file with hotkey information
+pub fn write_pid_file_with_hotkey(hotkey: &str) -> Result<()> {
     let path = pid_file_path();
 
     // Ensure parent directory exists (needed for Windows)
@@ -242,8 +242,21 @@ pub fn write_pid_file() -> Result<()> {
     }
 
     let pid = std::process::id();
-    std::fs::write(&path, pid.to_string()).context("Failed to write PID file")?;
+    let content = format!("{}|{}", pid, hotkey);
+    std::fs::write(&path, content).context("Failed to write PID file")?;
     Ok(())
+}
+
+/// Read hotkey from PID file
+pub fn read_hotkey_from_pid_file() -> Result<String> {
+    let path = pid_file_path();
+    let content = std::fs::read_to_string(&path).context("Failed to read PID file")?;
+
+    if let Some((_, hotkey)) = content.split_once('|') {
+        Ok(hotkey.to_string())
+    } else {
+        anyhow::bail!("PID file does not contain hotkey information")
+    }
 }
 
 /// Remove PID file

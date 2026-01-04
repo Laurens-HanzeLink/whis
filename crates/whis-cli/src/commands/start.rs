@@ -24,8 +24,8 @@ pub fn run(hotkey_str: String) -> Result<()> {
     // Load transcription configuration (provider + API key)
     let config = app::load_transcription_config()?;
 
-    // Write PID file
-    ipc::write_pid_file()?;
+    // Write PID file with hotkey information
+    ipc::write_pid_file_with_hotkey(&hotkey_str)?;
 
     // Set up cleanup on exit
     let _cleanup = CleanupGuard;

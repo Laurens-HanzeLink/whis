@@ -48,12 +48,12 @@ impl Service {
         // This keeps the model loaded between transcriptions for faster response
         #[cfg(feature = "local-transcription")]
         if self.provider == TranscriptionProvider::LocalWhisper {
-            whis_core::model_manager::set_keep_loaded(true);
+            whis_core::whisper_set_keep_loaded(true);
         }
 
         // Show startup message with shortcut hint
         let settings = Settings::load();
-        println!("Press {} to record. Ctrl+C to stop.", settings.shortcut);
+        println!("Press {} to record. Ctrl+C to stop.", settings.ui.shortcut);
 
         loop {
             // Check for incoming IPC connections (non-blocking)
@@ -165,7 +165,7 @@ impl Service {
         #[cfg(feature = "vad")]
         {
             let settings = Settings::load();
-            recorder.set_vad(settings.vad_enabled, settings.vad_threshold);
+            recorder.set_vad(settings.ui.vad.enabled, settings.ui.vad.threshold);
         }
 
         recorder.start_recording()?;
@@ -174,7 +174,7 @@ impl Service {
         // By the time recording finishes, model should be loaded
         #[cfg(feature = "local-transcription")]
         if self.provider == TranscriptionProvider::LocalWhisper {
-            whis_core::model_manager::preload_model(&self.api_key);
+            whis_core::whisper_preload_model(&self.api_key);
         }
 
         *self.recorder.lock().unwrap() = Some(recorder);
@@ -256,18 +256,19 @@ impl Service {
 
         // Apply post-processing if configured
         let settings = Settings::load();
-        let final_text = if settings.post_processor != PostProcessor::None {
-            if let Some(post_processor_api_key) = settings.get_post_processor_api_key() {
+        let final_text = if settings.post_processing.processor != PostProcessor::None {
+            if let Some(post_processor_api_key) = settings.post_processing.api_key(&settings.transcription.api_keys) {
                 println!("#{count} Post-processing...");
 
                 let prompt = settings
-                    .post_processing_prompt
+                    .post_processing
+                    .prompt
                     .as_deref()
                     .unwrap_or(DEFAULT_POST_PROCESSING_PROMPT);
 
                 match post_process(
                     &transcription,
-                    &settings.post_processor,
+                    &settings.post_processing.processor,
                     &post_processor_api_key,
                     prompt,
                     None,
@@ -285,7 +286,7 @@ impl Service {
         };
 
         // Copy to clipboard (blocking operation)
-        let clipboard_method = settings.clipboard_method.clone();
+        let clipboard_method = settings.ui.clipboard_method.clone();
         tokio::task::spawn_blocking(move || copy_to_clipboard(&final_text, clipboard_method))
             .await
             .context("Failed to join task")??;

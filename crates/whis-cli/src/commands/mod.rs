@@ -1,8 +1,9 @@
 pub mod config;
-pub mod listen;
-pub mod models;
-pub mod presets;
-pub mod record_once;
+pub mod model;
+pub mod preset;
+pub mod record;
+pub mod restart;
 pub mod setup;
+pub mod start;
 pub mod status;
 pub mod stop;

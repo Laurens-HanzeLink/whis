@@ -7,6 +7,9 @@ use whis_core::{PostProcessor, Settings, TranscriptionProvider, model, ollama};
 use super::post_processing::select_ollama_model;
 use crate::ui::{prompt_choice, prompt_choice_with_default};
 
+#[cfg(feature = "local-transcription")]
+use whis_core::model::{ModelType, ParakeetModel, WhisperModel};
+
 /// Setup for fully local (on-device) transcription (full interactive wizard)
 pub fn setup_local() -> Result<()> {
     println!("Local Setup");
@@ -32,33 +35,33 @@ pub fn setup_local() -> Result<()> {
             // Parakeet setup - show available models
             println!("Step 2: Choose Parakeet Model");
             println!("-----------------------------");
-            for (i, (name, _, desc, _)) in model::PARAKEET_MODELS.iter().enumerate() {
-                let path = model::default_parakeet_model_path(name);
-                let status = if model::parakeet_model_exists(&path) {
+            for (i, model) in ParakeetModel.models().iter().enumerate() {
+                let path = ParakeetModel.default_path(model.name);
+                let status = if ParakeetModel.verify(&path) {
                     " [installed]"
                 } else {
                     ""
                 };
-                println!("  {}. {} - {}{}", i + 1, name, desc, status);
+                println!("  {}. {} - {}{}", i + 1, model.name, model.description, status);
             }
             println!();
 
             let model_choice = prompt_choice(
-                &format!("Select model (1-{})", model::PARAKEET_MODELS.len()),
+                &format!("Select model (1-{})", ParakeetModel.models().len()),
                 1,
-                model::PARAKEET_MODELS.len(),
+                ParakeetModel.models().len(),
             )?;
-            let (model_name, _, _, _) = model::PARAKEET_MODELS[model_choice - 1];
+            let model = &ParakeetModel.models()[model_choice - 1];
             println!();
 
-            println!("Setting up {}...", model_name);
-            let path = model::default_parakeet_model_path(model_name);
-            if model::parakeet_model_exists(&path) {
-                println!("Model '{}' already installed at:", model_name);
+            println!("Setting up {}...", model.name);
+            let path = ParakeetModel.default_path(model.name);
+            if ParakeetModel.verify(&path) {
+                println!("Model '{}' already installed at:", model.name);
                 println!("  {}", path.display());
             } else {
-                println!("Downloading '{}' model...", model_name);
-                model::download_parakeet_model(model_name, &path)?;
+                println!("Downloading '{}' model...", model.name);
+                model::download::download(&ParakeetModel, model.name, &path)?;
             }
             (TranscriptionProvider::LocalParakeet, path)
         }
@@ -66,33 +69,33 @@ pub fn setup_local() -> Result<()> {
             // Whisper setup - show available models
             println!("Step 2: Choose Whisper Model");
             println!("----------------------------");
-            for (i, (name, _, desc)) in model::WHISPER_MODELS.iter().enumerate() {
-                let path = model::default_model_path(name);
-                let status = if model::model_exists(&path) {
+            for (i, model) in WhisperModel.models().iter().enumerate() {
+                let path = WhisperModel.default_path(model.name);
+                let status = if WhisperModel.verify(&path) {
                     " [installed]"
                 } else {
                     ""
                 };
-                println!("  {}. {} - {}{}", i + 1, name, desc, status);
+                println!("  {}. {} - {}{}", i + 1, model.name, model.description, status);
             }
             println!();
 
             let model_choice = prompt_choice(
-                &format!("Select model (1-{})", model::WHISPER_MODELS.len()),
+                &format!("Select model (1-{})", WhisperModel.models().len()),
                 1,
-                model::WHISPER_MODELS.len(),
+                WhisperModel.models().len(),
             )?;
-            let (model_name, _, _) = model::WHISPER_MODELS[model_choice - 1];
+            let model = &WhisperModel.models()[model_choice - 1];
             println!();
 
-            println!("Setting up {}...", model_name);
-            let path = model::default_model_path(model_name);
-            if model::model_exists(&path) {
-                println!("Model '{}' already installed at:", model_name);
+            println!("Setting up {}...", model.name);
+            let path = WhisperModel.default_path(model.name);
+            if WhisperModel.verify(&path) {
+                println!("Model '{}' already installed at:", model.name);
                 println!("  {}", path.display());
             } else {
-                println!("Downloading '{}' model...", model_name);
-                model::download_model(model_name, &path)?;
+                println!("Downloading '{}' model...", model.name);
+                model::download::download(&WhisperModel, model.name, &path)?;
             }
             (TranscriptionProvider::LocalWhisper, path)
         }
@@ -130,19 +133,19 @@ pub fn setup_local() -> Result<()> {
     println!("----------------------------");
 
     let mut settings = Settings::load();
-    settings.provider = provider.clone();
+    settings.transcription.provider = provider.clone();
     match &provider {
         TranscriptionProvider::LocalParakeet => {
-            settings.parakeet_model_path = Some(model_path.to_string_lossy().to_string());
+            settings.transcription.local_models.parakeet_path = Some(model_path.to_string_lossy().to_string());
         }
         TranscriptionProvider::LocalWhisper => {
-            settings.whisper_model_path = Some(model_path.to_string_lossy().to_string());
+            settings.transcription.local_models.whisper_path = Some(model_path.to_string_lossy().to_string());
         }
         _ => {}
     }
-    settings.post_processor = PostProcessor::Ollama;
-    settings.ollama_url = Some(ollama_url.to_string());
-    settings.ollama_model = Some(ollama_model.clone());
+    settings.post_processing.processor = PostProcessor::Ollama;
+    settings.services.ollama.url = Some(ollama_url.to_string());
+    settings.services.ollama.model = Some(ollama_model.clone());
     settings.save()?;
 
     println!("Configuration saved to: {}", Settings::path().display());
@@ -168,7 +171,7 @@ pub fn setup_transcription_local() -> Result<()> {
     let mut settings = Settings::load();
 
     // Determine current engine and show with [current] marker
-    let current_engine = match settings.provider {
+    let current_engine = match settings.transcription.provider {
         TranscriptionProvider::LocalParakeet => Some(1),
         TranscriptionProvider::LocalWhisper => Some(2),
         _ => None,
@@ -203,15 +206,15 @@ pub fn setup_transcription_local() -> Result<()> {
     let (provider, model_path) = match engine_choice {
         1 => {
             // Parakeet - use recommended model directly
-            let (model_name, _, _, _) = model::PARAKEET_MODELS[0]; // First is recommended
-            let path = model::default_parakeet_model_path(model_name);
+            let model = &ParakeetModel.models()[0]; // First is recommended
+            let path = ParakeetModel.default_path(model.name);
 
-            if model::parakeet_model_exists(&path) {
-                println!("Model ready: {}", model_name);
+            if ParakeetModel.verify(&path) {
+                println!("Model ready: {}", model.name);
             } else {
-                print!("Downloading {}... ", model_name);
+                print!("Downloading {}... ", model.name);
                 io::stdout().flush()?;
-                model::download_parakeet_model(model_name, &path)?;
+                model::download::download(&ParakeetModel, model.name, &path)?;
                 println!("Done!");
             }
 
@@ -220,33 +223,33 @@ pub fn setup_transcription_local() -> Result<()> {
         2 => {
             // Whisper - show model options
             println!("Whisper model:");
-            for (i, (name, _, desc)) in model::WHISPER_MODELS.iter().enumerate() {
-                let path = model::default_model_path(name);
-                let status = if model::model_exists(&path) {
+            for (i, model) in WhisperModel.models().iter().enumerate() {
+                let path = WhisperModel.default_path(model.name);
+                let status = if WhisperModel.verify(&path) {
                     " [installed]"
                 } else {
                     ""
                 };
-                println!("  {}. {} - {}{}", i + 1, name, desc, status);
+                println!("  {}. {} - {}{}", i + 1, model.name, model.description, status);
             }
             println!();
 
             let model_choice = prompt_choice_with_default(
                 "Select",
                 1,
-                model::WHISPER_MODELS.len(),
+                WhisperModel.models().len(),
                 Some(2), // Default to "base" which is usually index 2
             )?;
-            let (model_name, _, _) = model::WHISPER_MODELS[model_choice - 1];
+            let model = &WhisperModel.models()[model_choice - 1];
             println!();
 
-            let path = model::default_model_path(model_name);
-            if model::model_exists(&path) {
-                println!("Model ready: {}", model_name);
+            let path = WhisperModel.default_path(model.name);
+            if WhisperModel.verify(&path) {
+                println!("Model ready: {}", model.name);
             } else {
-                print!("Downloading {}... ", model_name);
+                print!("Downloading {}... ", model.name);
                 io::stdout().flush()?;
-                model::download_model(model_name, &path)?;
+                model::download::download(&WhisperModel, model.name, &path)?;
                 println!("Done!");
             }
 
@@ -256,13 +259,13 @@ pub fn setup_transcription_local() -> Result<()> {
     };
 
     // Save transcription config
-    settings.provider = provider.clone();
+    settings.transcription.provider = provider.clone();
     match &provider {
         TranscriptionProvider::LocalParakeet => {
-            settings.parakeet_model_path = Some(model_path.to_string_lossy().to_string());
+            settings.transcription.local_models.parakeet_path = Some(model_path.to_string_lossy().to_string());
         }
         TranscriptionProvider::LocalWhisper => {
-            settings.whisper_model_path = Some(model_path.to_string_lossy().to_string());
+            settings.transcription.local_models.whisper_path = Some(model_path.to_string_lossy().to_string());
         }
         _ => {}
     }

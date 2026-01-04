@@ -21,14 +21,16 @@ pub fn setup_post_processing() -> Result<()> {
     // Show current status
     println!(
         "Current post-processor: {}",
-        match settings.post_processor {
+        match settings.post_processing.processor {
             PostProcessor::None => "None (disabled)".to_string(),
             PostProcessor::OpenAI => "OpenAI".to_string(),
             PostProcessor::Mistral => "Mistral".to_string(),
             PostProcessor::Ollama => format!(
                 "Ollama ({})",
                 settings
-                    .ollama_model
+                    .services
+                    .ollama
+                    .model
                     .as_deref()
                     .unwrap_or(ollama::DEFAULT_OLLAMA_MODEL)
             ),
@@ -68,11 +70,11 @@ pub fn setup_post_processing() -> Result<()> {
             ollama::ensure_ollama_running(ollama_url)?;
 
             // Select model
-            let model = select_ollama_model(ollama_url, settings.ollama_model.as_deref())?;
+            let model = select_ollama_model(ollama_url, settings.services.ollama.model.as_deref())?;
 
-            settings.post_processor = PostProcessor::Ollama;
-            settings.ollama_url = Some(ollama_url.to_string());
-            settings.ollama_model = Some(model.clone());
+            settings.post_processing.processor = PostProcessor::Ollama;
+            settings.services.ollama.url = Some(ollama_url.to_string());
+            settings.services.ollama.model = Some(model.clone());
             settings.save()?;
 
             println!();
@@ -82,17 +84,17 @@ pub fn setup_post_processing() -> Result<()> {
         2 => {
             // OpenAI setup
             if settings
-                .get_api_key_for(&TranscriptionProvider::OpenAI)
+                .transcription.api_key_for(&TranscriptionProvider::OpenAI)
                 .is_none()
             {
                 println!("OpenAI API key not configured.");
                 println!("Get your API key from: https://platform.openai.com/api-keys");
                 println!();
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::OpenAI)?;
-                settings.set_api_key(&TranscriptionProvider::OpenAI, api_key);
+                settings.transcription.set_api_key(&TranscriptionProvider::OpenAI, api_key);
             }
 
-            settings.post_processor = PostProcessor::OpenAI;
+            settings.post_processing.processor = PostProcessor::OpenAI;
             settings.save()?;
 
             println!();
@@ -102,17 +104,17 @@ pub fn setup_post_processing() -> Result<()> {
         3 => {
             // Mistral setup
             if settings
-                .get_api_key_for(&TranscriptionProvider::Mistral)
+                .transcription.api_key_for(&TranscriptionProvider::Mistral)
                 .is_none()
             {
                 println!("Mistral API key not configured.");
                 println!("Get your API key from: https://console.mistral.ai/api-keys");
                 println!();
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::Mistral)?;
-                settings.set_api_key(&TranscriptionProvider::Mistral, api_key);
+                settings.transcription.set_api_key(&TranscriptionProvider::Mistral, api_key);
             }
 
-            settings.post_processor = PostProcessor::Mistral;
+            settings.post_processing.processor = PostProcessor::Mistral;
             settings.save()?;
 
             println!();
@@ -121,7 +123,7 @@ pub fn setup_post_processing() -> Result<()> {
         }
         4 => {
             // Disable post-processing
-            settings.post_processor = PostProcessor::None;
+            settings.post_processing.processor = PostProcessor::None;
             settings.save()?;
 
             println!("Post-processing disabled.");
@@ -141,7 +143,7 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
     println!("Choose post-processor:");
     println!("  1. Ollama (local, free)");
     if settings
-        .get_api_key_for(&TranscriptionProvider::OpenAI)
+        .transcription.api_key_for(&TranscriptionProvider::OpenAI)
         .is_some()
     {
         println!("  2. OpenAI (cloud, uses existing key)");
@@ -149,7 +151,7 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
         println!("  2. OpenAI (cloud, requires API key)");
     }
     if settings
-        .get_api_key_for(&TranscriptionProvider::Mistral)
+        .transcription.api_key_for(&TranscriptionProvider::Mistral)
         .is_some()
     {
         println!("  3. Mistral (cloud, uses existing key)");
@@ -184,46 +186,46 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
             ollama::ensure_ollama_running(ollama_url)?;
 
             // Select model
-            let model = select_ollama_model(ollama_url, settings.ollama_model.as_deref())?;
+            let model = select_ollama_model(ollama_url, settings.services.ollama.model.as_deref())?;
 
-            settings.post_processor = PostProcessor::Ollama;
-            settings.ollama_url = Some(ollama_url.to_string());
-            settings.ollama_model = Some(model);
+            settings.post_processing.processor = PostProcessor::Ollama;
+            settings.services.ollama.url = Some(ollama_url.to_string());
+            settings.services.ollama.model = Some(model);
             settings.save()?;
         }
         2 => {
             // OpenAI
             if settings
-                .get_api_key_for(&TranscriptionProvider::OpenAI)
+                .transcription.api_key_for(&TranscriptionProvider::OpenAI)
                 .is_none()
             {
                 println!("OpenAI API key not configured.");
                 println!("Get your API key from: https://platform.openai.com/api-keys");
                 println!();
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::OpenAI)?;
-                settings.set_api_key(&TranscriptionProvider::OpenAI, api_key);
+                settings.transcription.set_api_key(&TranscriptionProvider::OpenAI, api_key);
             }
-            settings.post_processor = PostProcessor::OpenAI;
+            settings.post_processing.processor = PostProcessor::OpenAI;
             settings.save()?;
         }
         3 => {
             // Mistral
             if settings
-                .get_api_key_for(&TranscriptionProvider::Mistral)
+                .transcription.api_key_for(&TranscriptionProvider::Mistral)
                 .is_none()
             {
                 println!("Mistral API key not configured.");
                 println!("Get your API key from: https://console.mistral.ai/api-keys");
                 println!();
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::Mistral)?;
-                settings.set_api_key(&TranscriptionProvider::Mistral, api_key);
+                settings.transcription.set_api_key(&TranscriptionProvider::Mistral, api_key);
             }
-            settings.post_processor = PostProcessor::Mistral;
+            settings.post_processing.processor = PostProcessor::Mistral;
             settings.save()?;
         }
         4 => {
             // Disable
-            settings.post_processor = PostProcessor::None;
+            settings.post_processing.processor = PostProcessor::None;
             settings.save()?;
         }
         _ => unreachable!(),
@@ -366,7 +368,7 @@ pub fn setup_ollama_fresh(settings: &mut Settings) -> Result<()> {
         println!();
         println!("Ollama not installed. Install from: https://ollama.com/download");
         println!("Run 'whis setup' again after installing.");
-        settings.post_processor = PostProcessor::None;
+        settings.post_processing.processor = PostProcessor::None;
         return Ok(());
     }
 
@@ -387,9 +389,9 @@ pub fn setup_ollama_fresh(settings: &mut Settings) -> Result<()> {
         println!("Model {} ready.", ollama_model);
     }
 
-    settings.post_processor = PostProcessor::Ollama;
-    settings.ollama_url = Some(ollama_url.to_string());
-    settings.ollama_model = Some(ollama_model.to_string());
+    settings.post_processing.processor = PostProcessor::Ollama;
+    settings.services.ollama.url = Some(ollama_url.to_string());
+    settings.services.ollama.model = Some(ollama_model.to_string());
 
     Ok(())
 }
@@ -413,10 +415,10 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
         1 => setup_cloud_post_processing(&mut settings)?,
         2 => {
             // Check if Ollama already configured
-            let ollama_configured = settings.post_processor == PostProcessor::Ollama;
+            let ollama_configured = settings.post_processing.processor == PostProcessor::Ollama;
             if ollama_configured {
                 let current_model = settings
-                    .ollama_model
+                    .services.ollama.model
                     .as_deref()
                     .unwrap_or(ollama::DEFAULT_OLLAMA_MODEL);
                 println!();
@@ -428,7 +430,7 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
                 } else {
                     // Just verify Ollama is accessible
                     let ollama_url = settings
-                        .ollama_url
+                        .services.ollama.url
                         .as_deref()
                         .unwrap_or(ollama::DEFAULT_OLLAMA_URL);
                     if ollama::is_ollama_installed()
@@ -442,7 +444,7 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
             }
         }
         3 => {
-            settings.post_processor = PostProcessor::None;
+            settings.post_processing.processor = PostProcessor::None;
         }
         _ => unreachable!(),
     }
@@ -456,7 +458,7 @@ fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
     println!();
     println!("Provider:");
     for (i, provider) in PP_PROVIDERS.iter().enumerate() {
-        let marker = if settings.get_api_key_for(provider).is_some() {
+        let marker = if settings.transcription.api_key_for(provider).is_some() {
             " [configured]"
         } else {
             ""
@@ -469,7 +471,7 @@ fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
     let provider = PP_PROVIDERS[choice - 1].clone();
 
     // Check if API key already exists
-    if let Some(existing_key) = settings.get_api_key_for(&provider) {
+    if let Some(existing_key) = settings.transcription.api_key_for(&provider) {
         println!();
         println!("Current API key: {}", mask_key(&existing_key));
         let keep = prompt_yes_no("Keep current key?", true)?;
@@ -478,16 +480,16 @@ fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
             println!();
             println!("Get your API key from: {}", api_key_url(&provider));
             let api_key = prompt_and_validate_key(&provider)?;
-            settings.set_api_key(&provider, api_key);
+            settings.transcription.set_api_key(&provider, api_key);
         }
     } else {
         println!();
         println!("Get your API key from: {}", api_key_url(&provider));
         let api_key = prompt_and_validate_key(&provider)?;
-        settings.set_api_key(&provider, api_key);
+        settings.transcription.set_api_key(&provider, api_key);
     }
 
-    settings.post_processor = match provider {
+    settings.post_processing.processor = match provider {
         TranscriptionProvider::OpenAI => PostProcessor::OpenAI,
         TranscriptionProvider::Mistral => PostProcessor::Mistral,
         _ => unreachable!(),

@@ -35,8 +35,8 @@ pub fn ensure_ffmpeg_installed() -> Result<()> {
 
 pub fn load_transcription_config() -> Result<TranscriptionConfig> {
     let settings = Settings::load();
-    let provider = settings.provider.clone();
-    let language = settings.language.clone();
+    let provider = settings.transcription.provider.clone();
+    let language = settings.transcription.language.clone();
 
     // Handle different provider types:
     // - Cloud providers: require API key
@@ -44,7 +44,7 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
     let api_key = match &provider {
         TranscriptionProvider::LocalWhisper => {
             // Local whisper: use model path
-            match settings.get_whisper_model_path() {
+            match settings.transcription.whisper_model_path() {
                 Some(path) => path,
                 None => {
                     eprintln!("Error: No whisper model path configured.");
@@ -61,7 +61,7 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
         }
         TranscriptionProvider::LocalParakeet => {
             // Local parakeet: use model path
-            match settings.get_parakeet_model_path() {
+            match settings.transcription.parakeet_model_path() {
                 Some(path) => path,
                 None => {
                     eprintln!("Error: No parakeet model path configured.");
@@ -78,7 +78,7 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
         }
         _ => {
             // Cloud providers: require API key
-            match settings.get_api_key_for(&provider) {
+            match settings.transcription.api_key_for(&provider) {
                 Some(key) => key,
                 None => {
                     eprintln!("Error: No {} API key configured.", provider.display_name());

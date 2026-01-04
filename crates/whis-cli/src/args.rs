@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, ValueHint};
+use clap::{Args, Parser, Subcommand, ValueHint};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -27,6 +27,55 @@ fn parse_duration(s: &str) -> Result<Duration, String> {
     }
 }
 
+/// Input source options for recording/transcription
+#[derive(Args)]
+pub struct InputSource {
+    /// Transcribe audio from file instead of recording
+    #[arg(short = 'f', long, value_hint = ValueHint::FilePath)]
+    pub file: Option<PathBuf>,
+
+    /// Read audio from stdin (use with pipes, e.g., `yt-dlp ... | whis --stdin`)
+    #[arg(long)]
+    pub stdin: bool,
+
+    /// Input audio format when using --stdin (default: mp3)
+    #[arg(long, default_value = "mp3")]
+    pub format: String,
+}
+
+/// Processing options for transcription
+#[derive(Args)]
+pub struct ProcessingOptions {
+    /// Post-process transcript with LLM (cleanup grammar, filler words)
+    #[arg(long)]
+    pub post_process: bool,
+
+    /// Output preset for transcript (run 'whis preset list' to see all)
+    #[arg(long = "as", value_name = "PRESET")]
+    pub preset: Option<String>,
+
+    /// Record for a fixed duration (e.g., "10s", "30s", "1m")
+    /// Useful for non-interactive environments like AI assistant shell modes
+    #[arg(short = 'd', long, value_parser = parse_duration)]
+    pub duration: Option<Duration>,
+
+    /// Disable Voice Activity Detection (records all audio including silence)
+    #[arg(long)]
+    pub no_vad: bool,
+}
+
+/// Output options for transcription results
+#[derive(Args)]
+pub struct OutputOptions {
+    /// Print output to stdout instead of copying to clipboard
+    #[arg(long)]
+    pub print: bool,
+
+    /// Save recorded audio to WAV file (16kHz mono f32)
+    #[arg(long, value_name = "PATH", value_hint = ValueHint::FilePath)]
+    pub save_raw: Option<PathBuf>,
+}
+
 #[derive(Parser)]
 #[command(name = "whis")]
 #[command(version)]
@@ -40,45 +89,24 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub verbose: bool,
 
-    /// Post-process transcript with LLM (cleanup grammar, filler words)
-    #[arg(long)]
-    pub post_process: bool,
+    // Input source options (file, stdin, or microphone)
+    #[command(flatten)]
+    pub input: InputSource,
 
-    /// Output preset for transcript (run 'whis presets' to see all)
-    #[arg(long = "as", value_name = "PRESET")]
-    pub preset: Option<String>,
+    // Processing options (post-processing, presets, duration, VAD)
+    #[command(flatten)]
+    pub processing: ProcessingOptions,
 
-    /// Transcribe audio from file instead of recording
-    #[arg(short = 'f', long, value_hint = ValueHint::FilePath)]
-    pub file: Option<PathBuf>,
-
-    /// Read audio from stdin (use with pipes, e.g., `yt-dlp ... | whis --stdin`)
-    #[arg(long)]
-    pub stdin: bool,
-
-    /// Input audio format when using --stdin (default: mp3)
-    #[arg(long, default_value = "mp3")]
-    pub format: String,
-
-    /// Print output to stdout instead of copying to clipboard
-    #[arg(long)]
-    pub print: bool,
-
-    /// Record for a fixed duration (e.g., "10s", "30s", "1m")
-    /// Useful for non-interactive environments like AI assistant shell modes
-    #[arg(short = 'd', long, value_parser = parse_duration)]
-    pub duration: Option<Duration>,
-
-    /// Disable Voice Activity Detection (records all audio including silence)
-    #[arg(long)]
-    pub no_vad: bool,
+    // Output options (print, save raw audio)
+    #[command(flatten)]
+    pub output: OutputOptions,
 }
 
 #[derive(Subcommand)]
 #[allow(clippy::large_enum_variant)]
 pub enum Commands {
     /// Start the background service that listens for hotkey triggers
-    Listen {
+    Start {
         /// Hotkey to trigger recording (e.g., "ctrl+alt+w" or "cmd+option+w" on macOS)
         #[arg(short = 'k', long, default_value = "ctrl+alt+w")]
         hotkey: String,
@@ -87,82 +115,15 @@ pub enum Commands {
     /// Stop the background service
     Stop,
 
+    /// Restart the background service (preserves hotkey if not specified)
+    Restart {
+        /// Hotkey to trigger recording (if not specified, preserves current hotkey or uses default)
+        #[arg(short = 'k', long)]
+        hotkey: Option<String>,
+    },
+
     /// Check service status
     Status,
-
-    /// Configure settings (API keys, transcription service, post-processing, etc.)
-    Config {
-        /// Set your OpenAI API key
-        #[arg(long)]
-        openai_api_key: Option<String>,
-
-        /// Set your Mistral API key
-        #[arg(long)]
-        mistral_api_key: Option<String>,
-
-        /// Set your Groq API key
-        #[arg(long)]
-        groq_api_key: Option<String>,
-
-        /// Set your Deepgram API key
-        #[arg(long)]
-        deepgram_api_key: Option<String>,
-
-        /// Set your ElevenLabs API key
-        #[arg(long)]
-        elevenlabs_api_key: Option<String>,
-
-        /// Set the transcription provider (openai, openai-realtime, mistral, groq, deepgram, elevenlabs, local-whisper, local-parakeet)
-        #[arg(long)]
-        provider: Option<String>,
-
-        /// Path to whisper.cpp model file for local transcription (e.g., ~/.local/share/whis/models/ggml-small.bin)
-        #[arg(long)]
-        whisper_model_path: Option<String>,
-
-        /// Path to Parakeet model directory for local transcription (e.g., ~/.local/share/whis/models/parakeet/parakeet-tdt-0.6b-v3-int8)
-        #[arg(long)]
-        parakeet_model_path: Option<String>,
-
-        /// Ollama server URL for local post-processing (default: http://localhost:11434)
-        #[arg(long)]
-        ollama_url: Option<String>,
-
-        /// Ollama model name for local post-processing (default: qwen2.5:1.5b)
-        #[arg(long)]
-        ollama_model: Option<String>,
-
-        /// Set the language hint (ISO-639-1 code: en, de, fr, etc.) or "auto" for auto-detect
-        #[arg(long)]
-        language: Option<String>,
-
-        /// Set the post-processor for transcript cleanup (none, openai, mistral, or ollama)
-        #[arg(long)]
-        post_processor: Option<String>,
-
-        /// Set custom post-processing prompt for transcript cleanup
-        #[arg(long)]
-        post_processing_prompt: Option<String>,
-
-        /// Enable Voice Activity Detection (skips silence during recording)
-        #[arg(long)]
-        vad: Option<bool>,
-
-        /// VAD speech detection threshold (0.0-1.0, default 0.5)
-        /// Lower = more sensitive, Higher = stricter
-        #[arg(long)]
-        vad_threshold: Option<f32>,
-
-        /// Show current configuration
-        #[arg(long)]
-        show: bool,
-    },
-
-    /// Manage output presets
-    Presets {
-        #[command(subcommand)]
-        action: Option<PresetsAction>,
-    },
 
     /// Interactive setup wizard
     Setup {
@@ -170,10 +131,33 @@ pub enum Commands {
         mode: Option<SetupMode>,
     },
 
-    /// List available models (whisper, ollama)
-    Models {
+    /// Configure settings (git-style interface)
+    Config {
+        /// Configuration key to get or set
+        key: Option<String>,
+
+        /// Value to set (omit to get current value)
+        value: Option<String>,
+
+        /// List all configuration settings
+        #[arg(long, conflicts_with_all = ["key", "value"])]
+        list: bool,
+
+        /// Show configuration file path
+        #[arg(long, conflicts_with_all = ["key", "value", "list"])]
+        path: bool,
+    },
+
+    /// Manage output presets
+    Preset {
         #[command(subcommand)]
-        action: Option<ModelsAction>,
+        action: Option<PresetAction>,
+    },
+
+    /// List available models (whisper, parakeet, ollama)
+    Model {
+        #[command(subcommand)]
+        action: Option<ModelAction>,
     },
 }
 
@@ -193,7 +177,7 @@ pub enum SetupMode {
 }
 
 #[derive(Subcommand)]
-pub enum PresetsAction {
+pub enum PresetAction {
     /// List all available presets (default)
     List,
 
@@ -217,10 +201,26 @@ pub enum PresetsAction {
         #[arg(value_hint = ValueHint::Other)]
         name: String,
     },
+
+    /// Delete a user preset
+    Delete {
+        /// Name of the preset to delete
+        #[arg(value_hint = ValueHint::Other)]
+        name: String,
+    },
 }
 
 #[derive(Subcommand)]
-pub enum ModelsAction {
+pub enum ModelAction {
+    /// List available models
+    List {
+        #[command(subcommand)]
+        model_type: Option<ModelType>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum ModelType {
     /// List available whisper models with install status (default)
     Whisper,
 

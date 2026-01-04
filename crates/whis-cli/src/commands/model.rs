@@ -3,16 +3,27 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::time::Duration;
-use whis_core::{model, ollama};
+use whis_core::ollama;
+use whis_core::model::{ModelType, WhisperModel};
 
-use crate::args::ModelsAction;
+#[cfg(feature = "local-transcription")]
+use whis_core::model::ParakeetModel;
 
-/// Run the models command
-pub fn run(action: Option<ModelsAction>) -> Result<()> {
+use crate::args::{ModelAction, ModelType as ModelTypeArg};
+
+/// Run the model command
+pub fn run(action: Option<ModelAction>) -> Result<()> {
     match action {
-        None | Some(ModelsAction::Whisper) => list_whisper_models(),
-        Some(ModelsAction::Parakeet) => list_parakeet_models(),
-        Some(ModelsAction::Ollama { url }) => list_ollama_models(url),
+        None | Some(ModelAction::List { model_type: None }) => list_whisper_models(),
+        Some(ModelAction::List {
+            model_type: Some(ModelTypeArg::Whisper),
+        }) => list_whisper_models(),
+        Some(ModelAction::List {
+            model_type: Some(ModelTypeArg::Parakeet),
+        }) => list_parakeet_models(),
+        Some(ModelAction::List {
+            model_type: Some(ModelTypeArg::Ollama { url }),
+        }) => list_ollama_models(url),
     }
 }
 
@@ -21,9 +32,9 @@ fn list_whisper_models() -> Result<()> {
     println!("Available whisper models:\n");
 
     // Calculate column widths
-    let name_width = model::WHISPER_MODELS
+    let name_width = WhisperModel.models()
         .iter()
-        .map(|(name, _, _)| name.len())
+        .map(|model| model.name.len())
         .max()
         .unwrap_or(6)
         .max(4);
@@ -37,9 +48,9 @@ fn list_whisper_models() -> Result<()> {
     println!("{}", "-".repeat(60));
 
     // Print each model
-    for (name, _, desc) in model::WHISPER_MODELS {
-        let path = model::default_model_path(name);
-        let status = if model::model_exists(&path) {
+    for model in WhisperModel.models() {
+        let path = WhisperModel.default_path(model.name);
+        let status = if WhisperModel.verify(&path) {
             "[installed]"
         } else {
             ""
@@ -47,9 +58,9 @@ fn list_whisper_models() -> Result<()> {
 
         println!(
             "{:<name_width$}  {:<11}  {}",
-            name,
+            model.name,
             status,
-            desc,
+            model.description,
             name_width = name_width
         );
     }
@@ -57,7 +68,7 @@ fn list_whisper_models() -> Result<()> {
     println!();
     println!(
         "Models directory: {}",
-        model::default_models_dir().display()
+        WhisperModel.default_dir().display()
     );
     println!();
     println!("To download a model, run: whis setup local");
@@ -70,9 +81,9 @@ fn list_parakeet_models() -> Result<()> {
     println!("Available Parakeet models:\n");
 
     // Calculate column widths
-    let name_width = model::PARAKEET_MODELS
+    let name_width = ParakeetModel.models()
         .iter()
-        .map(|(name, _, _, _)| name.len())
+        .map(|model| model.name.len())
         .max()
         .unwrap_or(6)
         .max(4);
@@ -86,9 +97,9 @@ fn list_parakeet_models() -> Result<()> {
     println!("{}", "-".repeat(60));
 
     // Print each model
-    for (name, _, desc, _) in model::PARAKEET_MODELS {
-        let path = model::default_parakeet_model_path(name);
-        let status = if model::parakeet_model_exists(&path) {
+    for model in ParakeetModel.models() {
+        let path = ParakeetModel.default_path(model.name);
+        let status = if ParakeetModel.verify(&path) {
             "[installed]"
         } else {
             ""
@@ -96,9 +107,9 @@ fn list_parakeet_models() -> Result<()> {
 
         println!(
             "{:<name_width$}  {:<11}  {}",
-            name,
+            model.name,
             status,
-            desc,
+            model.description,
             name_width = name_width
         );
     }
@@ -106,7 +117,7 @@ fn list_parakeet_models() -> Result<()> {
     println!();
     println!(
         "Models directory: {}",
-        model::default_models_dir().join("parakeet").display()
+        WhisperModel.default_dir().join("parakeet").display()
     );
     println!();
     println!("To download a model, run: whis setup local");
@@ -136,7 +147,7 @@ fn list_ollama_models(url: Option<String>) -> Result<()> {
     if !ollama::is_ollama_running(url).unwrap_or(false) {
         println!("Ollama is not running at {}\n", url);
         println!("Start Ollama with: ollama serve");
-        println!("Or specify a different URL: whis models ollama --url http://...");
+        println!("Or specify a different URL: whis model list ollama --url http://...");
         return Ok(());
     }
 

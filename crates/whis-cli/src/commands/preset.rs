@@ -1,14 +1,15 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use whis_core::{Preset, PresetSource};
 
-use crate::args::PresetsAction;
+use crate::args::PresetAction;
 
-pub fn run(action: Option<PresetsAction>) -> Result<()> {
+pub fn run(action: Option<PresetAction>) -> Result<()> {
     match action {
-        None | Some(PresetsAction::List) => list(),
-        Some(PresetsAction::Show { name }) => show(&name),
-        Some(PresetsAction::New { name }) => new(&name),
-        Some(PresetsAction::Edit { name }) => edit(&name),
+        None | Some(PresetAction::List) => list(),
+        Some(PresetAction::Show { name }) => show(&name),
+        Some(PresetAction::New { name }) => new(&name),
+        Some(PresetAction::Edit { name }) => edit(&name),
+        Some(PresetAction::Delete { name }) => delete(&name),
     }
 }
 
@@ -126,5 +127,27 @@ fn edit(name: &str) -> Result<()> {
     if status.success() {
         println!("Preset saved: {}", file_path.display());
     }
+    Ok(())
+}
+
+fn delete(name: &str) -> Result<()> {
+    // Check if preset exists and get its source
+    let (_, source) = Preset::load(name).map_err(|e| anyhow!("{}", e))?;
+
+    // Prevent deletion of built-in presets
+    if source == PresetSource::BuiltIn {
+        anyhow::bail!(
+            "Cannot delete built-in preset '{}'. Only user presets can be deleted.",
+            name
+        );
+    }
+
+    // Delete the file
+    let file_path = Preset::presets_dir().join(format!("{}.json", name));
+
+    std::fs::remove_file(&file_path)
+        .with_context(|| format!("Failed to delete preset file: {}", file_path.display()))?;
+
+    println!("Deleted preset: {}", name);
     Ok(())
 }
