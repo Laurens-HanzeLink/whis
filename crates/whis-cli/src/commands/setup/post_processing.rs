@@ -5,8 +5,9 @@ use std::io::{self, Write};
 use whis_core::{PostProcessor, Settings, TranscriptionProvider, ollama};
 
 use super::cloud::prompt_and_validate_key;
+use super::interactive;
 use super::provider_helpers::{PP_PROVIDERS, api_key_url};
-use crate::ui::{mask_key, prompt_choice, prompt_choice_with_default, prompt_yes_no};
+use crate::ui::{mask_key, prompt_choice, prompt_choice_with_default};
 
 /// Setup for post-processing configuration (standalone command)
 pub fn setup_post_processing() -> Result<()> {
@@ -439,7 +440,7 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
                     .unwrap_or(ollama::DEFAULT_OLLAMA_MODEL);
                 println!();
                 println!("Current model: {}", current_model);
-                let keep = prompt_yes_no("Keep current config?", true)?;
+                let keep = interactive::confirm("Keep current config?", true)?;
 
                 if !keep {
                     setup_ollama_fresh(&mut settings)?;
@@ -492,11 +493,11 @@ fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
     if let Some(existing_key) = settings.transcription.api_key_for(&provider) {
         println!();
         println!("Current API key: {}", mask_key(&existing_key));
-        let keep = prompt_yes_no("Keep current key?", true)?;
+        let keep = interactive::confirm("Keep current key?", true)?;
 
         if !keep {
             println!();
-            println!("Get your API key from: {}", api_key_url(&provider));
+            interactive::info(&format!("Get your API key from: {}", api_key_url(&provider)));
             let api_key = prompt_and_validate_key(&provider)?;
             settings.transcription.set_api_key(&provider, api_key);
         }

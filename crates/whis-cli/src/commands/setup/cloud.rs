@@ -3,13 +3,12 @@
 use anyhow::{Result, anyhow};
 use whis_core::{PostProcessor, Settings, TranscriptionProvider};
 
+use super::interactive;
 use super::post_processing::configure_post_processing_options;
 use super::provider_helpers::{
     CLOUD_PROVIDERS, api_key_url, get_provider_status, provider_description,
 };
-use crate::ui::{
-    mask_key, prompt_choice, prompt_choice_with_default, prompt_secret, prompt_yes_no,
-};
+use crate::ui::{mask_key, prompt_choice, prompt_choice_with_default};
 
 /// Type alias for menu action callbacks
 type MenuAction = Box<dyn FnOnce(&mut Settings) -> Result<()>>;
@@ -198,7 +197,7 @@ fn update_existing_key(settings: &mut Settings, providers: &[TranscriptionProvid
                 .unwrap_or_default()
         )
     );
-    println!("Get a new key from: {}", api_key_url(&provider));
+    interactive::info(&format!("Get a new key from: {}", api_key_url(&provider)));
     println!();
 
     let api_key = prompt_and_validate_key(&provider)?;
@@ -214,28 +213,40 @@ fn update_existing_key(settings: &mut Settings, providers: &[TranscriptionProvid
 
 /// Prompt for and validate an API key
 pub fn prompt_and_validate_key(provider: &TranscriptionProvider) -> Result<String> {
-    let api_key = prompt_secret("Enter API key")?;
+    // Validation loop with secure password input
+    loop {
+        let api_key = interactive::password(&format!("{} API key", provider.display_name()))?;
 
-    // Validate key format
-    match provider {
-        TranscriptionProvider::OpenAI | TranscriptionProvider::OpenAIRealtime => {
-            if !api_key.starts_with("sk-") {
-                return Err(anyhow!("Invalid OpenAI key format. Keys start with 'sk-'"));
+        // Validate key format
+        let validation_result = match provider {
+            TranscriptionProvider::OpenAI | TranscriptionProvider::OpenAIRealtime => {
+                if !api_key.starts_with("sk-") {
+                    Err(anyhow!("Invalid OpenAI key format. Keys start with 'sk-'"))
+                } else {
+                    Ok(())
+                }
             }
-        }
-        TranscriptionProvider::Groq => {
-            if !api_key.starts_with("gsk_") {
-                return Err(anyhow!("Invalid Groq key format. Keys start with 'gsk_'"));
+            TranscriptionProvider::Groq => {
+                if !api_key.starts_with("gsk_") {
+                    Err(anyhow!("Invalid Groq key format. Keys start with 'gsk_'"))
+                } else {
+                    Ok(())
+                }
             }
-        }
-        _ => {
-            if api_key.len() < 20 {
-                return Err(anyhow!("API key seems too short"));
+            _ => {
+                if api_key.len() < 20 {
+                    Err(anyhow!("API key seems too short"))
+                } else {
+                    Ok(())
+                }
             }
+        };
+
+        match validation_result {
+            Ok(_) => return Ok(api_key),
+            Err(e) => interactive::error(&e.to_string()),
         }
     }
-
-    Ok(api_key)
 }
 
 /// Finish setup and save settings
@@ -319,29 +330,31 @@ fn finish_setup(settings: &mut Settings, provider: &TranscriptionProvider) -> Re
 pub fn setup_transcription_cloud() -> Result<()> {
     let mut settings = Settings::load();
 
-    // Show providers with [configured] marker
-    println!("Provider:");
-    for (i, provider) in CLOUD_PROVIDERS.iter().enumerate() {
-        // Check if this provider or its realtime variant is configured
-        let configured = if settings.transcription.api_key_for(provider).is_some()
-            || (*provider == TranscriptionProvider::OpenAI
-                && settings.transcription.provider == TranscriptionProvider::OpenAIRealtime)
-            || (*provider == TranscriptionProvider::Deepgram
-                && settings.transcription.provider == TranscriptionProvider::DeepgramRealtime)
-        {
-            " [configured]"
-        } else {
-            ""
-        };
-        println!(
-            "  {}. {:<10} - {}{}",
-            i + 1,
-            provider.display_name(),
-            provider_description(provider),
-            configured
-        );
-    }
-    println!();
+    // Build provider display items with [configured] marker
+    use console::style;
+
+    let items: Vec<String> = CLOUD_PROVIDERS
+        .iter()
+        .map(|provider| {
+            // Check if this provider or its realtime variant is configured
+            let configured = if settings.transcription.api_key_for(provider).is_some()
+                || (*provider == TranscriptionProvider::OpenAI
+                    && settings.transcription.provider == TranscriptionProvider::OpenAIRealtime)
+                || (*provider == TranscriptionProvider::Deepgram
+                    && settings.transcription.provider == TranscriptionProvider::DeepgramRealtime)
+            {
+                style(" [configured]").green().to_string()
+            } else {
+                String::new()
+            };
+            format!(
+                "{:<10} - {}{}",
+                provider.display_name(),
+                provider_description(provider),
+                configured
+            )
+        })
+        .collect();
 
     // Default to current provider if configured, otherwise first
     // Treat realtime variants same as base provider for default selection
@@ -353,53 +366,48 @@ pub fn setup_transcription_cloud() -> Result<()> {
                     && settings.transcription.provider == TranscriptionProvider::OpenAIRealtime)
                 || (*p == TranscriptionProvider::Deepgram
                     && settings.transcription.provider == TranscriptionProvider::DeepgramRealtime)
-        })
-        .map(|i| i + 1)
-        .unwrap_or(1);
+        });
 
-    let choice = prompt_choice_with_default("Select", 1, CLOUD_PROVIDERS.len(), Some(default))?;
-    let mut provider = CLOUD_PROVIDERS[choice - 1].clone();
+    let choice = interactive::select("Select provider", &items, default)?;
+    let mut provider = CLOUD_PROVIDERS[choice].clone();
 
     // If OpenAI selected, ask for method (Standard vs Streaming)
     if provider == TranscriptionProvider::OpenAI {
-        println!();
-        println!("Method:");
-        println!("  1. Standard  - Batch processing");
-        println!("  2. Streaming - Real-time, lower latency");
-        println!();
+        let methods = vec!["Standard - Batch processing", "Streaming - Real-time, lower latency"];
 
         // Default to current method if already using OpenAI variant
-        let current_method =
+        let default_method =
             if settings.transcription.provider == TranscriptionProvider::OpenAIRealtime {
-                2
-            } else {
                 1
+            } else {
+                0
             };
 
-        let method_choice = prompt_choice_with_default("Select", 1, 2, Some(current_method))?;
-        if method_choice == 2 {
+        println!();
+        let method_choice = interactive::select("Select method", &methods, Some(default_method))?;
+        if method_choice == 1 {
             provider = TranscriptionProvider::OpenAIRealtime;
         }
     }
 
     // If Deepgram selected, ask for method (Standard vs Streaming)
     if provider == TranscriptionProvider::Deepgram {
-        println!();
-        println!("Method:");
-        println!("  1. Standard  - Batch processing");
-        println!("  2. Streaming - Real-time, very fast (~150ms)");
-        println!();
+        let methods = vec![
+            "Standard - Batch processing",
+            "Streaming - Real-time, very fast (~150ms)",
+        ];
 
         // Default to current method if already using Deepgram variant
-        let current_method =
+        let default_method =
             if settings.transcription.provider == TranscriptionProvider::DeepgramRealtime {
-                2
-            } else {
                 1
+            } else {
+                0
             };
 
-        let method_choice = prompt_choice_with_default("Select", 1, 2, Some(current_method))?;
-        if method_choice == 2 {
+        println!();
+        let method_choice = interactive::select("Select method", &methods, Some(default_method))?;
+        if method_choice == 1 {
             provider = TranscriptionProvider::DeepgramRealtime;
         }
     }
@@ -408,18 +416,18 @@ pub fn setup_transcription_cloud() -> Result<()> {
     if let Some(existing_key) = settings.transcription.api_key_for(&provider) {
         println!();
         println!("Current API key: {}", mask_key(&existing_key));
-        let keep = prompt_yes_no("Keep current key?", true)?;
+        let keep = interactive::confirm("Keep current key?", true)?;
 
         if !keep {
             println!();
-            println!("Get your API key from: {}", api_key_url(&provider));
+            interactive::info(&format!("Get your API key from: {}", api_key_url(&provider)));
             let api_key = prompt_and_validate_key(&provider)?;
             settings.transcription.set_api_key(&provider, api_key);
         }
     } else {
         // No existing key - prompt for new one
         println!();
-        println!("Get your API key from: {}", api_key_url(&provider));
+        interactive::info(&format!("Get your API key from: {}", api_key_url(&provider)));
         let api_key = prompt_and_validate_key(&provider)?;
         settings.transcription.set_api_key(&provider, api_key);
     }
