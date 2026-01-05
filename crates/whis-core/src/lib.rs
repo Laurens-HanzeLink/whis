@@ -2,6 +2,7 @@ pub mod audio;
 #[cfg(feature = "clipboard")]
 pub mod clipboard;
 pub mod config;
+pub mod defaults;
 pub mod error;
 pub mod model;
 pub mod ollama;
@@ -50,3 +51,9 @@ pub use transcribe::{
 #[cfg(feature = "local-transcription")]
 pub use transcribe::{LocalAudioChunk, progressive_transcribe_local};
 pub use verbose::set_verbose;
+
+// Re-export defaults for convenience
+pub use defaults::{
+    DEFAULT_LANGUAGE, DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL, DEFAULT_POST_PROCESSOR,
+    DEFAULT_PROVIDER, DEFAULT_SHORTCUT, DEFAULT_VAD_ENABLED, DEFAULT_VAD_THRESHOLD,
+};

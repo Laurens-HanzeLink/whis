@@ -12,14 +12,19 @@ Fix grammar and punctuation. Keep technical terms intact. \
 Output only the cleaned text, no explanations.";
 
 /// Available post-processing providers (LLM for transcript cleanup)
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum PostProcessor {
-    #[default]
     None,
     OpenAI,
     Mistral,
     Ollama,
+}
+
+impl Default for PostProcessor {
+    fn default() -> Self {
+        crate::defaults::DEFAULT_POST_PROCESSOR
+    }
 }
 
 impl fmt::Display for PostProcessor {

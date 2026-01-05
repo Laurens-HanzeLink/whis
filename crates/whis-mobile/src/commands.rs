@@ -34,7 +34,7 @@ pub fn get_status(app: tauri::AppHandle, state: State<'_, AppState>) -> StatusRe
             let provider = store
                 .get("provider")
                 .and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_else(|| "openai".to_string());
+                .unwrap_or_else(|| whis_core::DEFAULT_PROVIDER.as_str().to_string());
 
             let key = match provider.as_str() {
                 "openai" | "openai-realtime" => store.get("openai_api_key"),
@@ -187,11 +187,10 @@ pub async fn transcribe_audio(
     let provider_str = store
         .get("provider")
         .and_then(|v| v.as_str().map(String::from))
-        .unwrap_or_else(|| "openai".to_string());
+        .unwrap_or_else(|| whis_core::DEFAULT_PROVIDER.as_str().to_string());
 
-    let provider: TranscriptionProvider = provider_str
-        .parse()
-        .unwrap_or(TranscriptionProvider::OpenAI);
+    let provider: TranscriptionProvider =
+        provider_str.parse().unwrap_or(whis_core::DEFAULT_PROVIDER);
 
     let api_key = match provider_str.as_str() {
         "openai" | "openai-realtime" => store.get("openai_api_key"),

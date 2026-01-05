@@ -37,19 +37,15 @@ pub struct VadSettings {
     pub enabled: bool,
 
     /// VAD speech probability threshold (0.0-1.0, default 0.5)
-    #[serde(default = "default_vad_threshold")]
+    #[serde(default)]
     pub threshold: f32,
-}
-
-fn default_vad_threshold() -> f32 {
-    0.5
 }
 
 impl Default for VadSettings {
     fn default() -> Self {
         Self {
-            enabled: false, // Disabled by default for conservative behavior
-            threshold: default_vad_threshold(),
+            enabled: crate::defaults::DEFAULT_VAD_ENABLED,
+            threshold: crate::defaults::DEFAULT_VAD_THRESHOLD,
         }
     }
 }
@@ -57,7 +53,7 @@ impl Default for VadSettings {
 impl Default for UiSettings {
     fn default() -> Self {
         Self {
-            shortcut: "Ctrl+Alt+W".to_string(),
+            shortcut: crate::defaults::DEFAULT_SHORTCUT.to_string(),
             #[cfg(feature = "clipboard")]
             clipboard_method: ClipboardMethod::default(),
             microphone_device: None,

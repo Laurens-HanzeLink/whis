@@ -6,7 +6,7 @@ use crate::config::TranscriptionProvider;
 use crate::post_processing::PostProcessor;
 
 /// Settings for post-processing transcripts with LLMs.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PostProcessingSettings {
     /// LLM provider for post-processing (grammar, punctuation, filler word removal)
     #[serde(default)]
@@ -15,6 +15,15 @@ pub struct PostProcessingSettings {
     /// Custom prompt for post-processing (uses default if None)
     #[serde(default)]
     pub prompt: Option<String>,
+}
+
+impl Default for PostProcessingSettings {
+    fn default() -> Self {
+        Self {
+            processor: crate::defaults::DEFAULT_POST_PROCESSOR,
+            prompt: Some(crate::post_processing::DEFAULT_POST_PROCESSING_PROMPT.to_string()),
+        }
+    }
 }
 
 impl PostProcessingSettings {

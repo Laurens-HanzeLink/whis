@@ -2,10 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Available transcription providers
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum TranscriptionProvider {
-    #[default]
     OpenAI,
     #[serde(rename = "openai-realtime")]
     OpenAIRealtime,
@@ -17,6 +16,12 @@ pub enum TranscriptionProvider {
     LocalWhisper,
     #[serde(rename = "local-parakeet")]
     LocalParakeet,
+}
+
+impl Default for TranscriptionProvider {
+    fn default() -> Self {
+        crate::defaults::DEFAULT_PROVIDER
+    }
 }
 
 impl TranscriptionProvider {
