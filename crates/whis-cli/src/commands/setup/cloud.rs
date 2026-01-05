@@ -8,22 +8,18 @@ use super::post_processing::configure_post_processing_options;
 use super::provider_helpers::{
     CLOUD_PROVIDERS, api_key_url, get_provider_status, provider_description,
 };
-use crate::ui::{mask_key, prompt_choice};
+use crate::ui::mask_key;
 
 /// Type alias for menu action callbacks
 type MenuAction = Box<dyn FnOnce(&mut Settings) -> Result<()>>;
 
 /// Setup for cloud providers (full interactive menu)
 pub fn setup_cloud() -> Result<()> {
-    println!("Cloud Setup");
-    println!("===========");
-    println!();
-
     let mut settings = Settings::load();
     let (configured, unconfigured) = get_provider_status(&settings);
 
     // Show current status
-    println!("Provider status:");
+    interactive::info("Provider status:");
     for provider in CLOUD_PROVIDERS {
         let is_active = settings.transcription.provider == *provider;
         let active_marker = if is_active { " [active]" } else { "" };
@@ -39,17 +35,16 @@ pub fn setup_cloud() -> Result<()> {
             } else {
                 format!("from ${}", provider.api_key_env_var())
             };
-            println!(
+            interactive::info(&format!(
                 "  + {:<10} ({}){}",
                 provider.display_name(),
                 key_source,
                 active_marker
-            );
+            ));
         } else {
-            println!("  - {:<10} (not configured)", provider.display_name());
+            interactive::info(&format!("  - {:<10} (not configured)", provider.display_name()));
         }
     }
-    println!();
 
     // Determine menu options based on state
     if configured.is_empty() {
@@ -72,8 +67,7 @@ pub fn setup_cloud() -> Result<()> {
         ));
         let current = settings.transcription.provider.clone();
         menu_actions.push(Box::new(move |s| {
-            println!();
-            println!("Keeping {} as active provider.", current.display_name());
+            interactive::info(&format!("Keeping {} as active provider.", current.display_name()));
             finish_setup(s, &current)
         }));
     }
@@ -85,8 +79,7 @@ pub fn setup_cloud() -> Result<()> {
             let p = provider.clone();
             menu_actions.push(Box::new(move |s| {
                 s.transcription.provider = p.clone();
-                println!();
-                println!("Switched to {}.", p.display_name());
+                interactive::info(&format!("Switched to {}.", p.display_name()));
                 finish_setup(s, &p)
             }));
         }
@@ -97,7 +90,6 @@ pub fn setup_cloud() -> Result<()> {
         menu_options.push("Configure a new provider".to_string());
         let unconfigured_clone = unconfigured.clone();
         menu_actions.push(Box::new(move |s| {
-            println!();
             setup_new_provider(s, &unconfigured_clone)
         }));
     }
@@ -107,53 +99,29 @@ pub fn setup_cloud() -> Result<()> {
         menu_options.push("Update an existing key".to_string());
         let configured_clone: Vec<_> = configured.iter().map(|(p, _)| p.clone()).collect();
         menu_actions.push(Box::new(move |s| {
-            println!();
             update_existing_key(s, &configured_clone)
         }));
     }
 
     // Display menu
-    println!("What would you like to do?");
-    for (i, option) in menu_options.iter().enumerate() {
-        println!("  {}. {}", i + 1, option);
-    }
-    println!();
-
-    let choice = prompt_choice(
-        &format!("Select (1-{})", menu_options.len()),
-        1,
-        menu_options.len(),
-    )?;
+    let choice = interactive::select("What would you like to do?", &menu_options, Some(0))?;
 
     // Execute selected action
-    let action = menu_actions.into_iter().nth(choice - 1).unwrap();
+    let action = menu_actions.into_iter().nth(choice).unwrap();
     action(&mut settings)
 }
 
 /// Configure a new provider with API key
 fn setup_new_provider(settings: &mut Settings, providers: &[TranscriptionProvider]) -> Result<()> {
-    println!("Select provider to configure:");
-    for (i, provider) in providers.iter().enumerate() {
-        println!(
-            "  {}. {:<10} - {}",
-            i + 1,
-            provider.display_name(),
-            provider_description(provider)
-        );
-    }
-    println!();
+    let items: Vec<String> = providers
+        .iter()
+        .map(|p| format!("{:<10} - {}", p.display_name(), provider_description(p)))
+        .collect();
 
-    let choice = prompt_choice(
-        &format!("Select (1-{})", providers.len()),
-        1,
-        providers.len(),
-    )?;
-    let provider = providers[choice - 1].clone();
+    let choice = interactive::select("Which provider to configure?", &items, Some(0))?;
+    let provider = providers[choice].clone();
 
-    println!();
-    println!("Get your API key from:");
-    println!("  {}", api_key_url(&provider));
-    println!();
+    interactive::info(&format!("Get your API key from: {}", api_key_url(&provider)));
 
     let api_key = prompt_and_validate_key(&provider)?;
 
@@ -165,30 +133,21 @@ fn setup_new_provider(settings: &mut Settings, providers: &[TranscriptionProvide
 
 /// Update an existing API key
 fn update_existing_key(settings: &mut Settings, providers: &[TranscriptionProvider]) -> Result<()> {
-    println!("Select provider to update:");
-    for (i, provider) in providers.iter().enumerate() {
-        let current_key = settings
-            .transcription
-            .api_key_for(provider)
-            .unwrap_or_default();
-        println!(
-            "  {}. {} ({})",
-            i + 1,
-            provider.display_name(),
-            mask_key(&current_key)
-        );
-    }
-    println!();
+    let items: Vec<String> = providers
+        .iter()
+        .map(|p| {
+            let current_key = settings
+                .transcription
+                .api_key_for(p)
+                .unwrap_or_default();
+            format!("{} ({})", p.display_name(), mask_key(&current_key))
+        })
+        .collect();
 
-    let choice = prompt_choice(
-        &format!("Select (1-{})", providers.len()),
-        1,
-        providers.len(),
-    )?;
-    let provider = providers[choice - 1].clone();
+    let choice = interactive::select("Which provider to update?", &items, Some(0))?;
+    let provider = providers[choice].clone();
 
-    println!();
-    println!(
+    interactive::info(&format!(
         "Current key: {}",
         mask_key(
             &settings
@@ -196,16 +155,14 @@ fn update_existing_key(settings: &mut Settings, providers: &[TranscriptionProvid
                 .api_key_for(&provider)
                 .unwrap_or_default()
         )
-    );
+    ));
     interactive::info(&format!("Get a new key from: {}", api_key_url(&provider)));
-    println!();
 
     let api_key = prompt_and_validate_key(&provider)?;
 
     settings.transcription.set_api_key(&provider, api_key);
 
-    println!();
-    println!("{} key updated.", provider.display_name());
+    interactive::info(&format!("{} key updated", provider.display_name()));
 
     settings.save()?;
     Ok(())
@@ -272,9 +229,7 @@ fn finish_setup(settings: &mut Settings, provider: &TranscriptionProvider) -> Re
     settings.post_processing.processor = default_post_processor.clone();
     settings.save()?;
 
-    println!();
-    println!("Transcription configured: {}", provider.display_name());
-    println!();
+    interactive::info(&format!("Transcription configured: {}", provider.display_name()));
 
     // Offer post-processing configuration
     let pp_display = match &default_post_processor {
@@ -284,43 +239,39 @@ fn finish_setup(settings: &mut Settings, provider: &TranscriptionProvider) -> Re
         PostProcessor::Ollama => "Ollama",
     };
 
-    println!("Post-processing cleans up transcriptions (removes filler words, fixes grammar).");
-    println!();
-    println!("Would you like to configure post-processing?");
-    println!("  1. Use {} (default)", pp_display);
-    println!("  2. Configure different post-processor");
-    println!("  3. Skip for now");
-    println!();
+    interactive::info("Post-processing cleans up transcriptions (removes filler words, fixes grammar)");
 
-    let choice = prompt_choice("Select (1-3)", 1, 3)?;
+    let options = vec![
+        format!("Use {} (default)", pp_display),
+        "Configure different post-processor".to_string(),
+        "Skip for now".to_string(),
+    ];
+
+    let choice = interactive::select("Configure post-processing?", &options, Some(0))?;
 
     match choice {
-        1 => {
+        0 => {
             // Keep default
         }
-        2 => {
+        1 => {
             // Run post-processing setup
-            println!();
             configure_post_processing_options(settings)?;
         }
-        3 => {
+        2 => {
             // Skip - leave as default
         }
         _ => unreachable!(),
     }
 
-    println!();
-    println!("Setup complete!");
-    println!();
-    println!("Transcription: {}", provider.display_name());
-    if settings.post_processing.processor != PostProcessor::None {
-        println!("Post-processing: {}", settings.post_processing.processor);
-    }
-    println!();
-    println!("Try it out:");
-    println!("  whis                # Record and transcribe");
-    println!("  whis --post-process # Record, transcribe, and post-process");
-    println!();
+    interactive::info(&format!(
+        "Configuration saved! Transcription: {}{}",
+        provider.display_name(),
+        if settings.post_processing.processor != PostProcessor::None {
+            format!(", Post-processing: {}", settings.post_processing.processor)
+        } else {
+            String::new()
+        }
+    ));
 
     Ok(())
 }
@@ -331,8 +282,6 @@ pub fn setup_transcription_cloud() -> Result<()> {
     let mut settings = Settings::load();
 
     // Build provider display items with [configured] marker
-    use console::style;
-
     let items: Vec<String> = CLOUD_PROVIDERS
         .iter()
         .map(|provider| {
@@ -343,9 +292,9 @@ pub fn setup_transcription_cloud() -> Result<()> {
                 || (*provider == TranscriptionProvider::Deepgram
                     && settings.transcription.provider == TranscriptionProvider::DeepgramRealtime)
             {
-                style(" [configured]").green().to_string()
+                " [configured]"
             } else {
-                String::new()
+                ""
             };
             format!(
                 "{:<10} - {}{}",
@@ -358,22 +307,23 @@ pub fn setup_transcription_cloud() -> Result<()> {
 
     // Default to current provider if configured, otherwise first
     // Treat realtime variants same as base provider for default selection
-    let default = CLOUD_PROVIDERS
-        .iter()
-        .position(|p| {
-            *p == settings.transcription.provider
-                || (*p == TranscriptionProvider::OpenAI
-                    && settings.transcription.provider == TranscriptionProvider::OpenAIRealtime)
-                || (*p == TranscriptionProvider::Deepgram
-                    && settings.transcription.provider == TranscriptionProvider::DeepgramRealtime)
-        });
+    let default = CLOUD_PROVIDERS.iter().position(|p| {
+        *p == settings.transcription.provider
+            || (*p == TranscriptionProvider::OpenAI
+                && settings.transcription.provider == TranscriptionProvider::OpenAIRealtime)
+            || (*p == TranscriptionProvider::Deepgram
+                && settings.transcription.provider == TranscriptionProvider::DeepgramRealtime)
+    });
 
-    let choice = interactive::select("Select provider", &items, default)?;
+    let choice = interactive::select("Which provider?", &items, default)?;
     let mut provider = CLOUD_PROVIDERS[choice].clone();
 
     // If OpenAI selected, ask for method (Standard vs Streaming)
     if provider == TranscriptionProvider::OpenAI {
-        let methods = vec!["Standard - Batch processing", "Streaming - Real-time, lower latency"];
+        let methods = vec![
+            "Standard - Progressive",
+            "Streaming - Real-time",
+        ];
 
         // Default to current method if already using OpenAI variant
         let default_method =
@@ -383,8 +333,7 @@ pub fn setup_transcription_cloud() -> Result<()> {
                 0
             };
 
-        println!();
-        let method_choice = interactive::select("Select method", &methods, Some(default_method))?;
+        let method_choice = interactive::select("Which method?", &methods, Some(default_method))?;
         if method_choice == 1 {
             provider = TranscriptionProvider::OpenAIRealtime;
         }
@@ -393,8 +342,8 @@ pub fn setup_transcription_cloud() -> Result<()> {
     // If Deepgram selected, ask for method (Standard vs Streaming)
     if provider == TranscriptionProvider::Deepgram {
         let methods = vec![
-            "Standard - Batch processing",
-            "Streaming - Real-time, very fast (~150ms)",
+            "Standard - Progressive",
+            "Streaming - Real-time",
         ];
 
         // Default to current method if already using Deepgram variant
@@ -405,8 +354,7 @@ pub fn setup_transcription_cloud() -> Result<()> {
                 0
             };
 
-        println!();
-        let method_choice = interactive::select("Select method", &methods, Some(default_method))?;
+        let method_choice = interactive::select("Which method?", &methods, Some(default_method))?;
         if method_choice == 1 {
             provider = TranscriptionProvider::DeepgramRealtime;
         }
@@ -414,20 +362,26 @@ pub fn setup_transcription_cloud() -> Result<()> {
 
     // Check if API key already exists for this provider
     if let Some(existing_key) = settings.transcription.api_key_for(&provider) {
-        println!();
-        println!("Current API key: {}", mask_key(&existing_key));
-        let keep = interactive::confirm("Keep current key?", true)?;
+        interactive::info(&format!("Current API key: {}", mask_key(&existing_key)));
+        let keep = match interactive::select("Keep current key?", &["Yes", "No"], Some(0))? {
+            0 => true,
+            _ => false,
+        };
 
         if !keep {
-            println!();
-            interactive::info(&format!("Get your API key from: {}", api_key_url(&provider)));
+            interactive::info(&format!(
+                "Get your API key from: {}",
+                api_key_url(&provider)
+            ));
             let api_key = prompt_and_validate_key(&provider)?;
             settings.transcription.set_api_key(&provider, api_key);
         }
     } else {
         // No existing key - prompt for new one
-        println!();
-        interactive::info(&format!("Get your API key from: {}", api_key_url(&provider)));
+        interactive::info(&format!(
+            "Get your API key from: {}",
+            api_key_url(&provider)
+        ));
         let api_key = prompt_and_validate_key(&provider)?;
         settings.transcription.set_api_key(&provider, api_key);
     }

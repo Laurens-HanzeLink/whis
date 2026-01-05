@@ -14,14 +14,25 @@ pub fn download<M: ModelType>(model_type: &M, model_name: &str, dest: &Path) -> 
         } else {
             0
         };
-        eprint!(
-            "\rDownloading: {}% ({:.1} MB / {:.1} MB)  ",
-            progress,
-            downloaded as f64 / 1_000_000.0,
-            total as f64 / 1_000_000.0
-        );
+
+        // Progress bar: [========          ] 45%
+        let bar_width = 20;
+        let filled = (bar_width * progress) / 100;
+
+        eprint!("\r[");
+        for i in 0..bar_width {
+            if i < filled {
+                eprint!("=");
+            } else {
+                eprint!(" ");
+            }
+        }
+        eprint!("] {}%", progress);
+
         io::stderr().flush().ok();
-    })
+    })?;
+
+    Ok(())
 }
 
 /// Download a model with a custom progress callback
@@ -52,15 +63,6 @@ where
     if let Some(parent) = dest.parent() {
         fs::create_dir_all(parent).context("Failed to create models directory")?;
     }
-
-    eprintln!(
-        "Downloading {} model '{}'...",
-        model_type.name(),
-        model_name
-    );
-    eprintln!("URL: {}", url);
-    eprintln!("Destination: {}", dest.display());
-    eprintln!();
 
     // Download with progress
     let client = reqwest::blocking::Client::builder()
@@ -120,14 +122,13 @@ where
     on_progress(downloaded, total_size);
 
     eprintln!(
-        "\rDownload complete: {:.1} MB                    ",
+        "\r[+] Download complete: {:.1} MB                    ",
         downloaded as f64 / 1_000_000.0
     );
-    eprintln!();
 
     // Handle extraction if needed
     if model_type.needs_extraction() {
-        eprintln!("Extracting...");
+        eprintln!("[i] Extracting...");
         if let Some(parent) = dest.parent() {
             model_type.extract(&temp_path, parent)?;
         } else {
@@ -135,7 +136,7 @@ where
         }
         // Remove temp archive after extraction
         fs::remove_file(&temp_path).ok();
-        eprintln!("Extraction complete!");
+        eprintln!("[+] Extraction complete!");
     } else {
         // Rename temp file to final destination
         fs::rename(&temp_path, dest).context("Failed to finalize download")?;

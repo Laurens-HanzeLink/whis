@@ -1,26 +1,46 @@
 //! Post-processing setup (Ollama, OpenAI, Mistral)
 
 use anyhow::{Result, anyhow};
-use std::io::{self, Write};
 use whis_core::{PostProcessor, Settings, TranscriptionProvider, ollama};
+use std::io::Write;
 
 use super::cloud::prompt_and_validate_key;
 use super::interactive;
 use super::provider_helpers::{PP_PROVIDERS, api_key_url};
-use crate::ui::{mask_key, prompt_choice};
+use crate::ui::mask_key;
+
+/// Display a progress bar for ollama model pulls (with bracket notation prefix)
+fn display_progress(downloaded: u64, total: u64) {
+    let progress = if total > 0 {
+        (downloaded * 100 / total) as usize
+    } else {
+        0
+    };
+
+    let bar_width = 20;
+    let filled = (bar_width * progress) / 100;
+
+    eprint!("\r[i] [");
+    for i in 0..bar_width {
+        if i < filled {
+            eprint!("=");
+        } else {
+            eprint!(" ");
+        }
+    }
+    eprint!("] {}%", progress);
+
+    std::io::stderr().flush().ok();
+}
 
 /// Setup for post-processing configuration (standalone command)
 pub fn setup_post_processing() -> Result<()> {
-    println!("Post-Processing Setup");
-    println!("=====================");
-    println!();
-    println!("Post-processing cleans up transcriptions (removes filler words, fixes grammar).");
-    println!();
+    interactive::info("Post-processing cleans up transcriptions (removes filler words, fixes grammar).");
 
     let mut settings = Settings::load();
 
     // Show current status
-    println!(
+    interactive::info(&format!(
         "Current post-processor: {}",
         match settings.post_processing.processor {
             PostProcessor::None => "None (disabled)".to_string(),
@@ -36,19 +56,11 @@ pub fn setup_post_processing() -> Result<()> {
                     .unwrap_or(ollama::DEFAULT_OLLAMA_MODEL)
             ),
         }
-    );
-    println!();
+    ));
 
     // Choose post-processor type
-    println!("Choose post-processor:");
-    println!("  1. Ollama (local, free, recommended)");
-    println!("  2. OpenAI (cloud, requires API key)");
-    println!("  3. Mistral (cloud, requires API key)");
-    println!("  4. None (disable post-processing)");
-    println!();
-
-    let choice = prompt_choice("Select (1-4)", 1, 4)?;
-    println!();
+    let items = vec!["Ollama", "OpenAI", "Mistral", "None"];
+    let choice = interactive::select("Which post-processor?", &items, Some(0))? + 1;
 
     match choice {
         1 => {
@@ -57,13 +69,7 @@ pub fn setup_post_processing() -> Result<()> {
 
             // Check if Ollama is installed
             if !ollama::is_ollama_installed() {
-                println!("Ollama is not installed.");
-                println!();
-                println!("Install Ollama:");
-                println!("  Linux:  curl -fsSL https://ollama.com/install.sh | sh");
-                println!("  macOS:  brew install ollama");
-                println!("  Website: https://ollama.com/download");
-                println!();
+                interactive::ollama_not_installed();
                 return Err(anyhow!("Please install Ollama and run setup again"));
             }
 
@@ -78,9 +84,8 @@ pub fn setup_post_processing() -> Result<()> {
             settings.services.ollama.model = Some(model.clone());
             settings.save()?;
 
-            println!();
-            println!("Setup complete!");
-            println!("  Post-processor: Ollama ({})", model);
+            interactive::info("Setup complete!");
+            interactive::info(&format!("  Post-processor: Ollama ({})", model));
         }
         2 => {
             // OpenAI setup
@@ -89,9 +94,8 @@ pub fn setup_post_processing() -> Result<()> {
                 .api_key_for(&TranscriptionProvider::OpenAI)
                 .is_none()
             {
-                println!("OpenAI API key not configured.");
-                println!("Get your API key from: https://platform.openai.com/api-keys");
-                println!();
+                interactive::info("OpenAI API key not configured.");
+                interactive::info("Get your API key from: https://platform.openai.com/api-keys");
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::OpenAI)?;
                 settings
                     .transcription
@@ -101,9 +105,8 @@ pub fn setup_post_processing() -> Result<()> {
             settings.post_processing.processor = PostProcessor::OpenAI;
             settings.save()?;
 
-            println!();
-            println!("Setup complete!");
-            println!("  Post-processor: OpenAI");
+            interactive::info("Setup complete!");
+            interactive::info("  Post-processor: OpenAI");
         }
         3 => {
             // Mistral setup
@@ -112,9 +115,8 @@ pub fn setup_post_processing() -> Result<()> {
                 .api_key_for(&TranscriptionProvider::Mistral)
                 .is_none()
             {
-                println!("Mistral API key not configured.");
-                println!("Get your API key from: https://console.mistral.ai/api-keys");
-                println!();
+                interactive::info("Mistral API key not configured.");
+                interactive::info("Get your API key from: https://console.mistral.ai/api-keys");
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::Mistral)?;
                 settings
                     .transcription
@@ -124,54 +126,27 @@ pub fn setup_post_processing() -> Result<()> {
             settings.post_processing.processor = PostProcessor::Mistral;
             settings.save()?;
 
-            println!();
-            println!("Setup complete!");
-            println!("  Post-processor: Mistral");
+            interactive::info("Setup complete!");
+            interactive::info("  Post-processor: Mistral");
         }
         4 => {
             // Disable post-processing
             settings.post_processing.processor = PostProcessor::None;
             settings.save()?;
 
-            println!("Post-processing disabled.");
+            interactive::info("Post-processing disabled.");
         }
         _ => unreachable!(),
     }
-
-    println!();
-    println!("Try it out:");
-    println!("  whis --post-process # Record, transcribe, and post-process");
 
     Ok(())
 }
 
 /// Configure post-processing options (used within cloud setup flow)
 pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> {
-    println!("Choose post-processor:");
-    println!("  1. Ollama (local, free)");
-    if settings
-        .transcription
-        .api_key_for(&TranscriptionProvider::OpenAI)
-        .is_some()
-    {
-        println!("  2. OpenAI (cloud, uses existing key)");
-    } else {
-        println!("  2. OpenAI (cloud, requires API key)");
-    }
-    if settings
-        .transcription
-        .api_key_for(&TranscriptionProvider::Mistral)
-        .is_some()
-    {
-        println!("  3. Mistral (cloud, uses existing key)");
-    } else {
-        println!("  3. Mistral (cloud, requires API key)");
-    }
-    println!("  4. None (disable post-processing)");
-    println!();
+    let items = vec!["Ollama", "OpenAI", "Mistral", "None"];
 
-    let choice = prompt_choice("Select (1-4)", 1, 4)?;
-    println!();
+    let choice = interactive::select("Which post-processor?", &items, Some(0))? + 1;
 
     match choice {
         1 => {
@@ -180,14 +155,8 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
 
             // Check if Ollama is installed
             if !ollama::is_ollama_installed() {
-                println!("Ollama is not installed.");
-                println!();
-                println!("Install Ollama:");
-                println!("  Linux:  curl -fsSL https://ollama.com/install.sh | sh");
-                println!("  macOS:  brew install ollama");
-                println!("  Website: https://ollama.com/download");
-                println!();
-                println!("You can run 'whis setup post-processing' later to configure Ollama.");
+                interactive::ollama_not_installed();
+                interactive::info("You can run 'whis setup post-processing' later to configure Ollama.");
                 return Ok(());
             }
 
@@ -209,9 +178,8 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
                 .api_key_for(&TranscriptionProvider::OpenAI)
                 .is_none()
             {
-                println!("OpenAI API key not configured.");
-                println!("Get your API key from: https://platform.openai.com/api-keys");
-                println!();
+                interactive::info("OpenAI API key not configured.");
+                interactive::info("Get your API key from: https://platform.openai.com/api-keys");
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::OpenAI)?;
                 settings
                     .transcription
@@ -227,9 +195,8 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
                 .api_key_for(&TranscriptionProvider::Mistral)
                 .is_none()
             {
-                println!("Mistral API key not configured.");
-                println!("Get your API key from: https://console.mistral.ai/api-keys");
-                println!();
+                interactive::info("Mistral API key not configured.");
+                interactive::info("Get your API key from: https://console.mistral.ai/api-keys");
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::Mistral)?;
                 settings
                     .transcription
@@ -252,8 +219,6 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
 /// Interactive Ollama model selection
 /// Shows installed models + recommended options, allows pulling new models
 pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<String> {
-    use console::style;
-
     // Get installed models from Ollama
     let installed = ollama::list_models(url).unwrap_or_default();
     let installed_names: Vec<&str> = installed.iter().map(|m| m.name.as_str()).collect();
@@ -262,26 +227,28 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
     let mut items = Vec::new();
     let mut model_data: Vec<Option<(String, bool)>> = Vec::new(); // (name, needs_download)
 
-    // Installed section
+    // Installed section (with prefix, no separator)
     if !installed.is_empty() {
-        items.push(style("─── Installed ───").dim().to_string());
-        model_data.push(None); // Separator
-
         for model in &installed {
-            let is_recommended = model.name.starts_with("qwen2.5:1.5b");
-            let is_current = current_model == Some(&model.name);
+            let is_current = current_model.map(|c| {
+                // Handle both exact match and version tag differences
+                model.name == c || model.name.starts_with(&format!("{}:", c))
+            }).unwrap_or(false);
+
             let size = if model.size > 0 {
                 format!(" ({})", model.size_str())
             } else {
                 String::new()
             };
-            let markers = match (is_recommended, is_current) {
-                (true, true) => style(" - Recommended [current]").green().to_string(),
-                (true, false) => " - Recommended".to_string(),
-                (false, true) => style(" [current]").green().to_string(),
-                (false, false) => String::new(),
+
+            let markers = if is_current {
+                " [current]".to_string()
+            } else {
+                String::new()
             };
-            items.push(format!("{}{}{}", model.name, size, markers));
+
+            // Use [Installed] prefix instead of separator
+            items.push(format!("[Installed] {}{}{}", model.name, size, markers));
             model_data.push(Some((model.name.clone(), false)));
         }
     }
@@ -297,44 +264,76 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
         .collect();
 
     if !not_installed.is_empty() {
-        items.push(style("─── Available (will download) ───").dim().to_string());
-        model_data.push(None); // Separator
-
         for (name, size, desc) in not_installed {
-            items.push(format!("{} ({}) - {}", name, size, desc));
+            // Use [Available] prefix instead of separator
+            items.push(format!("[Available] {} ({}) - {}", name, size, desc));
             model_data.push(Some((name.to_string(), true)));
         }
     }
 
     // Custom option
-    items.push(style("─── Custom ───").dim().to_string());
-    model_data.push(None); // Separator
-    items.push("Enter custom model name".to_string());
+    items.push("[Custom] Enter custom model name".to_string());
     model_data.push(None); // Custom trigger
 
-    // Find default index (skip separators)
+    // Find default index with robust fallback chain
     let default = if let Some(current) = current_model {
-        model_data
+        // Try exact match first
+        let exact_match = model_data
             .iter()
-            .position(|m| m.as_ref().map(|(n, _)| n.as_str()) == Some(current))
+            .position(|m| m.as_ref().map(|(n, _)| n.as_str()) == Some(current));
+
+        if exact_match.is_some() {
+            exact_match
+        } else {
+            // Try prefix match (handles version tags like :latest)
+            let current_base = current.split(':').next().unwrap_or(current);
+            let prefix_match = model_data
+                .iter()
+                .position(|m| {
+                    if let Some((name, _)) = m {
+                        let name_base = name.split(':').next().unwrap_or(name);
+                        name_base == current_base || name.starts_with(&format!("{}:", current))
+                    } else {
+                        false
+                    }
+                });
+
+            // Fallback to first model if no match
+            prefix_match.or_else(|| model_data.iter().position(|m| m.is_some()))
+        }
     } else {
-        // First real model (skip first separator)
-        model_data.iter().position(|m| m.is_some())
+        // No current model - select recommended model (qwen2.5:1.5b)
+        let recommended = model_data
+            .iter()
+            .position(|m| {
+                if let Some((name, _)) = m {
+                    name.starts_with("qwen2.5:1.5b")
+                } else {
+                    false
+                }
+            });
+
+        // Fallback to first model if recommended not found
+        recommended.or_else(|| model_data.iter().position(|m| m.is_some()))
     };
 
+    // Ensure default is always Some (safety net)
+    let default = default.or(Some(0));
+
     // Interactive select
-    let choice = interactive::select("Select Ollama model", &items, default)?;
+    let choice = interactive::select("Which Ollama model?", &items, default)?;
 
     // Handle selection
     match &model_data[choice] {
         Some((model_name, needs_download)) => {
             // Selected a model from the list
             if *needs_download {
-                println!("Pulling model '{}'...", model_name);
-                ollama::pull_model(url, model_name)?;
-            } else {
-                println!("Using model: {}", model_name);
+                interactive::info(&format!("Pulling model '{}'...", model_name));
+                ollama::pull_model_with_progress(url, model_name, display_progress)?;
+                eprintln!();  // Newline after progress bar
+                interactive::info(&format!("Model '{}' ready!", model_name));
             }
+            // No echo needed - user already confirmed with [*]
             Ok(model_name.clone())
         }
         None => {
@@ -349,8 +348,10 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
 
                 // Check if model exists, pull if needed
                 if !ollama::has_model(url, &model_name)? {
-                    println!("Pulling model '{}'...", model_name);
-                    ollama::pull_model(url, &model_name)?;
+                    interactive::info(&format!("Pulling model '{}'...", model_name));
+                    ollama::pull_model_with_progress(url, &model_name, display_progress)?;
+                    eprintln!();  // Newline after progress bar
+                    interactive::info(&format!("Model '{}' ready!", model_name));
                 }
 
                 Ok(model_name)
@@ -362,98 +363,38 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
     }
 }
 
-/// Helper to set up Ollama fresh (used by wizard)
-pub fn setup_ollama_fresh(settings: &mut Settings) -> Result<()> {
-    let ollama_url = ollama::DEFAULT_OLLAMA_URL;
-
-    // Check if Ollama is installed
-    if !ollama::is_ollama_installed() {
-        println!();
-        println!("Ollama not installed. Install from: https://ollama.com/download");
-        println!("Run 'whis setup' again after installing.");
-        settings.post_processing.processor = PostProcessor::None;
-        return Ok(());
-    }
-
-    // Start Ollama
-    print!("Starting Ollama... ");
-    io::stdout().flush()?;
-    ollama::ensure_ollama_running(ollama_url)?;
-    println!("Done!");
-
-    // Use default model
-    let ollama_model = ollama::DEFAULT_OLLAMA_MODEL;
-    if !ollama::has_model(ollama_url, ollama_model)? {
-        print!("Downloading {}... ", ollama_model);
-        io::stdout().flush()?;
-        ollama::pull_model(ollama_url, ollama_model)?;
-        println!("Done!");
-    } else {
-        println!("Model {} ready.", ollama_model);
-    }
-
-    settings.post_processing.processor = PostProcessor::Ollama;
-    settings.services.ollama.url = Some(ollama_url.to_string());
-    settings.services.ollama.model = Some(ollama_model.to_string());
-
-    Ok(())
-}
-
 /// Independent post-processing step (called after transcription setup in wizard)
 pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
     let mut settings = Settings::load();
 
-    println!();
-    println!("Post-processing?");
-    println!("  1. Cloud (OpenAI, Mistral)");
-    println!("  2. Ollama (local, free)");
-    println!("  3. Skip");
-    println!();
-
     // Default: cloud if came from cloud transcription, Ollama if came from local
-    let options = vec![
-        "Cloud (OpenAI/Mistral) - Requires API key",
-        "Ollama (local) - Free, runs on your machine",
-        "Skip",
-    ];
+    let options = vec!["Cloud", "Ollama", "Skip"];
     let default = if prefer_cloud { 0 } else { 1 };
-    let choice = interactive::select("Select post-processing", &options, Some(default))?;
+    let choice = interactive::select("Configure post-processing?", &options, Some(default))?;
 
     match choice {
         0 => setup_cloud_post_processing(&mut settings)?,
         1 => {
-            // Check if Ollama already configured
-            let ollama_configured = settings.post_processing.processor == PostProcessor::Ollama;
-            if ollama_configured {
-                let current_model = settings
-                    .services
-                    .ollama
-                    .model
-                    .as_deref()
-                    .unwrap_or(ollama::DEFAULT_OLLAMA_MODEL);
-                println!();
-                println!("Current model: {}", current_model);
-                let keep = interactive::confirm("Keep current config?", true)?;
+            // Ollama setup with model selection
+            let ollama_url = ollama::DEFAULT_OLLAMA_URL;
 
-                if !keep {
-                    setup_ollama_fresh(&mut settings)?;
-                } else {
-                    // Just verify Ollama is accessible
-                    let ollama_url = settings
-                        .services
-                        .ollama
-                        .url
-                        .as_deref()
-                        .unwrap_or(ollama::DEFAULT_OLLAMA_URL);
-                    if ollama::is_ollama_installed()
-                        && ollama::is_ollama_running(ollama_url).unwrap_or(false)
-                    {
-                        println!("Ollama ready.");
-                    }
-                }
-            } else {
-                setup_ollama_fresh(&mut settings)?;
+            // Check if Ollama is installed
+            if !ollama::is_ollama_installed() {
+                interactive::ollama_not_installed();
+                interactive::info("You can run 'whis setup post-processing' later to configure Ollama.");
+                return Ok(());
             }
+
+            // Start Ollama if not running
+            ollama::ensure_ollama_running(ollama_url)?;
+
+            // Select model (shows installed models + recommended options)
+            let current_model = settings.services.ollama.model.as_deref();
+            let model = select_ollama_model(ollama_url, current_model)?;
+
+            settings.post_processing.processor = PostProcessor::Ollama;
+            settings.services.ollama.url = Some(ollama_url.to_string());
+            settings.services.ollama.model = Some(model);
         }
         2 => {
             settings.post_processing.processor = PostProcessor::None;
@@ -467,41 +408,40 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
 
 /// Setup cloud post-processing (OpenAI or Mistral)
 fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
-    use console::style;
-
-    println!();
-
     // Build provider items with [configured] marker
     let items: Vec<String> = PP_PROVIDERS
         .iter()
         .map(|provider| {
             let marker = if settings.transcription.api_key_for(provider).is_some() {
-                style(" [configured]").green().to_string()
+                " [configured]"
             } else {
-                String::new()
+                ""
             };
             format!("{}{}", provider.display_name(), marker)
         })
         .collect();
 
-    let choice = interactive::select("Select provider", &items, Some(0))?;
+    let choice = interactive::select("Which provider?", &items, Some(0))?;
     let provider = PP_PROVIDERS[choice].clone();
 
     // Check if API key already exists
     if let Some(existing_key) = settings.transcription.api_key_for(&provider) {
-        println!();
-        println!("Current API key: {}", mask_key(&existing_key));
-        let keep = interactive::confirm("Keep current key?", true)?;
+        interactive::info(&format!("Current API key: {}", mask_key(&existing_key)));
+        let keep = match interactive::select("Keep current key?", &["Yes", "No"], Some(0))? {
+            0 => true,
+            _ => false,
+        };
 
         if !keep {
-            println!();
-            interactive::info(&format!("Get your API key from: {}", api_key_url(&provider)));
+            interactive::info(&format!(
+                "Get your API key from: {}",
+                api_key_url(&provider)
+            ));
             let api_key = prompt_and_validate_key(&provider)?;
             settings.transcription.set_api_key(&provider, api_key);
         }
     } else {
-        println!();
-        println!("Get your API key from: {}", api_key_url(&provider));
+        interactive::info(&format!("Get your API key from: {}", api_key_url(&provider)));
         let api_key = prompt_and_validate_key(&provider)?;
         settings.transcription.set_api_key(&provider, api_key);
     }
