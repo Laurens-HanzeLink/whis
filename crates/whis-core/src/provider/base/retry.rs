@@ -27,8 +27,8 @@ impl Default for RetryConfig {
     fn default() -> Self {
         Self {
             max_retries: 3,
-            base_delay_ms: 1000,    // 1 second
-            max_delay_ms: 16000,    // 16 seconds
+            base_delay_ms: 1000, // 1 second
+            max_delay_ms: 16000, // 16 seconds
             rate_limit_multiplier: 2.0,
         }
     }
@@ -50,10 +50,7 @@ impl RetryConfig {
 
 /// Check if an HTTP status code is retryable
 pub fn is_retryable_status(status: StatusCode) -> bool {
-    matches!(
-        status.as_u16(),
-        408 | 429 | 500 | 502 | 503 | 504
-    )
+    matches!(status.as_u16(), 408 | 429 | 500 | 502 | 503 | 504)
 }
 
 /// Check if a status code indicates rate limiting
@@ -90,14 +87,35 @@ mod tests {
         let config = RetryConfig::default();
 
         // Normal delays: 1s, 2s, 4s, 8s (capped at 16s)
-        assert_eq!(config.delay_for_attempt(0, false), Duration::from_millis(1000));
-        assert_eq!(config.delay_for_attempt(1, false), Duration::from_millis(2000));
-        assert_eq!(config.delay_for_attempt(2, false), Duration::from_millis(4000));
-        assert_eq!(config.delay_for_attempt(3, false), Duration::from_millis(8000));
-        assert_eq!(config.delay_for_attempt(4, false), Duration::from_millis(16000)); // capped
+        assert_eq!(
+            config.delay_for_attempt(0, false),
+            Duration::from_millis(1000)
+        );
+        assert_eq!(
+            config.delay_for_attempt(1, false),
+            Duration::from_millis(2000)
+        );
+        assert_eq!(
+            config.delay_for_attempt(2, false),
+            Duration::from_millis(4000)
+        );
+        assert_eq!(
+            config.delay_for_attempt(3, false),
+            Duration::from_millis(8000)
+        );
+        assert_eq!(
+            config.delay_for_attempt(4, false),
+            Duration::from_millis(16000)
+        ); // capped
 
         // Rate limited: 2x multiplier
-        assert_eq!(config.delay_for_attempt(0, true), Duration::from_millis(2000));
-        assert_eq!(config.delay_for_attempt(1, true), Duration::from_millis(4000));
+        assert_eq!(
+            config.delay_for_attempt(0, true),
+            Duration::from_millis(2000)
+        );
+        assert_eq!(
+            config.delay_for_attempt(1, true),
+            Duration::from_millis(4000)
+        );
     }
 }
