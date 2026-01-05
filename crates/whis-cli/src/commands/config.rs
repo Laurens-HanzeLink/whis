@@ -20,6 +20,7 @@ const VALID_KEYS: &[&str] = &[
     "ollama-model",
     "vad",
     "vad-threshold",
+    "chunk-size",
 ];
 
 pub fn run(key: Option<String>, value: Option<String>, list: bool, path: bool) -> Result<()> {
@@ -196,6 +197,16 @@ fn set_config(key: &str, value: &str) -> Result<()> {
             settings.ui.vad.threshold = threshold;
             println!("vad-threshold = {:.2}", threshold);
         }
+        "chunk-size" => {
+            let size = value_trimmed
+                .parse::<u64>()
+                .context("Invalid chunk size. Use a number of seconds (e.g., 30, 60, 90)")?;
+            if !(10..=300).contains(&size) {
+                anyhow::bail!("Invalid chunk size: must be between 10 and 300 seconds");
+            }
+            settings.ui.chunk_duration_secs = size;
+            println!("chunk-size = {}s", size);
+        }
         _ => unreachable!("Key validation should prevent this"),
     }
 
@@ -255,6 +266,7 @@ fn get_config(key: &str) -> Result<()> {
         }
         "vad" => println!("{}", settings.ui.vad.enabled),
         "vad-threshold" => println!("{:.2}", settings.ui.vad.threshold),
+        "chunk-size" => println!("{}s", settings.ui.chunk_duration_secs),
         _ => unreachable!("Key validation should prevent this"),
     }
 
@@ -337,6 +349,10 @@ fn show_all_settings() -> Result<()> {
     println!("vad-threshold = {:.2}", settings.ui.vad.threshold);
 
     println!();
+    println!("[Audio Chunking]");
+    println!("chunk-size = {}s", settings.ui.chunk_duration_secs);
+
+    println!();
     println!("[Presets]");
     println!("Available presets: {}", Preset::all_names().join(", "));
 
@@ -356,6 +372,7 @@ fn show_usage() {
     eprintln!("  whis config language en");
     eprintln!("  whis config post-processor ollama");
     eprintln!("  whis config vad true");
+    eprintln!("  whis config chunk-size 30");
     eprintln!();
     eprintln!("Run 'whis config --list' to see all available keys and current values");
 }

@@ -27,6 +27,15 @@ pub struct UiSettings {
     /// Currently active preset name (if any)
     #[serde(default)]
     pub active_preset: Option<String>,
+
+    /// Audio chunk duration in seconds for progressive transcription
+    /// Smaller = faster response, larger = better accuracy
+    #[serde(default = "default_chunk_duration")]
+    pub chunk_duration_secs: u64,
+}
+
+fn default_chunk_duration() -> u64 {
+    crate::defaults::DEFAULT_CHUNK_DURATION_SECS
 }
 
 /// Voice Activity Detection configuration.
@@ -59,6 +68,7 @@ impl Default for UiSettings {
             microphone_device: None,
             vad: VadSettings::default(),
             active_preset: None,
+            chunk_duration_secs: crate::defaults::DEFAULT_CHUNK_DURATION_SECS,
         }
     }
 }

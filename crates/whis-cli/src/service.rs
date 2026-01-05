@@ -196,12 +196,13 @@ impl Service {
         // Create channels for progressive chunking
         let (chunk_tx, chunk_rx) = mpsc::unbounded_channel();
 
-        // Create chunker config (90-second chunks like CLI)
+        // Create chunker config from settings
         let vad_enabled = settings.ui.vad.enabled;
+        let target = settings.ui.chunk_duration_secs;
         let chunker_config = ChunkerConfig {
-            target_duration_secs: 90,
-            min_duration_secs: 60,
-            max_duration_secs: 120,
+            target_duration_secs: target,
+            min_duration_secs: target * 2 / 3,
+            max_duration_secs: target * 4 / 3,
             vad_aware: vad_enabled,
         };
 

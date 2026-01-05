@@ -86,6 +86,13 @@ pub const DEFAULT_VAD_ENABLED: bool = false;
 /// and capturing soft speech. Adjust via `whis config vad-threshold <value>`.
 pub const DEFAULT_VAD_THRESHOLD: f32 = 0.5;
 
+/// Default chunk duration for progressive transcription (seconds)
+///
+/// 90 seconds provides a good balance between transcription quality
+/// (more context) and response time. Adjust via `whis config chunk-size <seconds>`.
+/// Smaller values (30s) feel more real-time, larger values (120s) improve accuracy.
+pub const DEFAULT_CHUNK_DURATION_SECS: u64 = 90;
+
 // =============================================================================
 // SERVICE DEFAULTS
 // =============================================================================
