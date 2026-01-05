@@ -17,6 +17,7 @@ use serde::Deserialize;
 use super::super::{
     DEFAULT_TIMEOUT_SECS, TranscriptionRequest, TranscriptionResult, TranscriptionStage,
 };
+use super::retry::{RetryConfig, is_rate_limited, is_retryable_error, is_retryable_status};
 
 /// Response structure for OpenAI-compatible APIs
 #[derive(Deserialize)]
@@ -48,42 +49,84 @@ pub(crate) fn openai_compatible_transcribe_sync(
         .build()
         .context("Failed to create HTTP client")?;
 
-    let mut form = reqwest::blocking::multipart::Form::new()
-        .text("model", model.to_string())
-        .part(
-            "file",
-            reqwest::blocking::multipart::Part::bytes(request.audio_data.clone())
-                .file_name(request.filename.clone())
-                .mime_str(&request.mime_type)?,
-        );
+    let config = RetryConfig::default();
+    let mut attempt = 0;
 
-    if let Some(lang) = request.language.clone() {
-        form = form.text("language", lang);
+    loop {
+        let mut form = reqwest::blocking::multipart::Form::new()
+            .text("model", model.to_string())
+            .part(
+                "file",
+                reqwest::blocking::multipart::Part::bytes(request.audio_data.clone())
+                    .file_name(request.filename.clone())
+                    .mime_str(&request.mime_type)?,
+            );
+
+        if let Some(lang) = request.language.clone() {
+            form = form.text("language", lang);
+        }
+
+        // Report transcribing stage (request sent, waiting for response)
+        request.report(TranscriptionStage::Transcribing);
+
+        let result = client
+            .post(api_url)
+            .header("Authorization", format!("Bearer {api_key}"))
+            .multipart(form)
+            .send();
+
+        match result {
+            Ok(response) => {
+                let status = response.status();
+
+                if status.is_success() {
+                    let text = response.text().context("Failed to get response text")?;
+                    let resp: OpenAICompatibleResponse =
+                        serde_json::from_str(&text).context("Failed to parse API response")?;
+                    return Ok(TranscriptionResult { text: resp.text });
+                }
+
+                // Check if error is retryable
+                if is_retryable_status(status) && attempt < config.max_retries {
+                    let delay = config.delay_for_attempt(attempt, is_rate_limited(status));
+                    crate::verbose!(
+                        "Request failed with {} (attempt {}/{}), retrying in {:?}",
+                        status,
+                        attempt + 1,
+                        config.max_retries,
+                        delay
+                    );
+                    std::thread::sleep(delay);
+                    attempt += 1;
+                    continue;
+                }
+
+                // Non-retryable error or max retries exceeded
+                let error_text = response
+                    .text()
+                    .unwrap_or_else(|_| "Unknown error".to_string());
+                anyhow::bail!("API error ({status}): {error_text}");
+            }
+            Err(err) => {
+                // Check if network error is retryable
+                if is_retryable_error(&err) && attempt < config.max_retries {
+                    let delay = config.delay_for_attempt(attempt, false);
+                    crate::verbose!(
+                        "Request failed with network error (attempt {}/{}), retrying in {:?}: {}",
+                        attempt + 1,
+                        config.max_retries,
+                        delay,
+                        err
+                    );
+                    std::thread::sleep(delay);
+                    attempt += 1;
+                    continue;
+                }
+
+                return Err(err).context("Failed to send request");
+            }
+        }
     }
-
-    // Report transcribing stage (request sent, waiting for response)
-    request.report(TranscriptionStage::Transcribing);
-
-    let response = client
-        .post(api_url)
-        .header("Authorization", format!("Bearer {api_key}"))
-        .multipart(form)
-        .send()
-        .context("Failed to send request")?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response
-            .text()
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        anyhow::bail!("API error ({status}): {error_text}");
-    }
-
-    let text = response.text().context("Failed to get response text")?;
-    let resp: OpenAICompatibleResponse =
-        serde_json::from_str(&text).context("Failed to parse API response")?;
-
-    Ok(TranscriptionResult { text: resp.text })
 }
 
 /// Transcribe audio using an OpenAI-compatible API (asynchronous).
@@ -107,45 +150,87 @@ pub(crate) async fn openai_compatible_transcribe_async(
     // Report uploading stage
     request.report(TranscriptionStage::Uploading);
 
-    let mut form = reqwest::multipart::Form::new()
-        .text("model", model.to_string())
-        .part(
-            "file",
-            reqwest::multipart::Part::bytes(request.audio_data.clone())
-                .file_name(request.filename.clone())
-                .mime_str(&request.mime_type)?,
-        );
+    let config = RetryConfig::default();
+    let mut attempt = 0;
 
-    if let Some(lang) = request.language.clone() {
-        form = form.text("language", lang);
+    loop {
+        let mut form = reqwest::multipart::Form::new()
+            .text("model", model.to_string())
+            .part(
+                "file",
+                reqwest::multipart::Part::bytes(request.audio_data.clone())
+                    .file_name(request.filename.clone())
+                    .mime_str(&request.mime_type)?,
+            );
+
+        if let Some(lang) = request.language.clone() {
+            form = form.text("language", lang);
+        }
+
+        // Report transcribing stage
+        request.report(TranscriptionStage::Transcribing);
+
+        let result = client
+            .post(api_url)
+            .header("Authorization", format!("Bearer {api_key}"))
+            .multipart(form)
+            .send()
+            .await;
+
+        match result {
+            Ok(response) => {
+                let status = response.status();
+
+                if status.is_success() {
+                    let text = response
+                        .text()
+                        .await
+                        .context("Failed to get response text")?;
+                    let resp: OpenAICompatibleResponse =
+                        serde_json::from_str(&text).context("Failed to parse API response")?;
+                    return Ok(TranscriptionResult { text: resp.text });
+                }
+
+                // Check if error is retryable
+                if is_retryable_status(status) && attempt < config.max_retries {
+                    let delay = config.delay_for_attempt(attempt, is_rate_limited(status));
+                    crate::verbose!(
+                        "Request failed with {} (attempt {}/{}), retrying in {:?}",
+                        status,
+                        attempt + 1,
+                        config.max_retries,
+                        delay
+                    );
+                    tokio::time::sleep(delay).await;
+                    attempt += 1;
+                    continue;
+                }
+
+                // Non-retryable error or max retries exceeded
+                let error_text = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Unknown error".to_string());
+                anyhow::bail!("API error ({status}): {error_text}");
+            }
+            Err(err) => {
+                // Check if network error is retryable
+                if is_retryable_error(&err) && attempt < config.max_retries {
+                    let delay = config.delay_for_attempt(attempt, false);
+                    crate::verbose!(
+                        "Request failed with network error (attempt {}/{}), retrying in {:?}: {}",
+                        attempt + 1,
+                        config.max_retries,
+                        delay,
+                        err
+                    );
+                    tokio::time::sleep(delay).await;
+                    attempt += 1;
+                    continue;
+                }
+
+                return Err(err).context("Failed to send request");
+            }
+        }
     }
-
-    // Report transcribing stage
-    request.report(TranscriptionStage::Transcribing);
-
-    let response = client
-        .post(api_url)
-        .header("Authorization", format!("Bearer {api_key}"))
-        .multipart(form)
-        .send()
-        .await
-        .context("Failed to send request")?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        anyhow::bail!("API error ({status}): {error_text}");
-    }
-
-    let text = response
-        .text()
-        .await
-        .context("Failed to get response text")?;
-    let resp: OpenAICompatibleResponse =
-        serde_json::from_str(&text).context("Failed to parse API response")?;
-
-    Ok(TranscriptionResult { text: resp.text })
 }

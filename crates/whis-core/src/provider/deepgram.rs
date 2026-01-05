@@ -9,6 +9,7 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::Deserialize;
 
+use super::base::retry::{RetryConfig, is_rate_limited, is_retryable_error, is_retryable_status};
 use super::{
     DEFAULT_TIMEOUT_SECS, TranscriptionBackend, TranscriptionRequest, TranscriptionResult,
     TranscriptionStage,
@@ -76,42 +77,85 @@ impl TranscriptionBackend for DeepgramProvider {
             url.query_pairs_mut().append_pair("language", lang);
         }
 
-        // Report transcribing stage
-        request.report(TranscriptionStage::Transcribing);
+        let config = RetryConfig::default();
+        let mut attempt = 0;
 
-        let response = client
-            .post(url)
-            .header("Authorization", format!("Token {api_key}"))
-            .header("Content-Type", &request.mime_type)
-            .body(request.audio_data.clone())
-            .send()
-            .context("Failed to send request to Deepgram API")?;
+        loop {
+            // Report transcribing stage
+            request.report(TranscriptionStage::Transcribing);
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response
-                .text()
-                .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Deepgram API error ({status}): {error_text}");
+            let result = client
+                .post(url.clone())
+                .header("Authorization", format!("Token {api_key}"))
+                .header("Content-Type", &request.mime_type)
+                .body(request.audio_data.clone())
+                .send();
+
+            match result {
+                Ok(response) => {
+                    let status = response.status();
+
+                    if status.is_success() {
+                        let text = response.text().context("Failed to get response text")?;
+                        let resp: Response = serde_json::from_str(&text)
+                            .context("Failed to parse Deepgram API response")?;
+
+                        let transcript = resp
+                            .results
+                            .channels
+                            .first()
+                            .and_then(|c| c.alternatives.first())
+                            .map(|a| a.transcript.clone())
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Deepgram API returned unexpected response format: no transcript found"
+                                )
+                            })?;
+
+                        return Ok(TranscriptionResult { text: transcript });
+                    }
+
+                    // Check if error is retryable
+                    if is_retryable_status(status) && attempt < config.max_retries {
+                        let delay = config.delay_for_attempt(attempt, is_rate_limited(status));
+                        crate::verbose!(
+                            "Deepgram request failed with {} (attempt {}/{}), retrying in {:?}",
+                            status,
+                            attempt + 1,
+                            config.max_retries,
+                            delay
+                        );
+                        std::thread::sleep(delay);
+                        attempt += 1;
+                        continue;
+                    }
+
+                    // Non-retryable error or max retries exceeded
+                    let error_text = response
+                        .text()
+                        .unwrap_or_else(|_| "Unknown error".to_string());
+                    anyhow::bail!("Deepgram API error ({status}): {error_text}");
+                }
+                Err(err) => {
+                    // Check if network error is retryable
+                    if is_retryable_error(&err) && attempt < config.max_retries {
+                        let delay = config.delay_for_attempt(attempt, false);
+                        crate::verbose!(
+                            "Deepgram request failed with network error (attempt {}/{}), retrying in {:?}: {}",
+                            attempt + 1,
+                            config.max_retries,
+                            delay,
+                            err
+                        );
+                        std::thread::sleep(delay);
+                        attempt += 1;
+                        continue;
+                    }
+
+                    return Err(err).context("Failed to send request to Deepgram API");
+                }
+            }
         }
-
-        let text = response.text().context("Failed to get response text")?;
-        let resp: Response =
-            serde_json::from_str(&text).context("Failed to parse Deepgram API response")?;
-
-        let transcript = resp
-            .results
-            .channels
-            .first()
-            .and_then(|c| c.alternatives.first())
-            .map(|a| a.transcript.clone())
-            .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Deepgram API returned unexpected response format: no transcript found"
-                )
-            })?;
-
-        Ok(TranscriptionResult { text: transcript })
     }
 
     async fn transcribe_async(
@@ -132,46 +176,89 @@ impl TranscriptionBackend for DeepgramProvider {
             url.query_pairs_mut().append_pair("language", lang);
         }
 
-        // Report transcribing stage
-        request.report(TranscriptionStage::Transcribing);
+        let config = RetryConfig::default();
+        let mut attempt = 0;
 
-        let response = client
-            .post(url)
-            .header("Authorization", format!("Token {api_key}"))
-            .header("Content-Type", &request.mime_type)
-            .body(request.audio_data.clone())
-            .send()
-            .await
-            .context("Failed to send request to Deepgram API")?;
+        loop {
+            // Report transcribing stage
+            request.report(TranscriptionStage::Transcribing);
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Deepgram API error ({status}): {error_text}");
+            let result = client
+                .post(url.clone())
+                .header("Authorization", format!("Token {api_key}"))
+                .header("Content-Type", &request.mime_type)
+                .body(request.audio_data.clone())
+                .send()
+                .await;
+
+            match result {
+                Ok(response) => {
+                    let status = response.status();
+
+                    if status.is_success() {
+                        let text = response
+                            .text()
+                            .await
+                            .context("Failed to get response text")?;
+                        let resp: Response = serde_json::from_str(&text)
+                            .context("Failed to parse Deepgram API response")?;
+
+                        let transcript = resp
+                            .results
+                            .channels
+                            .first()
+                            .and_then(|c| c.alternatives.first())
+                            .map(|a| a.transcript.clone())
+                            .ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "Deepgram API returned unexpected response format: no transcript found"
+                                )
+                            })?;
+
+                        return Ok(TranscriptionResult { text: transcript });
+                    }
+
+                    // Check if error is retryable
+                    if is_retryable_status(status) && attempt < config.max_retries {
+                        let delay = config.delay_for_attempt(attempt, is_rate_limited(status));
+                        crate::verbose!(
+                            "Deepgram request failed with {} (attempt {}/{}), retrying in {:?}",
+                            status,
+                            attempt + 1,
+                            config.max_retries,
+                            delay
+                        );
+                        tokio::time::sleep(delay).await;
+                        attempt += 1;
+                        continue;
+                    }
+
+                    // Non-retryable error or max retries exceeded
+                    let error_text = response
+                        .text()
+                        .await
+                        .unwrap_or_else(|_| "Unknown error".to_string());
+                    anyhow::bail!("Deepgram API error ({status}): {error_text}");
+                }
+                Err(err) => {
+                    // Check if network error is retryable
+                    if is_retryable_error(&err) && attempt < config.max_retries {
+                        let delay = config.delay_for_attempt(attempt, false);
+                        crate::verbose!(
+                            "Deepgram request failed with network error (attempt {}/{}), retrying in {:?}: {}",
+                            attempt + 1,
+                            config.max_retries,
+                            delay,
+                            err
+                        );
+                        tokio::time::sleep(delay).await;
+                        attempt += 1;
+                        continue;
+                    }
+
+                    return Err(err).context("Failed to send request to Deepgram API");
+                }
+            }
         }
-
-        let text = response
-            .text()
-            .await
-            .context("Failed to get response text")?;
-        let resp: Response =
-            serde_json::from_str(&text).context("Failed to parse Deepgram API response")?;
-
-        let transcript = resp
-            .results
-            .channels
-            .first()
-            .and_then(|c| c.alternatives.first())
-            .map(|a| a.transcript.clone())
-            .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Deepgram API returned unexpected response format: no transcript found"
-                )
-            })?;
-
-        Ok(TranscriptionResult { text: transcript })
     }
 }
