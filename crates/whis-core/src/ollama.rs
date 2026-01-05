@@ -16,12 +16,11 @@ pub const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
 pub const DEFAULT_OLLAMA_MODEL: &str = "qwen2.5:1.5b";
 
 /// Alternative models for post-processing (name, size, description)
-/// qwen2.5:1.5b is the recommended default; these are additional options
 pub const OLLAMA_MODEL_OPTIONS: &[(&str, &str, &str)] = &[
-    ("qwen2.5:1.5b", "1.0 GB", "Recommended - fast, good quality"),
-    ("qwen2.5:3b", "1.9 GB", "Better quality, still fast"),
-    ("ministral:3b", "1.9 GB", "European model, good quality"),
-    ("gemma2:2b", "1.6 GB", "Google model, efficient"),
+    ("qwen2.5:1.5b", "1.0 GB", ""),
+    ("qwen2.5:3b", "1.9 GB", ""),
+    ("ministral:3b", "1.9 GB", "European"),
+    ("gemma2:2b", "1.6 GB", "Google"),
 ];
 
 /// Timeout for Ollama to start
@@ -261,11 +260,9 @@ pub fn list_models(url: &str) -> Result<Vec<OllamaModel>> {
 
 /// Pull a model from Ollama registry
 ///
-/// Shows progress to stderr.
-/// Note: Uses the ollama CLI for better progress display.
+/// Note: Uses the ollama CLI which displays its own progress output.
+/// Callers should print appropriate status messages with bracket notation.
 pub fn pull_model(_url: &str, model: &str) -> Result<()> {
-    eprintln!("Pulling Ollama model '{}'...", model);
-
     // Use ollama CLI for pulling (better progress display)
     let status = Command::new("ollama")
         .args(["pull", model])
@@ -276,7 +273,6 @@ pub fn pull_model(_url: &str, model: &str) -> Result<()> {
         return Err(anyhow!("Failed to pull model '{}'", model));
     }
 
-    eprintln!("Model '{}' is ready.", model);
     Ok(())
 }
 

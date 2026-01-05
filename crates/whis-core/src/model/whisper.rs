@@ -8,25 +8,25 @@ const MODELS: &[ModelInfo] = &[
     ModelInfo {
         name: "tiny",
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
-        description: "~75 MB - Fastest, lower quality",
+        description: "75 MB",
         size_mb: Some(75),
     },
     ModelInfo {
         name: "base",
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
-        description: "~142 MB - Fast, decent quality",
+        description: "142 MB",
         size_mb: Some(142),
     },
     ModelInfo {
         name: "small",
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
-        description: "~466 MB - Balanced (recommended)",
+        description: "466 MB",
         size_mb: Some(466),
     },
     ModelInfo {
         name: "medium",
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin",
-        description: "~1.5 GB - Better quality, slower",
+        description: "1.5 GB",
         size_mb: Some(1500),
     },
 ];

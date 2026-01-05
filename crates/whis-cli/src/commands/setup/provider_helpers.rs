@@ -21,13 +21,13 @@ pub const PP_PROVIDERS: &[TranscriptionProvider] = &[
 /// Provider descriptions for display
 pub fn provider_description(provider: &TranscriptionProvider) -> &'static str {
     match provider {
-        TranscriptionProvider::OpenAI => "High quality, most popular",
-        TranscriptionProvider::OpenAIRealtime => "Streaming, lower latency",
-        TranscriptionProvider::Mistral => "European provider, good quality",
-        TranscriptionProvider::Groq => "Very fast, good for real-time",
-        TranscriptionProvider::Deepgram => "Fast, good for conversations",
-        TranscriptionProvider::DeepgramRealtime => "Streaming, very fast (~150ms)",
-        TranscriptionProvider::ElevenLabs => "Good multilingual support",
+        TranscriptionProvider::OpenAI => "",
+        TranscriptionProvider::OpenAIRealtime => "Streaming",
+        TranscriptionProvider::Mistral => "",
+        TranscriptionProvider::Groq => "",
+        TranscriptionProvider::Deepgram => "",
+        TranscriptionProvider::DeepgramRealtime => "Streaming",
+        TranscriptionProvider::ElevenLabs => "",
         _ => "",
     }
 }

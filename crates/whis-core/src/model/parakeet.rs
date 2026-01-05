@@ -13,13 +13,13 @@ const MODELS: &[ModelInfo] = &[
     ModelInfo {
         name: "parakeet-v3",
         url: "https://blob.handy.computer/parakeet-v3-int8.tar.gz",
-        description: "~478 MB - Fast & accurate (recommended)",
+        description: "478 MB",
         size_mb: Some(478),
     },
     ModelInfo {
         name: "parakeet-v2",
         url: "https://blob.handy.computer/parakeet-v2-int8.tar.gz",
-        description: "~478 MB - Previous version",
+        description: "478 MB",
         size_mb: Some(478),
     },
 ];
