@@ -50,11 +50,13 @@ function getBubbleState(): BubbleState {
  * Update bubble visual state (safe - catches errors if plugin unavailable).
  */
 async function updateBubbleState() {
+  console.log('[FloatingBubble] updateBubbleState called, state:', getBubbleState())
   try {
     await setBubbleState(getBubbleState())
   }
-  catch {
+  catch (error) {
     // Plugin may not be available
+    console.error('[FloatingBubble] setBubbleState failed:', error)
   }
 }
 

@@ -263,9 +263,11 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
         val args = invoke.parseArgs(StateOptions::class.java)
         
         try {
+            Log.d(TAG, "setBubbleState command received, state: ${args.state}")
             FloatingBubbleService.setState(args.state)
             invoke.resolve()
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to update bubble state: ${e.message}", e)
             invoke.reject("Failed to update bubble state: ${e.message}")
         }
     }

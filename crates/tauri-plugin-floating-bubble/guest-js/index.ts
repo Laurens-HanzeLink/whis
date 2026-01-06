@@ -166,6 +166,7 @@ export type BubbleState = 'idle' | 'recording' | 'processing'
  * ```
  */
 export async function setBubbleState(state: BubbleState): Promise<void> {
+  console.log('[FloatingBubble] setBubbleState invoking:', state)
   await invoke('plugin:floating-bubble|set_bubble_state', { state })
 }
 

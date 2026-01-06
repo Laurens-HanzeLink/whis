@@ -86,8 +86,10 @@ class FloatingBubbleService : Service() {
          */
         fun setState(state: String) {
             val service = instance
+            Log.d(TAG, "setState called with: $state, instance: $service")
             if (service == null) {
                 // Store for later - will be applied when service starts
+                Log.d(TAG, "Instance is null, storing pending state: $state")
                 pendingState = state
                 return
             }
@@ -227,10 +229,12 @@ class FloatingBubbleService : Service() {
         // Apply any pending state that was set before service was ready
         val pending = pendingState
         if (pending != null) {
+            Log.d(TAG, "Applying pending state on bubble creation: $pending")
             pendingState = null
             updateState(pending)
         } else {
             // Apply initial idle state
+            Log.d(TAG, "No pending state, applying initial IDLE")
             applyIdleState()
         }
     }
@@ -352,9 +356,14 @@ class FloatingBubbleService : Service() {
             else -> BubbleState.IDLE
         }
         
-        if (currentState == newState) return
+        Log.d(TAG, "updateState called: $state, current: $currentState")
+        if (currentState == newState) {
+            Log.d(TAG, "State unchanged, skipping")
+            return
+        }
         currentState = newState
         
+        Log.d(TAG, "Changing state from $currentState to $newState")
         // Apply new state (just changes icon color)
         when (newState) {
             BubbleState.IDLE -> applyIdleState()
@@ -368,14 +377,17 @@ class FloatingBubbleService : Service() {
     }
     
     private fun applyIdleState() {
+        Log.d(TAG, "Applying IDLE state")
         bubbleView?.setColorFilter(Companion.colors.idle)
     }
     
     private fun applyRecordingState() {
+        Log.d(TAG, "Applying RECORDING state")
         bubbleView?.setColorFilter(Companion.colors.recording)
     }
     
     private fun applyProcessingState() {
+        Log.d(TAG, "Applying PROCESSING state")
         bubbleView?.setColorFilter(Companion.colors.processing)
     }
     
