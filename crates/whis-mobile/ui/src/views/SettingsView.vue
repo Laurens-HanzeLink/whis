@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { PostProcessor, Provider, SelectOption, TranscriptionMethod } from '../types'
-import { invoke } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import {
+  hasOverlayPermission as checkOverlayPermissionApi,
+  hideBubble as hideBubbleApi,
+  requestOverlayPermission as requestOverlayPermissionApi,
+  showBubble as showBubbleApi,
+} from 'tauri-plugin-floating-bubble'
 import { computed, onMounted, ref } from 'vue'
 import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
@@ -171,7 +176,7 @@ onMounted(async () => {
 // Check if overlay permission is granted
 async function checkOverlayPermission() {
   try {
-    const result = await invoke<{ granted: boolean }>('plugin:floating-bubble|has_overlay_permission')
+    const result = await checkOverlayPermissionApi()
     hasOverlayPermission.value = result.granted
   }
   catch (e) {
@@ -189,7 +194,7 @@ async function handleFloatingBubbleToggle(enabled: boolean) {
     if (!hasOverlayPermission.value) {
       // Request permission - this opens settings
       try {
-        await invoke('plugin:floating-bubble|request_overlay_permission')
+        await requestOverlayPermissionApi()
         // User needs to manually enable permission and return to app
         // Don't enable yet - they need to toggle again after granting permission
         bubbleError.value = 'Please enable "Display over other apps" permission and try again'
@@ -215,9 +220,7 @@ async function handleFloatingBubbleToggle(enabled: boolean) {
 // Show the floating bubble
 async function showBubble() {
   try {
-    await invoke('plugin:floating-bubble|show_bubble', {
-      options: { size: 60, startX: 0, startY: 200 },
-    })
+    await showBubbleApi({ size: 60, startX: 0, startY: 200 })
   }
   catch (e) {
     console.error('Failed to show bubble:', e)
@@ -229,7 +232,7 @@ async function showBubble() {
 // Hide the floating bubble
 async function hideBubble() {
   try {
-    await invoke('plugin:floating-bubble|hide_bubble')
+    await hideBubbleApi()
   }
   catch (e) {
     console.error('Failed to hide bubble:', e)

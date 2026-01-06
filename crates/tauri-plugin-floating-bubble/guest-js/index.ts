@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 
 /**
  * Options for configuring the floating bubble.
@@ -34,7 +35,7 @@ export interface PermissionResponse {
  *
  * @example
  * ```typescript
- * import { showBubble } from '@frankdierolf/tauri-plugin-floating-bubble'
+ * import { showBubble } from 'tauri-plugin-floating-bubble'
  * await showBubble({ size: 60, startX: 0, startY: 100 })
  * ```
  */
@@ -47,7 +48,7 @@ export async function showBubble(options?: BubbleOptions): Promise<void> {
  *
  * @example
  * ```typescript
- * import { hideBubble } from '@frankdierolf/tauri-plugin-floating-bubble'
+ * import { hideBubble } from 'tauri-plugin-floating-bubble'
  * await hideBubble()
  * ```
  */
@@ -62,7 +63,7 @@ export async function hideBubble(): Promise<void> {
  *
  * @example
  * ```typescript
- * import { isBubbleVisible } from '@frankdierolf/tauri-plugin-floating-bubble'
+ * import { isBubbleVisible } from 'tauri-plugin-floating-bubble'
  * const { visible } = await isBubbleVisible()
  * ```
  */
@@ -78,7 +79,7 @@ export async function isBubbleVisible(): Promise<VisibilityResponse> {
  *
  * @example
  * ```typescript
- * import { requestOverlayPermission } from '@frankdierolf/tauri-plugin-floating-bubble'
+ * import { requestOverlayPermission } from 'tauri-plugin-floating-bubble'
  * const { granted } = await requestOverlayPermission()
  * if (granted) {
  *   await showBubble()
@@ -96,10 +97,69 @@ export async function requestOverlayPermission(): Promise<PermissionResponse> {
  *
  * @example
  * ```typescript
- * import { hasOverlayPermission } from '@frankdierolf/tauri-plugin-floating-bubble'
+ * import { hasOverlayPermission } from 'tauri-plugin-floating-bubble'
  * const { granted } = await hasOverlayPermission()
  * ```
  */
 export async function hasOverlayPermission(): Promise<PermissionResponse> {
   return await invoke<PermissionResponse>('plugin:floating-bubble|has_overlay_permission')
+}
+
+/**
+ * Update the bubble's visual state to indicate recording.
+ *
+ * @param recording - Whether the bubble should show recording state
+ *
+ * @example
+ * ```typescript
+ * import { setBubbleRecording } from 'tauri-plugin-floating-bubble'
+ * await setBubbleRecording(true) // Show recording state
+ * await setBubbleRecording(false) // Show idle state
+ * ```
+ */
+export async function setBubbleRecording(recording: boolean): Promise<void> {
+  await invoke('plugin:floating-bubble|set_bubble_recording', { recording })
+}
+
+/**
+ * Event payload when the bubble is clicked.
+ */
+export interface BubbleClickEvent {
+  /** The action that triggered the event */
+  action: 'click'
+}
+
+/**
+ * The event name used for bubble click events.
+ * Can be used with `listen()` from `@tauri-apps/api/event` directly.
+ */
+export const BUBBLE_CLICK_EVENT = 'floating-bubble://click'
+
+/**
+ * Register a listener for bubble click events.
+ *
+ * This uses Tauri's global event system (same pattern as official plugins like plugin-store).
+ *
+ * @param callback - Function to call when the bubble is clicked
+ * @returns A function to unregister the listener
+ *
+ * @example
+ * ```typescript
+ * import { onBubbleClick } from 'tauri-plugin-floating-bubble'
+ *
+ * const unlisten = await onBubbleClick((event) => {
+ *   console.log('Bubble clicked!', event.action)
+ *   // Start/stop recording, etc.
+ * })
+ *
+ * // Later, to stop listening:
+ * unlisten()
+ * ```
+ */
+export async function onBubbleClick(
+  callback: (event: BubbleClickEvent) => void
+): Promise<() => void> {
+  return await listen<BubbleClickEvent>(BUBBLE_CLICK_EVENT, (event) => {
+    callback(event.payload)
+  })
 }

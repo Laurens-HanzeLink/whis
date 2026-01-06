@@ -4,7 +4,11 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
+import android.util.Log
+import android.webkit.WebView
 import androidx.core.content.ContextCompat
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
@@ -51,21 +55,52 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
         @Volatile
         private var pluginInstance: FloatingBubblePlugin? = null
         
+        // Reference to WebView for emitting events via JavaScript
+        @Volatile
+        private var webViewInstance: WebView? = null
+        
         /**
          * Called from FloatingBubbleService when the bubble is clicked.
+         * Emits a global Tauri event via WebView JavaScript evaluation.
          */
         fun sendBubbleClickEvent() {
-            pluginInstance?.let { plugin ->
-                val event = JSObject()
-                event.put("action", "click")
-                plugin.trigger("bubble-click", event)
+            Log.d(TAG, "sendBubbleClickEvent called")
+            val webView = webViewInstance
+            if (webView == null) {
+                Log.w(TAG, "webViewInstance is null - cannot send event")
+                return
+            }
+            
+            // Run on main thread to ensure WebView access is safe
+            Handler(Looper.getMainLooper()).post {
+                try {
+                    // Emit event via Tauri's internal event system (same pattern as plugin-store)
+                    val js = """
+                        (function() {
+                            if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {
+                                window.__TAURI_INTERNALS__.invoke('plugin:event|emit', {
+                                    event: 'floating-bubble://click',
+                                    payload: { action: 'click' }
+                                }).catch(function(e) { console.error('Failed to emit event:', e); });
+                            } else {
+                                console.warn('Tauri internals not available');
+                            }
+                        })();
+                    """.trimIndent()
+                    webView.evaluateJavascript(js, null)
+                    Log.d(TAG, "Event emitted via WebView JS")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error emitting bubble-click event", e)
+                }
             }
         }
     }
     
-    override fun load(webView: android.webkit.WebView) {
+    override fun load(webView: WebView) {
         super.load(webView)
         pluginInstance = this
+        webViewInstance = webView
+        Log.d(TAG, "Plugin loaded, webViewInstance set")
     }
 
     /**

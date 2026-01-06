@@ -9,7 +9,9 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
@@ -42,9 +44,20 @@ class FloatingBubbleService : Service() {
         
         /**
          * Update the bubble's recording state from outside the service.
+         * Runs on main thread to safely update UI.
          */
         fun setRecordingState(recording: Boolean) {
-            instance?.updateRecordingState(recording)
+            Log.d(TAG, "setRecordingState called: $recording")
+            val service = instance
+            if (service == null) {
+                Log.w(TAG, "Service instance is null - cannot update recording state")
+                return
+            }
+            
+            // Run on main thread to safely update UI
+            Handler(Looper.getMainLooper()).post {
+                service.updateRecordingState(recording)
+            }
         }
     }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
+import { onBubbleClick, setBubbleRecording } from 'tauri-plugin-floating-bubble'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { headerStore } from './stores/header'
@@ -48,32 +48,33 @@ onMounted(async () => {
   // Warm up HTTP client and cloud connections in background
   invoke('warmup_connections').catch(console.error)
 
-  // Listen for bubble-click events from the floating bubble
-  unlistenBubbleClick = await listen('bubble-click', async () => {
-    console.log('Bubble clicked - toggling recording')
-    const started = await recordingStore.toggleRecording()
+  // Listen for bubble-click events from the floating bubble plugin
+  try {
+    unlistenBubbleClick = await onBubbleClick(async (event) => {
+      console.log('Bubble clicked:', event.action)
+      const started = await recordingStore.toggleRecording()
 
-    // Update bubble appearance based on recording state
-    try {
-      await invoke('plugin:floating-bubble|set_bubble_recording', {
-        recording: started,
-      })
-    }
-    catch (e) {
-      // Command may not exist yet, ignore
-      console.log('Could not update bubble state:', e)
-    }
-  })
+      // Update bubble appearance based on recording state
+      try {
+        await setBubbleRecording(started)
+      }
+      catch (e) {
+        console.log('Could not update bubble state:', e)
+      }
+    })
+    console.log('Successfully registered bubble click listener')
+  }
+  catch (e) {
+    console.error('Failed to register bubble click listener:', e)
+  }
 
   // Watch recording state to update bubble appearance
   watch(() => recordingStore.state.isRecording, async (isRecording) => {
     try {
-      await invoke('plugin:floating-bubble|set_bubble_recording', {
-        recording: isRecording,
-      })
+      await setBubbleRecording(isRecording)
     }
     catch (e) {
-      // Command may not exist yet, ignore
+      // Plugin may not be available, ignore
     }
   })
 })
