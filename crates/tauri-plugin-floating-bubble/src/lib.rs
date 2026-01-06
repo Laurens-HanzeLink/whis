@@ -21,8 +21,8 @@
 //! ```
 
 use tauri::{
-    Manager, Runtime,
     plugin::{Builder, TauriPlugin},
+    Manager, Runtime,
 };
 
 pub use models::*;
@@ -64,6 +64,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::request_overlay_permission,
             commands::has_overlay_permission,
             commands::set_bubble_recording,
+            commands::set_bubble_state,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

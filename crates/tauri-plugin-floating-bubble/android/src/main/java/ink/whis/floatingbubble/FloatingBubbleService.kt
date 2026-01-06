@@ -19,12 +19,35 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+
+/**
+ * Bubble state enum for visual representation.
+ */
+enum class BubbleState {
+    IDLE,
+    RECORDING,
+    PROCESSING
+}
+
+/**
+ * Configuration for bubble colors.
+ */
+data class BubbleColors(
+    val background: Int = Color.parseColor("#1C1C1C"),
+    val idle: Int = Color.WHITE,
+    val recording: Int = Color.parseColor("#FF4444"),
+    val processing: Int = Color.parseColor("#FFD633")
+)
 
 /**
  * Foreground service that manages the floating bubble overlay.
  *
  * Uses standard Android WindowManager to create a draggable floating bubble.
- * This approach avoids external library dependencies.
+ * Visual states (background stays constant, only icon color changes):
+ * - Idle: Default icon color (configurable, default white)
+ * - Recording: Recording icon color (configurable, default red)
+ * - Processing: Processing icon color (configurable, default gold)
  */
 class FloatingBubbleService : Service() {
 
@@ -37,27 +60,48 @@ class FloatingBubbleService : Service() {
         var bubbleSize: Int = 60
         var bubbleStartX: Int = 0
         var bubbleStartY: Int = 100
+        var iconResourceName: String? = null
+        var colors: BubbleColors = BubbleColors()
         
         // Reference to the current service instance for state updates
         @Volatile
         private var instance: FloatingBubbleService? = null
         
+        // Store pending state when service isn't ready yet
+        @Volatile
+        private var pendingState: String? = null
+        
         /**
          * Update the bubble's recording state from outside the service.
-         * Runs on main thread to safely update UI.
+         * @deprecated Use setState instead
          */
         fun setRecordingState(recording: Boolean) {
-            Log.d(TAG, "setRecordingState called: $recording")
+            setState(if (recording) "recording" else "idle")
+        }
+        
+        /**
+         * Update the bubble's state from outside the service.
+         * Runs on main thread to safely update UI.
+         * If service isn't ready, stores the state for later application.
+         */
+        fun setState(state: String) {
             val service = instance
             if (service == null) {
-                Log.w(TAG, "Service instance is null - cannot update recording state")
+                // Store for later - will be applied when service starts
+                pendingState = state
                 return
             }
             
-            // Run on main thread to safely update UI
             Handler(Looper.getMainLooper()).post {
-                service.updateRecordingState(recording)
+                service.updateState(state)
             }
+        }
+        
+        /**
+         * Reset static state when service is fully destroyed.
+         */
+        fun resetState() {
+            pendingState = null
         }
     }
 
@@ -65,17 +109,12 @@ class FloatingBubbleService : Service() {
     private var bubbleView: ImageView? = null
     private var bubbleBackground: GradientDrawable? = null
     private var layoutParams: WindowManager.LayoutParams? = null
-    private var isRecording: Boolean = false
-    
-    // Colors
-    private val colorIdle = Color.parseColor("#6366F1")      // Indigo-500
-    private val colorRecording = Color.parseColor("#EF4444") // Red-500
+    private var currentState: BubbleState = BubbleState.IDLE
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "Service created")
         instance = this
         
         createNotificationChannel()
@@ -87,7 +126,6 @@ class FloatingBubbleService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "Service destroyed")
         instance = null
         removeBubble()
         FloatingBubblePlugin.isBubbleVisible = false
@@ -110,26 +148,52 @@ class FloatingBubbleService : Service() {
 
     private fun createBubble() {
         val density = resources.displayMetrics.density
-        val sizePx = (bubbleSize * density).toInt()
+        val sizePx = (Companion.bubbleSize * density).toInt()
+        val currentColors = Companion.colors
+        val currentIconResourceName = Companion.iconResourceName
 
-        // Create circular background
+        // Create circular background with configured color
         bubbleBackground = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            setColor(colorIdle)
+            setColor(currentColors.background)
         }
 
-        // Create bubble view
+        // Create bubble view with icon
         bubbleView = ImageView(this).apply {
             background = bubbleBackground
 
-            // Microphone icon
-            setImageResource(android.R.drawable.ic_btn_speak_now)
+            // Load icon by resource name, fallback to default
+            val iconResId = if (!currentIconResourceName.isNullOrEmpty()) {
+                resources.getIdentifier(
+                    currentIconResourceName,
+                    "drawable",
+                    packageName
+                )
+            } else {
+                0
+            }
+            
+            if (iconResId != 0) {
+                try {
+                    val iconDrawable = ContextCompat.getDrawable(
+                        this@FloatingBubbleService,
+                        iconResId
+                    )
+                    setImageDrawable(iconDrawable)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to load icon: $currentIconResourceName", e)
+                    loadDefaultIcon()
+                }
+            } else {
+                // Try plugin's default icon, then fallback to system icon
+                loadDefaultIcon()
+            }
+            
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            val padding = (sizePx * 0.2).toInt()
+            val padding = (sizePx * 0.22).toInt()
             setPadding(padding, padding, padding, padding)
-            setColorFilter(Color.WHITE)
 
-            contentDescription = "Voice input bubble"
+            contentDescription = "Floating bubble"
         }
 
         // Window layout params for overlay
@@ -149,8 +213,8 @@ class FloatingBubbleService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = (bubbleStartX * density).toInt()
-            y = (bubbleStartY * density).toInt()
+            x = (Companion.bubbleStartX * density).toInt()
+            y = (Companion.bubbleStartY * density).toInt()
         }
 
         // Add touch listener for dragging
@@ -160,7 +224,43 @@ class FloatingBubbleService : Service() {
         windowManager?.addView(bubbleView, layoutParams)
         FloatingBubblePlugin.isBubbleVisible = true
         
-        Log.d(TAG, "Bubble created at ($bubbleStartX, $bubbleStartY)")
+        // Apply any pending state that was set before service was ready
+        val pending = pendingState
+        if (pending != null) {
+            pendingState = null
+            updateState(pending)
+        } else {
+            // Apply initial idle state
+            applyIdleState()
+        }
+    }
+    
+    /**
+     * Load the plugin's default icon or fallback to system icon.
+     */
+    private fun ImageView.loadDefaultIcon() {
+        // Try plugin's default icon first
+        val defaultResId = resources.getIdentifier(
+            "ic_floating_bubble_default",
+            "drawable",
+            packageName
+        )
+        
+        if (defaultResId != 0) {
+            try {
+                val defaultDrawable = ContextCompat.getDrawable(
+                    this@FloatingBubbleService,
+                    defaultResId
+                )
+                setImageDrawable(defaultDrawable)
+                return
+            } catch (e: Exception) {
+                // Fall through to system icon
+            }
+        }
+        
+        // Fallback to system icon
+        setImageResource(android.R.drawable.ic_btn_speak_now)
     }
 
     private fun removeBubble() {
@@ -211,10 +311,8 @@ class FloatingBubbleService : Service() {
                 }
                 MotionEvent.ACTION_UP -> {
                     if (!isDragging) {
-                        // It was a click, not a drag
                         handleBubbleClick()
                     } else {
-                        // Animate to edge (snap to left or right)
                         animateToEdge()
                     }
                     return true
@@ -225,8 +323,6 @@ class FloatingBubbleService : Service() {
     }
 
     private fun handleBubbleClick() {
-        Log.d(TAG, "Bubble clicked")
-        // Send event to the Tauri app
         FloatingBubblePlugin.sendBubbleClickEvent()
     }
 
@@ -235,11 +331,10 @@ class FloatingBubbleService : Service() {
         val bubbleWidth = bubbleView?.width ?: 0
         val currentX = layoutParams?.x ?: 0
         
-        // Snap to nearest edge
         val targetX = if (currentX + bubbleWidth / 2 < screenWidth / 2) {
-            0 // Snap to left
+            0
         } else {
-            screenWidth - bubbleWidth // Snap to right
+            screenWidth - bubbleWidth
         }
         
         layoutParams?.x = targetX
@@ -247,31 +342,49 @@ class FloatingBubbleService : Service() {
     }
     
     /**
-     * Update the visual state of the bubble based on recording state.
+     * Update the visual state of the bubble.
+     * Only changes icon color - background stays constant.
      */
-    private fun updateRecordingState(recording: Boolean) {
-        if (isRecording == recording) return
-        isRecording = recording
+    private fun updateState(state: String) {
+        val newState = when (state.lowercase()) {
+            "recording" -> BubbleState.RECORDING
+            "processing" -> BubbleState.PROCESSING
+            else -> BubbleState.IDLE
+        }
         
-        Log.d(TAG, "Recording state changed: $recording")
+        if (currentState == newState) return
+        currentState = newState
         
-        // Update bubble color
-        bubbleBackground?.setColor(if (recording) colorRecording else colorIdle)
-        
-        // Update icon - use stop icon when recording
-        bubbleView?.setImageResource(
-            if (recording) android.R.drawable.ic_media_pause
-            else android.R.drawable.ic_btn_speak_now
-        )
+        // Apply new state (just changes icon color)
+        when (newState) {
+            BubbleState.IDLE -> applyIdleState()
+            BubbleState.RECORDING -> applyRecordingState()
+            BubbleState.PROCESSING -> applyProcessingState()
+        }
         
         // Update notification
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.notify(NOTIFICATION_ID, createNotification())
     }
     
+    private fun applyIdleState() {
+        bubbleView?.setColorFilter(Companion.colors.idle)
+    }
+    
+    private fun applyRecordingState() {
+        bubbleView?.setColorFilter(Companion.colors.recording)
+    }
+    
+    private fun applyProcessingState() {
+        bubbleView?.setColorFilter(Companion.colors.processing)
+    }
+    
     private fun createNotification(): Notification {
-        val title = if (isRecording) "Recording..." else "Whis Voice Input"
-        val text = if (isRecording) "Tap bubble to stop" else "Tap the bubble to start recording"
+        val (title, text) = when (currentState) {
+            BubbleState.RECORDING -> "Recording..." to "Tap bubble to stop"
+            BubbleState.PROCESSING -> "Processing..." to "Transcribing your voice"
+            BubbleState.IDLE -> "Floating Bubble" to "Tap the bubble to interact"
+        }
         
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)

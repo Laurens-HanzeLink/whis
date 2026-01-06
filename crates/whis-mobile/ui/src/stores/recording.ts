@@ -27,11 +27,17 @@ const MIN_RECORDING_DURATION_MS = 500
 // Event listener cleanup functions
 let cleanupListeners: (() => void)[] = []
 
+// Guard against double initialization
+let initialized = false
+
 /**
  * Initialize the recording store - sets up event listeners.
  * Should be called once at app startup.
  */
 async function initialize() {
+  if (initialized) return
+  initialized = true
+
   // Check initial config validity
   await checkConfig()
 
@@ -67,6 +73,7 @@ async function initialize() {
 function cleanup() {
   cleanupListeners.forEach(fn => fn())
   cleanupListeners = []
+  initialized = false
 
   if (audioStreamer) {
     audioStreamer.stop()

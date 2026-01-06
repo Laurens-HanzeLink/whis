@@ -2,6 +2,7 @@ package ink.whis.floatingbubble
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -18,6 +19,17 @@ import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 
 /**
+ * Color configuration for bubble states.
+ */
+@InvokeArg
+class ColorsOptions {
+    var background: String? = null
+    var idle: String? = null
+    var recording: String? = null
+    var processing: String? = null
+}
+
+/**
  * Options for showing the floating bubble.
  */
 @InvokeArg
@@ -25,10 +37,13 @@ class BubbleOptions {
     var size: Int = 60
     var startX: Int = 0
     var startY: Int = 100
+    var iconResourceName: String? = null
+    var colors: ColorsOptions? = null
 }
 
 /**
  * Options for setting recording state.
+ * @deprecated Use StateOptions instead
  */
 @InvokeArg
 class RecordingOptions {
@@ -36,9 +51,17 @@ class RecordingOptions {
 }
 
 /**
+ * Options for setting bubble state.
+ */
+@InvokeArg
+class StateOptions {
+    var state: String = "idle"
+}
+
+/**
  * Tauri plugin for displaying floating bubble overlays on Android.
  *
- * This plugin uses the FloatingBubbleView library to show a draggable bubble
+ * This plugin uses Android's WindowManager to show a draggable bubble
  * that persists across apps using the SYSTEM_ALERT_WINDOW permission.
  */
 @TauriPlugin
@@ -64,12 +87,7 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
          * Emits a global Tauri event via WebView JavaScript evaluation.
          */
         fun sendBubbleClickEvent() {
-            Log.d(TAG, "sendBubbleClickEvent called")
-            val webView = webViewInstance
-            if (webView == null) {
-                Log.w(TAG, "webViewInstance is null - cannot send event")
-                return
-            }
+            val webView = webViewInstance ?: return
             
             // Run on main thread to ensure WebView access is safe
             Handler(Looper.getMainLooper()).post {
@@ -82,13 +100,10 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
                                     event: 'floating-bubble://click',
                                     payload: { action: 'click' }
                                 }).catch(function(e) { console.error('Failed to emit event:', e); });
-                            } else {
-                                console.warn('Tauri internals not available');
                             }
                         })();
                     """.trimIndent()
                     webView.evaluateJavascript(js, null)
-                    Log.d(TAG, "Event emitted via WebView JS")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error emitting bubble-click event", e)
                 }
@@ -100,7 +115,6 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
         super.load(webView)
         pluginInstance = this
         webViewInstance = webView
-        Log.d(TAG, "Plugin loaded, webViewInstance set")
     }
 
     /**
@@ -121,6 +135,20 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
             FloatingBubbleService.bubbleSize = args.size
             FloatingBubbleService.bubbleStartX = args.startX
             FloatingBubbleService.bubbleStartY = args.startY
+            FloatingBubbleService.iconResourceName = args.iconResourceName
+            
+            // Parse colors if provided
+            val colorsOpts = args.colors
+            if (colorsOpts != null) {
+                FloatingBubbleService.colors = BubbleColors(
+                    background = parseColor(colorsOpts.background, "#1C1C1C"),
+                    idle = parseColor(colorsOpts.idle, "#FFFFFF"),
+                    recording = parseColor(colorsOpts.recording, "#FF4444"),
+                    processing = parseColor(colorsOpts.processing, "#FFD633")
+                )
+            } else {
+                FloatingBubbleService.colors = BubbleColors()
+            }
 
             // Start the floating bubble service
             val intent = Intent(activity, FloatingBubbleService::class.java)
@@ -130,6 +158,17 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
             invoke.resolve()
         } catch (e: Exception) {
             invoke.reject("Failed to start bubble service: ${e.message}")
+        }
+    }
+    
+    /**
+     * Parse a color string to an Int, with fallback.
+     */
+    private fun parseColor(color: String?, default: String): Int {
+        return try {
+            Color.parseColor(color ?: default)
+        } catch (e: Exception) {
+            Color.parseColor(default)
         }
     }
 
@@ -142,6 +181,7 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
             val intent = Intent(activity, FloatingBubbleService::class.java)
             activity.stopService(intent)
             isBubbleVisible = false
+            FloatingBubbleService.resetState()
             invoke.resolve()
         } catch (e: Exception) {
             invoke.reject("Failed to stop bubble service: ${e.message}")
@@ -200,6 +240,7 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
 
     /**
      * Update the bubble's visual state to indicate recording.
+     * @deprecated Use setBubbleState instead
      */
     @Command
     fun setBubbleRecording(invoke: Invoke) {
@@ -207,6 +248,22 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
         
         try {
             FloatingBubbleService.setRecordingState(args.recording)
+            invoke.resolve()
+        } catch (e: Exception) {
+            invoke.reject("Failed to update bubble state: ${e.message}")
+        }
+    }
+
+    /**
+     * Update the bubble's visual state.
+     * Valid states: "idle", "recording", "processing"
+     */
+    @Command
+    fun setBubbleState(invoke: Invoke) {
+        val args = invoke.parseArgs(StateOptions::class.java)
+        
+        try {
+            FloatingBubbleService.setState(args.state)
             invoke.resolve()
         } catch (e: Exception) {
             invoke.reject("Failed to update bubble state: ${e.message}")

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core'
-import { onBubbleClick, setBubbleRecording } from 'tauri-plugin-floating-bubble'
+import type { BubbleState } from 'tauri-plugin-floating-bubble'
+import { onBubbleClick, setBubbleState } from 'tauri-plugin-floating-bubble'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { headerStore } from './stores/header'
@@ -36,6 +37,27 @@ function closeSidebar() {
   sidebarOpen.value = false
 }
 
+/**
+ * Determine the bubble state based on recording store state.
+ */
+function getBubbleState(): BubbleState {
+  if (recordingStore.state.isRecording) return 'recording'
+  if (recordingStore.state.isTranscribing || recordingStore.state.isPostProcessing) return 'processing'
+  return 'idle'
+}
+
+/**
+ * Update bubble visual state (safe - catches errors if plugin unavailable).
+ */
+async function updateBubbleState() {
+  try {
+    await setBubbleState(getBubbleState())
+  }
+  catch {
+    // Plugin may not be available
+  }
+}
+
 // Close sidebar on route change
 watch(() => route.path, () => {
   closeSidebar()
@@ -46,37 +68,29 @@ onMounted(async () => {
   await recordingStore.initialize()
 
   // Warm up HTTP client and cloud connections in background
-  invoke('warmup_connections').catch(console.error)
+  invoke('warmup_connections').catch(() => {})
 
   // Listen for bubble-click events from the floating bubble plugin
   try {
-    unlistenBubbleClick = await onBubbleClick(async (event) => {
-      console.log('Bubble clicked:', event.action)
-      const started = await recordingStore.toggleRecording()
-
-      // Update bubble appearance based on recording state
-      try {
-        await setBubbleRecording(started)
-      }
-      catch (e) {
-        console.log('Could not update bubble state:', e)
-      }
+    unlistenBubbleClick = await onBubbleClick(async () => {
+      await recordingStore.toggleRecording()
+      // State will be updated by the watcher below
     })
-    console.log('Successfully registered bubble click listener')
   }
-  catch (e) {
-    console.error('Failed to register bubble click listener:', e)
+  catch {
+    // Plugin may not be available on this platform
   }
 
-  // Watch recording state to update bubble appearance
-  watch(() => recordingStore.state.isRecording, async (isRecording) => {
-    try {
-      await setBubbleRecording(isRecording)
-    }
-    catch (e) {
-      // Plugin may not be available, ignore
-    }
-  })
+  // Watch all recording states to update bubble appearance
+  watch(
+    () => [
+      recordingStore.state.isRecording,
+      recordingStore.state.isTranscribing,
+      recordingStore.state.isPostProcessing,
+    ],
+    () => updateBubbleState(),
+    { immediate: true },
+  )
 })
 
 onUnmounted(() => {

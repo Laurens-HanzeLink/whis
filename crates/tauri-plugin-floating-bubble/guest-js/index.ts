@@ -2,6 +2,21 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
 /**
+ * Color configuration for bubble states.
+ * All colors are hex strings (e.g., "#FF4444").
+ */
+export interface BubbleColors {
+  /** Background color. Default: "#1C1C1C" (dark) */
+  background?: string
+  /** Icon color for idle state. Default: "#FFFFFF" (white) */
+  idle?: string
+  /** Icon color for recording state. Default: "#FF4444" (red) */
+  recording?: string
+  /** Icon color for processing state. Default: "#FFD633" (gold) */
+  processing?: string
+}
+
+/**
  * Options for configuring the floating bubble.
  */
 export interface BubbleOptions {
@@ -11,6 +26,14 @@ export interface BubbleOptions {
   startX?: number
   /** Initial Y position. Default: 100 */
   startY?: number
+  /**
+   * Android drawable resource name for the icon (without "R.drawable." prefix).
+   * If not specified, uses the plugin's default icon.
+   * Example: "ic_my_app_logo"
+   */
+  iconResourceName?: string
+  /** Color configuration for different bubble states. */
+  colors?: BubbleColors
 }
 
 /**
@@ -36,7 +59,23 @@ export interface PermissionResponse {
  * @example
  * ```typescript
  * import { showBubble } from 'tauri-plugin-floating-bubble'
- * await showBubble({ size: 60, startX: 0, startY: 100 })
+ *
+ * // Basic usage with defaults
+ * await showBubble()
+ *
+ * // With custom icon and colors
+ * await showBubble({
+ *   size: 60,
+ *   startX: 0,
+ *   startY: 200,
+ *   iconResourceName: 'ic_my_logo',
+ *   colors: {
+ *     background: '#1C1C1C',
+ *     idle: '#FFFFFF',
+ *     recording: '#FF4444',
+ *     processing: '#FFD633'
+ *   }
+ * })
  * ```
  */
 export async function showBubble(options?: BubbleOptions): Promise<void> {
@@ -106,8 +145,34 @@ export async function hasOverlayPermission(): Promise<PermissionResponse> {
 }
 
 /**
+ * Bubble visual state.
+ * - idle: Default state with idle color
+ * - recording: Active recording state with recording color
+ * - processing: Processing/transcribing state with processing color
+ */
+export type BubbleState = 'idle' | 'recording' | 'processing'
+
+/**
+ * Update the bubble's visual state.
+ *
+ * @param state - The visual state to apply
+ *
+ * @example
+ * ```typescript
+ * import { setBubbleState } from 'tauri-plugin-floating-bubble'
+ * await setBubbleState('idle')       // Default state
+ * await setBubbleState('recording')  // Recording state
+ * await setBubbleState('processing') // Processing state
+ * ```
+ */
+export async function setBubbleState(state: BubbleState): Promise<void> {
+  await invoke('plugin:floating-bubble|set_bubble_state', { state })
+}
+
+/**
  * Update the bubble's visual state to indicate recording.
  *
+ * @deprecated Use setBubbleState() instead for more control
  * @param recording - Whether the bubble should show recording state
  *
  * @example
@@ -118,7 +183,7 @@ export async function hasOverlayPermission(): Promise<PermissionResponse> {
  * ```
  */
 export async function setBubbleRecording(recording: boolean): Promise<void> {
-  await invoke('plugin:floating-bubble|set_bubble_recording', { recording })
+  await setBubbleState(recording ? 'recording' : 'idle')
 }
 
 /**

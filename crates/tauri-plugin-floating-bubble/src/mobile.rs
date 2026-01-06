@@ -1,7 +1,7 @@
 use serde::de::DeserializeOwned;
 use tauri::{
-    AppHandle, Runtime,
     plugin::{PluginApi, PluginHandle},
+    AppHandle, Runtime,
 };
 
 use crate::models::*;
@@ -65,6 +65,13 @@ impl<R: Runtime> FloatingBubble<R> {
     pub fn set_recording(&self, recording: bool) -> crate::Result<()> {
         self.0
             .run_mobile_plugin("setBubbleRecording", RecordingOptions { recording })
+            .map_err(Into::into)
+    }
+
+    /// Set the bubble's visual state (idle, recording, processing).
+    pub fn set_state(&self, state: String) -> crate::Result<()> {
+        self.0
+            .run_mobile_plugin("setBubbleState", StateOptions { state })
             .map_err(Into::into)
     }
 }

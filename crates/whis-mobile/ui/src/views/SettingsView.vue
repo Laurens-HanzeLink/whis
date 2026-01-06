@@ -217,10 +217,21 @@ async function handleFloatingBubbleToggle(enabled: boolean) {
   }
 }
 
-// Show the floating bubble
+// Show the floating bubble with Whis-specific configuration
 async function showBubble() {
   try {
-    await showBubbleApi({ size: 60, startX: 0, startY: 200 })
+    await showBubbleApi({
+      size: 60,
+      startX: 0,
+      startY: 200,
+      iconResourceName: 'ic_whis_logo',
+      colors: {
+        background: '#1C1C1C',
+        idle: '#FFFFFF',
+        recording: '#FF4444',
+        processing: '#FFD633',
+      },
+    })
   }
   catch (e) {
     console.error('Failed to show bubble:', e)
