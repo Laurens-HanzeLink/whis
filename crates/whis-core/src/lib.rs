@@ -4,6 +4,7 @@ pub mod clipboard;
 pub mod config;
 pub mod defaults;
 pub mod error;
+pub mod http;
 pub mod model;
 pub mod ollama;
 pub mod ollama_manager;
@@ -15,6 +16,7 @@ pub mod settings;
 pub mod state;
 pub mod transcribe;
 pub mod verbose;
+pub mod warmup;
 
 pub use audio::{
     AudioChunk, AudioDeviceInfo, AudioRecorder, ChunkerConfig, ProgressiveChunk,
@@ -25,6 +27,7 @@ pub use audio::{
 pub use clipboard::{ClipboardMethod, copy_to_clipboard};
 pub use config::TranscriptionProvider;
 pub use error::{AudioError, ProviderError, Result, WhisError};
+pub use http::{get_http_client, is_http_client_ready, warmup_http_client};
 pub use ollama_manager::{clear_warmup_cache, preload_ollama};
 pub use post_processing::{DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, post_process};
 pub use preset::{Preset, PresetSource};
@@ -53,6 +56,7 @@ pub use transcribe::{
 #[cfg(feature = "local-transcription")]
 pub use transcribe::{LocalAudioChunk, progressive_transcribe_local};
 pub use verbose::set_verbose;
+pub use warmup::{WarmupConfig, warmup_configured};
 
 // Re-export defaults for convenience
 pub use defaults::{

@@ -2,6 +2,8 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+use crate::http::get_http_client;
+
 const OPENAI_CHAT_URL: &str = "https://api.openai.com/v1/chat/completions";
 const MISTRAL_CHAT_URL: &str = "https://api.mistral.ai/v1/chat/completions";
 const DEFAULT_TIMEOUT_SECS: u64 = 60;
@@ -105,7 +107,7 @@ async fn post_process_openai(
     model: Option<&str>,
 ) -> Result<String> {
     let model = model.unwrap_or(DEFAULT_OPENAI_MODEL);
-    let client = reqwest::Client::new();
+    let client = get_http_client()?;
     let response = client
         .post(OPENAI_CHAT_URL)
         .header("Authorization", format!("Bearer {}", api_key))
@@ -142,7 +144,7 @@ async fn post_process_mistral(
     model: Option<&str>,
 ) -> Result<String> {
     let model = model.unwrap_or(DEFAULT_MISTRAL_MODEL);
-    let client = reqwest::Client::new();
+    let client = get_http_client()?;
     let response = client
         .post(MISTRAL_CHAT_URL)
         .header("Authorization", format!("Bearer {}", api_key))
@@ -197,7 +199,7 @@ async fn post_process_ollama(
     };
     let url = format!("{}/api/chat", base_url.trim_end_matches('/'));
 
-    let client = reqwest::Client::new();
+    let client = get_http_client()?;
     let response = client
         .post(&url)
         .json(&serde_json::json!({

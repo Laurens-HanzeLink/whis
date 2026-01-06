@@ -20,46 +20,12 @@ use tokio::sync::Semaphore;
 
 use crate::audio::AudioChunk;
 use crate::config::TranscriptionProvider;
-use crate::provider::{DEFAULT_TIMEOUT_SECS, ProgressCallback, TranscriptionRequest, registry};
+use crate::http::get_http_client;
+use crate::provider::{ProgressCallback, TranscriptionRequest, registry};
 
 /// Maximum concurrent API requests
 const MAX_CONCURRENT_REQUESTS: usize = 3;
 
-/// Create an HTTP client configured for the current platform.
-///
-/// On mobile (embedded-encoder feature), uses bundled Mozilla CA certificates
-/// to avoid Android's platform verifier JNI initialization issues.
-/// On desktop, uses the default platform certificate verifier.
-fn create_http_client() -> Result<reqwest::Client> {
-    #[cfg(feature = "embedded-encoder")]
-    {
-        // Mobile: Use bundled webpki-roots to avoid Android TLS issues
-        // Build root certificate store from Mozilla's CA bundle
-        let mut root_store = rustls::RootCertStore::empty();
-        root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-
-        // Build rustls config with the bundled roots
-        let tls_config = rustls::ClientConfig::builder()
-            .with_root_certificates(root_store)
-            .with_no_client_auth();
-
-        // Create reqwest client with pre-configured TLS
-        reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(DEFAULT_TIMEOUT_SECS))
-            .use_preconfigured_tls(tls_config)
-            .build()
-            .context("Failed to create HTTP client")
-    }
-
-    #[cfg(not(feature = "embedded-encoder"))]
-    {
-        // Desktop: Use default platform verifier
-        reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(DEFAULT_TIMEOUT_SECS))
-            .build()
-            .context("Failed to create HTTP client")
-    }
-}
 /// Maximum words to search for overlap between chunks
 const MAX_OVERLAP_WORDS: usize = 15;
 
@@ -143,10 +109,10 @@ pub async fn transcribe_audio_async(
         progress: None,
     };
 
-    let client = create_http_client()?;
+    let client = get_http_client()?;
 
     let result = provider_impl
-        .transcribe_async(&client, api_key, request)
+        .transcribe_async(client, api_key, request)
         .await?;
     Ok(result.text)
 }
@@ -169,12 +135,12 @@ pub async fn batch_transcribe(
 ) -> Result<String> {
     let total_chunks = chunks.len();
 
-    // Create shared HTTP client
-    let client = create_http_client()?;
+    // Get global HTTP client
+    let client = get_http_client()?;
 
     // Semaphore to limit concurrent requests
     let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_REQUESTS));
-    let client = Arc::new(client);
+    let client = Arc::new(client.clone());
     let api_key = Arc::new(api_key.to_string());
     let language = language.map(|s| Arc::new(s.to_string()));
     let provider_impl = registry().get_by_kind(provider)?;
@@ -382,8 +348,8 @@ pub async fn progressive_transcribe_cloud(
     mut chunk_rx: tokio::sync::mpsc::UnboundedReceiver<ProgressiveChunk>,
     progress_callback: Option<Box<dyn Fn(usize, usize) + Send + Sync>>,
 ) -> Result<String> {
-    // Create shared HTTP client
-    let client = Arc::new(create_http_client()?);
+    // Get global HTTP client
+    let client = Arc::new(get_http_client()?.clone());
 
     // Semaphore to limit concurrent requests (max 3)
     let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_REQUESTS));
