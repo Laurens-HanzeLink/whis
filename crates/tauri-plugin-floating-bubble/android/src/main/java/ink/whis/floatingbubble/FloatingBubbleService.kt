@@ -1,6 +1,26 @@
 package ink.whis.floatingbubble
-
+ 
 import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Intent
+import android.graphics.Color
+import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.util.Log
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
+import android.widget.ImageView
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import app.tauri.annotation.InvokeArg
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -22,20 +42,10 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 
 /**
- * Configuration for a specific bubble state.
- */
-data class StateConfig(
-    val iconResourceName: String? = null
-)
-
-/**
  * Foreground service that manages the floating bubble overlay.
  *
  * Uses standard Android WindowManager to create a draggable floating bubble.
- * Visual states (background stays constant, only icon color changes):
- * - Idle: Default icon color (configurable, default white)
- * - Recording: Recording icon color (configurable, default red)
- * - Processing: Processing icon color (configurable, default gold)
+ * Visual states change based on configured icons for each state.
  */
 class FloatingBubbleService : Service() {
 
@@ -206,7 +216,7 @@ class FloatingBubbleService : Service() {
         // Add to window
         windowManager?.addView(bubbleView, layoutParams)
         FloatingBubblePlugin.isBubbleVisible = true
-        
+
         // Apply any pending state that was set before service was ready
         val pending = pendingState
         if (pending != null) {
@@ -216,7 +226,7 @@ class FloatingBubbleService : Service() {
         } else {
             // Apply initial idle state
             Log.d(TAG, "No pending state, applying initial IDLE")
-            applyIdleState()
+            currentStateName = "idle"
         }
     }
     
