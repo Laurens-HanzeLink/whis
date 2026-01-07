@@ -13,6 +13,9 @@
 # Generated Icons (Keep sources)
 /gen/android/app/src/main/res/mipmap-*/
 /icons/*.png
+/icons/*.ico
+/icons/*.icns
+/icons/ios/
 !/icons/icon.png
 !/icons/icon_foreground.png
 !/icons/icon_background.png
