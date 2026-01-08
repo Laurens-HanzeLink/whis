@@ -1,4 +1,16 @@
-//! Cloud provider setup
+//! Cloud transcription provider setup
+//!
+//! Handles API key configuration for cloud providers:
+//! - OpenAI (standard + realtime streaming)
+//! - Deepgram (standard + realtime streaming)
+//! - Mistral, Groq, ElevenLabs
+//!
+//! # Flow
+//!
+//! 1. Select provider (with [configured] markers for existing keys)
+//! 2. Choose method (standard vs streaming) for OpenAI/Deepgram
+//! 3. Enter/confirm API key with format validation
+//! 4. Save to settings
 
 use anyhow::{Result, anyhow};
 use whis_core::{Settings, TranscriptionProvider};
@@ -73,7 +85,7 @@ pub fn setup_transcription_cloud() -> Result<()> {
         })
         .unzip();
 
-    // Default to current provider if configured, otherwise first
+    // Default to current provider if configured
     // Treat realtime variants same as base provider for default selection
     let default = CLOUD_PROVIDERS.iter().position(|p| {
         *p == settings.transcription.provider
@@ -81,6 +93,13 @@ pub fn setup_transcription_cloud() -> Result<()> {
                 && settings.transcription.provider == TranscriptionProvider::OpenAIRealtime)
             || (*p == TranscriptionProvider::Deepgram
                 && settings.transcription.provider == TranscriptionProvider::DeepgramRealtime)
+    });
+
+    // Fallback: if on local provider, find first cloud provider with configured API key
+    let default = default.or_else(|| {
+        CLOUD_PROVIDERS
+            .iter()
+            .position(|p| settings.transcription.api_key_for(p).is_some())
     });
 
     let choice = interactive::select_clean("Which provider?", &items, &clean_items, default)?;

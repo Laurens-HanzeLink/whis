@@ -204,12 +204,17 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
 }
 
 /// Independent post-processing step (called after transcription setup in wizard)
-pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
+pub fn setup_post_processing_step(_prefer_cloud: bool) -> Result<()> {
     let mut settings = Settings::load();
 
-    // Default: cloud if came from cloud transcription, Ollama if came from local
+    // Default to current processor setting
+    let default = match settings.post_processing.processor {
+        PostProcessor::OpenAI | PostProcessor::Mistral => 0, // Cloud
+        PostProcessor::Ollama => 1,
+        PostProcessor::None => 2, // Skip
+    };
+
     let options = vec!["Cloud", "Ollama", "Skip"];
-    let default = if prefer_cloud { 0 } else { 1 };
     let choice = interactive::select("Configure post-processing?", &options, Some(default))?;
 
     match choice {
@@ -264,7 +269,18 @@ fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
         })
         .unzip();
 
-    let choice = interactive::select_clean("Which provider?", &items, &clean_items, Some(0))?;
+    // Default to current processor if it matches a PP provider
+    let default = match settings.post_processing.processor {
+        PostProcessor::OpenAI => {
+            PP_PROVIDERS.iter().position(|p| *p == TranscriptionProvider::OpenAI)
+        }
+        PostProcessor::Mistral => {
+            PP_PROVIDERS.iter().position(|p| *p == TranscriptionProvider::Mistral)
+        }
+        _ => Some(0),
+    };
+
+    let choice = interactive::select_clean("Which provider?", &items, &clean_items, default)?;
     let provider = PP_PROVIDERS[choice].clone();
 
     // Check if API key already exists

@@ -1,3 +1,25 @@
+//! Inter-process communication for CLI ↔ Service
+//!
+//! Provides message passing between CLI commands (`whis stop`, `whis status`, `whis toggle`)
+//! and the background service started by `whis start`.
+//!
+//! # Protocol
+//!
+//! - Unix: Domain socket at `$XDG_RUNTIME_DIR/whis.sock` (fallback: `/tmp/whis.sock`)
+//! - Windows: Named pipe `whis`
+//!
+//! # Messages
+//!
+//! - `Stop` → Terminate the service
+//! - `Status` → Query recording state (Idle/Recording/Transcribing)
+//! - `Toggle` → Start/stop recording
+//!
+//! # Components
+//!
+//! - `IpcServer` - Non-blocking listener for the service
+//! - `IpcClient` - Blocking client for CLI commands
+//! - `IpcConnection` - Individual client connection handler
+
 use anyhow::{Context, Result};
 use interprocess::local_socket::{
     GenericFilePath, ListenerNonblockingMode, ListenerOptions, ToFsName, prelude::*,

@@ -1,8 +1,36 @@
-//! Setup wizard for different usage modes
+//! Setup wizard for whis configuration
 //!
-//! Provides a streamlined setup experience for:
-//! - Cloud users (API key setup)
-//! - Local users (on-device transcription)
+//! Provides a streamlined setup experience through interactive prompts.
+//!
+//! # Wizard Flow
+//!
+//! ```text
+//! ┌─────────────────────────┐
+//! │ How do you want to      │
+//! │ transcribe?             │
+//! │  ├─► Cloud ──► cloud.rs │
+//! │  └─► Local ──► local.rs │
+//! └───────────┬─────────────┘
+//!             ▼
+//! ┌─────────────────────────┐
+//! │ Configure post-         │
+//! │ processing?             │
+//! │  └─► post_processing.rs │
+//! └───────────┬─────────────┘
+//!             ▼
+//! ┌─────────────────────────┐
+//! │ Audio device + Shortcut │
+//! │ (this module)           │
+//! └─────────────────────────┘
+//! ```
+//!
+//! # Sub-modules
+//!
+//! - `cloud` - Cloud provider API key setup
+//! - `local` - Local model (Whisper/Parakeet) selection
+//! - `post_processing` - Ollama or cloud LLM configuration
+//! - `interactive` - UI helpers (prompts, selection menus)
+//! - `provider_helpers` - Provider metadata (URLs, descriptions)
 
 mod cloud;
 mod interactive;
@@ -11,7 +39,7 @@ mod post_processing;
 mod provider_helpers;
 
 use anyhow::Result;
-use whis_core::Settings;
+use whis_core::{Settings, TranscriptionProvider};
 
 use crate::hotkey;
 
@@ -21,8 +49,16 @@ pub fn run() -> Result<()> {
 
 /// Unified setup wizard - guides user through all configuration
 fn setup_wizard() -> Result<()> {
+    let settings = Settings::load();
+
+    // Default to current provider type (Local if using local, else Cloud)
+    let default = match settings.transcription.provider {
+        TranscriptionProvider::LocalParakeet | TranscriptionProvider::LocalWhisper => 1,
+        _ => 0,
+    };
+
     let items = vec!["Cloud", "Local"];
-    let choice = interactive::select("How do you want to transcribe?", &items, Some(0))?;
+    let choice = interactive::select("How do you want to transcribe?", &items, Some(default))?;
 
     let is_cloud = match choice {
         0 => {

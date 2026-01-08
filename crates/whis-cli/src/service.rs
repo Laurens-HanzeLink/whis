@@ -1,3 +1,25 @@
+//! Background service for `whis start` mode
+//!
+//! Runs as a long-lived process that listens for hotkey events (direct mode)
+//! or IPC commands (system shortcut mode) to toggle recording.
+//!
+//! # State Machine
+//!
+//! ```text
+//! ┌─────────┐  toggle   ┌───────────┐  toggle   ┌──────────────┐
+//! │  Idle   │ ────────► │ Recording │ ────────► │ Transcribing │
+//! └─────────┘           └───────────┘           └──────────────┘
+//!      ▲                                               │
+//!      └───────────────────────────────────────────────┘
+//!                        (auto return)
+//! ```
+//!
+//! # Architecture
+//!
+//! - Polling loop checks IPC server + hotkey channel (non-blocking)
+//! - Progressive transcription: audio chunks sent during recording
+//! - Post-processing and clipboard copy on completion
+
 use anyhow::{Context, Result};
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};

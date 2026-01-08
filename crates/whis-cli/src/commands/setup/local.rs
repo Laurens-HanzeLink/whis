@@ -1,4 +1,15 @@
-//! Local transcription setup
+//! Local (on-device) transcription setup
+//!
+//! Handles model selection and download for local transcription engines:
+//! - Parakeet (NVIDIA NeMo, fast, English-optimized)
+//! - Whisper (OpenAI, multilingual)
+//!
+//! # Flow
+//!
+//! 1. Select engine (Parakeet/Whisper) with [current] marker
+//! 2. Select model variant with [installed]/[current] markers
+//! 3. Download model if not present
+//! 4. Save to settings
 
 use anyhow::Result;
 use whis_core::{Settings, TranscriptionProvider, model};

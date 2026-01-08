@@ -53,6 +53,39 @@ impl AppState {
             transcription_rx: Mutex::new(None),
         }
     }
+
+    // ─── Helper methods to reduce .lock().unwrap() boilerplate ───
+
+    /// Get the current recording state
+    pub fn get_state(&self) -> RecordingState {
+        *self.state.lock().unwrap()
+    }
+
+    /// Set the recording state
+    pub fn set_state(&self, new_state: RecordingState) {
+        *self.state.lock().unwrap() = new_state;
+    }
+
+    /// Read settings with a closure
+    pub fn with_settings<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&Settings) -> R,
+    {
+        f(&self.settings.lock().unwrap())
+    }
+
+    /// Modify settings with a closure
+    pub fn with_settings_mut<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut Settings) -> R,
+    {
+        f(&mut self.settings.lock().unwrap())
+    }
+
+    /// Check if tray is available
+    pub fn is_tray_available(&self) -> bool {
+        *self.tray_available.lock().unwrap()
+    }
 }
 
 impl Default for AppState {
