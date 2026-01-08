@@ -19,6 +19,7 @@ const VALID_KEYS: &[&str] = &[
     "post-processing-prompt",
     "ollama-url",
     "ollama-model",
+    "microphone-device",
     "shortcut-mode",
     "shortcut",
     "vad",
@@ -183,6 +184,15 @@ fn set_config(key: &str, value: &str) -> Result<()> {
             settings.services.ollama.model = Some(value_trimmed.to_string());
             println!("ollama-model = {}", value_trimmed);
         }
+        "microphone-device" => {
+            if value_trimmed.to_lowercase() == "default" || value_trimmed.is_empty() {
+                settings.ui.microphone_device = None;
+                println!("microphone-device = System Default");
+            } else {
+                settings.ui.microphone_device = Some(value_trimmed.to_string());
+                println!("microphone-device = {}", value_trimmed);
+            }
+        }
         "vad" => {
             let enabled = value_trimmed
                 .parse::<bool>()
@@ -282,6 +292,13 @@ fn get_config(key: &str) -> Result<()> {
                 println!("{}", DEFAULT_OLLAMA_MODEL);
             }
         }
+        "microphone-device" => {
+            if let Some(device) = &settings.ui.microphone_device {
+                println!("{}", device);
+            } else {
+                println!("System Default");
+            }
+        }
         "vad" => println!("{}", settings.ui.vad.enabled),
         "vad-threshold" => println!("{:.2}", settings.ui.vad.threshold),
         "chunk-size" => println!("{}s", settings.ui.chunk_duration_secs),
@@ -361,6 +378,14 @@ fn show_all_settings() -> Result<()> {
         println!("ollama-model = {}", model);
     } else {
         println!("ollama-model = {}", DEFAULT_OLLAMA_MODEL);
+    }
+
+    println!();
+    println!("[Audio]");
+    if let Some(device) = &settings.ui.microphone_device {
+        println!("microphone-device = {}", device);
+    } else {
+        println!("microphone-device = System Default");
     }
 
     println!();

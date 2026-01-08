@@ -1,9 +1,16 @@
 //! Audio device enumeration and management.
+//!
+//! On Linux with PulseAudio, uses libpulse-binding for rich device metadata
+//! (form_factor, bus type, monitor detection). Falls back to cpal on other
+//! platforms or when PulseAudio is unavailable.
 
 use anyhow::Result;
 use cpal::traits::{DeviceTrait, HostTrait};
 
 use super::types::AudioDeviceInfo;
+
+#[cfg(all(target_os = "linux", feature = "pulse-metadata"))]
+use super::pulse;
 
 #[cfg(target_os = "linux")]
 mod alsa_suppress {
@@ -57,12 +64,34 @@ mod alsa_suppress {
 
 /// List all available audio input devices on the system.
 ///
+/// On Linux with PulseAudio, returns devices with rich metadata (form_factor, bus, etc.).
+/// Falls back to cpal-based enumeration on other platforms or when PulseAudio unavailable.
+///
 /// # Returns
 /// A vector of audio device information, including device names and default status.
 ///
 /// # Errors
 /// Returns an error if no audio input devices are found.
 pub fn list_audio_devices() -> Result<Vec<AudioDeviceInfo>> {
+    // Try PulseAudio first on Linux (provides rich metadata)
+    #[cfg(all(target_os = "linux", feature = "pulse-metadata"))]
+    {
+        match pulse::list_pulse_devices() {
+            Ok(devices) if !devices.is_empty() => return Ok(devices),
+            Ok(_) => {} // Empty result, fall through to cpal
+            Err(_e) => {
+                // PulseAudio unavailable, fall through to cpal
+                // Could log: eprintln!("PulseAudio enumeration failed: {}, using cpal", e);
+            }
+        }
+    }
+
+    // Fallback: use cpal (cross-platform, less metadata)
+    list_cpal_devices()
+}
+
+/// List devices using cpal (cross-platform fallback).
+fn list_cpal_devices() -> Result<Vec<AudioDeviceInfo>> {
     alsa_suppress::init();
 
     let host = cpal::default_host();
@@ -74,10 +103,23 @@ pub fn list_audio_devices() -> Result<Vec<AudioDeviceInfo>> {
     let mut devices = Vec::new();
     for device in host.input_devices()? {
         if let Ok(desc) = device.description() {
-            let name = desc.to_string();
+            let raw_name = desc.to_string();
+
+            // Filter out virtual/null devices that aren't real microphones
+            if is_virtual_device(&raw_name) {
+                continue;
+            }
+
+            let display_name = clean_device_name(&raw_name);
+
             devices.push(AudioDeviceInfo {
-                name: name.clone(),
-                is_default: default_device_name.as_ref() == Some(&name),
+                name: raw_name.clone(),
+                display_name: Some(display_name),
+                is_default: default_device_name.as_ref() == Some(&raw_name),
+                // cpal doesn't provide rich metadata
+                form_factor: None,
+                bus: None,
+                is_monitor: false,
             });
         }
     }
@@ -87,6 +129,62 @@ pub fn list_audio_devices() -> Result<Vec<AudioDeviceInfo>> {
     }
 
     Ok(devices)
+}
+
+/// Check if a device is a virtual/null device that should be filtered out.
+fn is_virtual_device(name: &str) -> bool {
+    let lower = name.to_lowercase();
+
+    // Filter out null/dummy devices
+    if lower.contains("discard all samples")
+        || lower.contains("generate zero samples")
+        || lower.contains("null")
+    {
+        return true;
+    }
+
+    // Filter out output monitors (not real microphones)
+    if lower.contains("output") && lower.contains("monitor") {
+        return true;
+    }
+
+    // Filter out PipeWire's internal devices
+    if lower == "pipewire sound server" {
+        return true;
+    }
+
+    false
+}
+
+/// Clean up a device name for display.
+fn clean_device_name(name: &str) -> String {
+    let mut cleaned = name.to_string();
+
+    // Remove common verbose suffixes
+    let suffixes_to_remove = [
+        " (currently PipeWire Media Server)",
+        " (currently PulseAudio)",
+        " Analog Stereo",
+        " Digital Stereo",
+        " Stereo",
+        " Mono",
+    ];
+
+    for suffix in suffixes_to_remove {
+        if let Some(pos) = cleaned.find(suffix) {
+            cleaned.truncate(pos);
+        }
+    }
+
+    // Remove trailing commas and whitespace
+    cleaned = cleaned.trim_end_matches([',', ' ']).to_string();
+
+    // If empty after cleaning, return original
+    if cleaned.is_empty() {
+        return name.to_string();
+    }
+
+    cleaned
 }
 
 /// Initialize platform-specific audio system.

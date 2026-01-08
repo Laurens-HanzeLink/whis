@@ -38,6 +38,9 @@ fn setup_wizard() -> Result<()> {
 
     post_processing::setup_post_processing_step(is_cloud)?;
 
+    // Audio device selection step
+    setup_audio_device_step()?;
+
     // Shortcut setup step
     setup_shortcut_step()?;
 
@@ -102,6 +105,52 @@ fn setup_shortcut_step() -> Result<()> {
         _ => unreachable!(),
     }
 
+    Ok(())
+}
+
+/// Setup audio device (microphone) selection
+fn setup_audio_device_step() -> Result<()> {
+    use whis_core::list_audio_devices;
+
+    let devices = match list_audio_devices() {
+        Ok(d) if !d.is_empty() => d,
+        _ => {
+            // No devices found - skip this step silently
+            return Ok(());
+        }
+    };
+
+    // Build selection list with "System Default" as first option
+    let mut items: Vec<String> = vec!["System Default".to_string()];
+    for device in &devices {
+        // Use display_name if available, otherwise fall back to raw name
+        let name = device
+            .display_name
+            .as_ref()
+            .unwrap_or(&device.name);
+        items.push(name.to_string());
+    }
+
+    // Find current selection for default highlight
+    let mut settings = Settings::load();
+    let default_idx = settings
+        .ui
+        .microphone_device
+        .as_ref()
+        .and_then(|current| devices.iter().position(|d| &d.name == current))
+        .map(|i| i + 1)
+        .unwrap_or(0);
+
+    let choice = interactive::select("Microphone?", &items, Some(default_idx))?;
+
+    settings.ui.microphone_device = if choice == 0 {
+        None
+    } else {
+        // Store the raw name (for device lookup), not display name
+        Some(devices[choice - 1].name.clone())
+    };
+
+    settings.save()?;
     Ok(())
 }
 

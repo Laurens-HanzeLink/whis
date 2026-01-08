@@ -55,8 +55,14 @@ tempfile = { version = "3", optional = true }
 # stderr redirection for suppressing GGML Vulkan debug output on Unix
 libc = { version = "0.2", optional = true }
 
+# PulseAudio device enumeration with rich metadata (Linux only)
+[target.'cfg(target_os = "linux")'.dependencies]
+libpulse-binding = { version = "2.28", optional = true }
+
 [features]
-default = ["ffmpeg", "clipboard", "local-transcription", "vad", "realtime"]
+default = ["ffmpeg", "clipboard", "local-transcription", "vad", "realtime", "pulse-metadata"]
+# PulseAudio metadata for better device enumeration (Linux only, graceful fallback)
+pulse-metadata = ["libpulse-binding"]
 # Desktop: use FFmpeg process for audio encoding and arboard for clipboard
 ffmpeg = ["hound"]
 clipboard = ["arboard"]

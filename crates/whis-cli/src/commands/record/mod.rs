@@ -248,8 +248,10 @@ async fn progressive_record_and_transcribe(
         });
     }
 
-    // Start streaming recording
-    let mut audio_rx_bounded = recorder.start_recording_streaming()?;
+    // Start streaming recording with configured device
+    let device_name = settings.ui.microphone_device.clone();
+    let mut audio_rx_bounded =
+        recorder.start_recording_streaming_with_device(device_name.as_deref())?;
 
     // Create unbounded channel for chunker (adapter pattern)
     let (audio_tx_unbounded, audio_rx_unbounded) = mpsc::unbounded_channel();

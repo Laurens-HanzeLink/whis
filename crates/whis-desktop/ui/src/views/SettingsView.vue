@@ -181,6 +181,7 @@ function handleLanguageChange(value: string | null) {
 // Audio devices
 interface AudioDevice {
   name: string
+  display_name: string | null
   is_default: boolean
 }
 
@@ -204,9 +205,11 @@ const microphoneOptions = computed<SelectOption[]>(() => {
   ]
 
   for (const device of audioDevices.value) {
+    // Use display_name if available, otherwise fall back to raw name
+    const displayName = device.display_name ?? device.name
     options.push({
-      value: device.name,
-      label: device.is_default ? `${device.name} (default)` : device.name,
+      value: device.name, // Store raw name for device lookup
+      label: displayName,
     })
   }
 

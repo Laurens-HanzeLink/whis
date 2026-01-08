@@ -175,8 +175,10 @@ impl Service {
             recorder.set_vad(settings.ui.vad.enabled, settings.ui.vad.threshold);
         }
 
-        // Start streaming recording (returns bounded channel of audio samples)
-        let mut audio_rx_bounded = recorder.start_recording_streaming()?;
+        // Start streaming recording with configured device
+        let device_name = settings.ui.microphone_device.clone();
+        let mut audio_rx_bounded =
+            recorder.start_recording_streaming_with_device(device_name.as_deref())?;
 
         // Create unbounded channel for chunker (adapter pattern)
         let (audio_tx_unbounded, audio_rx_unbounded) = mpsc::unbounded_channel();

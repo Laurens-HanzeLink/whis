@@ -42,6 +42,10 @@ mod recorder;
 mod types;
 mod vad;
 
+// PulseAudio device enumeration with rich metadata (Linux only)
+#[cfg(all(target_os = "linux", feature = "pulse-metadata"))]
+mod pulse;
+
 // Re-export public types
 pub use chunker::{AudioChunk as ProgressiveChunk, ChunkerConfig, ProgressiveChunker};
 pub use devices::list_audio_devices;
