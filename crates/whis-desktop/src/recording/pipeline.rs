@@ -122,12 +122,12 @@ async fn do_progressive_transcription(app: &AppHandle, state: &AppState) -> Resu
         }
 
         // Re-warm Ollama model (in case it unloaded during long recording > 5 min)
-        if post_processor == PostProcessor::Ollama {
-            if let Some(model_name) = ollama_model.as_deref() {
-                preload_ollama(&key_or_url, model_name);
-                // Brief pause to allow warmup to complete (runs in background thread)
-                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-            }
+        if post_processor == PostProcessor::Ollama
+            && let Some(model_name) = ollama_model.as_deref()
+        {
+            preload_ollama(&key_or_url, model_name);
+            // Brief pause to allow warmup to complete (runs in background thread)
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
 
         println!("Post-processing...");

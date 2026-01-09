@@ -67,7 +67,8 @@ pub async fn save_settings(
 
     // Only update shortcut if it actually changed
     let needs_restart = if shortcut_changed {
-        crate::shortcuts::update_shortcut(&app, &settings.ui.shortcut_key).map_err(|e| e.to_string())?
+        crate::shortcuts::update_shortcut(&app, &settings.ui.shortcut_key)
+            .map_err(|e| e.to_string())?
     } else {
         false
     };

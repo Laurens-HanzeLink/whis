@@ -18,22 +18,22 @@ fn validate_key_format(
         return Ok(true); // Empty falls back to env var
     }
 
-    if let Some(prefix) = required_prefix {
-        if !key.starts_with(prefix) {
-            return Err(format!(
-                "Invalid key format. {} keys start with '{}'",
-                provider, prefix
-            ));
-        }
+    if let Some(prefix) = required_prefix
+        && !key.starts_with(prefix)
+    {
+        return Err(format!(
+            "Invalid key format. {} keys start with '{}'",
+            provider, prefix
+        ));
     }
 
-    if let Some(min_len) = min_length {
-        if key.trim().len() < min_len {
-            return Err(format!(
-                "Invalid {} API key: key appears too short",
-                provider
-            ));
-        }
+    if let Some(min_len) = min_length
+        && key.trim().len() < min_len
+    {
+        return Err(format!(
+            "Invalid {} API key: key appears too short",
+            provider
+        ));
     }
 
     Ok(true)

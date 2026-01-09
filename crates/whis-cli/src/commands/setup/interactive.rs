@@ -75,7 +75,7 @@ pub fn select_clean(
     let theme = theme();
     let mut select = Select::with_theme(&theme)
         .with_prompt(prompt)
-        .items(&items.iter().map(|s| s.as_ref()).collect::<Vec<_>>())
+        .items(items.iter().map(|s| s.as_ref()).collect::<Vec<_>>())
         .report(false); // Disable auto-confirmation
 
     if let Some(idx) = default {

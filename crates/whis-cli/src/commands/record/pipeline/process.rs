@@ -30,12 +30,12 @@ pub async fn process(
             resolve_post_processor(&config.preset, &settings)?;
 
         // Re-warm Ollama model (in case it unloaded during long recording > 5 min)
-        if processor == PostProcessor::Ollama {
-            if let Some(ref model_name) = model {
-                preload_ollama(&api_key, model_name);
-                // Brief pause to allow warmup to complete (runs in background thread)
-                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-            }
+        if processor == PostProcessor::Ollama
+            && let Some(ref model_name) = model
+        {
+            preload_ollama(&api_key, model_name);
+            // Brief pause to allow warmup to complete (runs in background thread)
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
 
         if !quiet {

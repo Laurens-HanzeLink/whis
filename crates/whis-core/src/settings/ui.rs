@@ -64,7 +64,10 @@ impl std::str::FromStr for CliShortcutMode {
         match s.to_lowercase().as_str() {
             "system" => Ok(CliShortcutMode::System),
             "direct" => Ok(CliShortcutMode::Direct),
-            _ => Err(format!("Invalid shortcut mode: '{}'. Use 'system' or 'direct'", s)),
+            _ => Err(format!(
+                "Invalid shortcut mode: '{}'. Use 'system' or 'direct'",
+                s
+            )),
         }
     }
 }

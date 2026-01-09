@@ -1,7 +1,7 @@
 use crate::{app, hotkey, ipc, service};
 use anyhow::Result;
-use whis_core::settings::CliShortcutMode;
 use whis_core::Settings;
+use whis_core::settings::CliShortcutMode;
 
 pub fn run() -> Result<()> {
     // Check if FFmpeg is available
