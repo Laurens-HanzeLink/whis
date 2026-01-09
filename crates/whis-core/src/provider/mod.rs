@@ -112,6 +112,8 @@ pub use local_parakeet::preload_parakeet;
 #[cfg(feature = "local-transcription")]
 pub use local_parakeet::transcribe_raw as transcribe_raw_parakeet;
 #[cfg(feature = "local-transcription")]
+pub use local_parakeet::{set_keep_loaded as parakeet_set_keep_loaded, unload_parakeet};
+#[cfg(feature = "local-transcription")]
 pub use local_whisper::LocalWhisperProvider;
 #[cfg(feature = "local-transcription")]
 pub use local_whisper::transcribe_raw;
@@ -266,4 +268,41 @@ impl Default for ProviderRegistry {
 pub fn registry() -> &'static ProviderRegistry {
     static REGISTRY: OnceLock<ProviderRegistry> = OnceLock::new();
     REGISTRY.get_or_init(ProviderRegistry::new)
+}
+
+/// Check if a provider supports realtime WebSocket streaming
+///
+/// Returns true for providers that implement RealtimeTranscriptionBackend
+/// and should bypass the chunking pipeline for lower latency.
+pub fn is_realtime_provider(provider: &TranscriptionProvider) -> bool {
+    matches!(
+        provider,
+        TranscriptionProvider::OpenAIRealtime | TranscriptionProvider::DeepgramRealtime
+    )
+}
+
+/// Get the realtime backend for a provider
+///
+/// Returns a trait object implementing RealtimeTranscriptionBackend for
+/// providers that support WebSocket streaming.
+///
+/// # Errors
+/// Returns an error if the provider does not support realtime streaming.
+#[cfg(feature = "realtime")]
+pub fn get_realtime_backend(
+    provider: &TranscriptionProvider,
+) -> anyhow::Result<std::sync::Arc<dyn RealtimeTranscriptionBackend>> {
+    match provider {
+        TranscriptionProvider::OpenAIRealtime => Ok(std::sync::Arc::new(OpenAIRealtimeProvider)
+            as std::sync::Arc<dyn RealtimeTranscriptionBackend>),
+        TranscriptionProvider::DeepgramRealtime => {
+            Ok(std::sync::Arc::new(DeepgramRealtimeProvider)
+                as std::sync::Arc<dyn RealtimeTranscriptionBackend>)
+        }
+        _ => Err(anyhow::anyhow!(
+            "Provider '{}' does not support realtime streaming. \
+             Available realtime providers: openai-realtime, deepgram-realtime",
+            provider.as_str()
+        )),
+    }
 }

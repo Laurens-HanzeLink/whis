@@ -16,7 +16,8 @@ use whis_core::{
 /// Start recording with progressive transcription (default mode)
 ///
 /// Starts streaming audio recording and spawns background tasks for:
-/// - Progressive audio chunking (90s target, VAD-aware)
+/// - Progressive audio chunking (90s target, VAD-aware) for non-realtime providers
+/// - WebSocket streaming for realtime providers (deepgram-realtime, openai-realtime)
 /// - Transcription during recording (parallel for cloud providers, sequential for local providers)
 ///
 /// The transcription result will be available via the oneshot channel
@@ -36,13 +37,16 @@ pub fn start_recording_sync(_app: &AppHandle, state: &AppState) -> Result<(), St
         )
     };
 
+    // Check if this is a realtime provider (for branching later)
+    let is_realtime = whis_core::is_realtime_provider(&provider);
+
     // Create recorder and start streaming
     let mut recorder = AudioRecorder::new().map_err(|e| e.to_string())?;
 
-    // Configure VAD from settings
+    // Configure VAD from settings (disabled for realtime - they handle silence detection)
     let vad_enabled = {
         let settings = state.settings.lock().unwrap();
-        settings.ui.vad.enabled
+        settings.ui.vad.enabled && !is_realtime
     };
     let vad_threshold = state.settings.lock().unwrap().ui.vad.threshold;
     recorder.set_vad(vad_enabled, vad_threshold);
@@ -59,7 +63,7 @@ pub fn start_recording_sync(_app: &AppHandle, state: &AppState) -> Result<(), St
             .map_err(|e| e.to_string())?
     };
 
-    // Create unbounded channel adapter
+    // Create unbounded channel adapter (used by both realtime and chunked paths)
     let (audio_tx_unbounded, audio_rx_unbounded) = mpsc::unbounded_channel();
     tauri::async_runtime::spawn(async move {
         while let Some(samples) = audio_rx_bounded.recv().await {
@@ -69,28 +73,10 @@ pub fn start_recording_sync(_app: &AppHandle, state: &AppState) -> Result<(), St
         }
     });
 
-    // Create channels for chunking
-    let (chunk_tx, chunk_rx) = mpsc::unbounded_channel();
-
-    // Create chunker config from settings
-    let target = state.settings.lock().unwrap().ui.chunk_duration_secs;
-    let chunker_config = ChunkerConfig {
-        target_duration_secs: target,
-        min_duration_secs: target * 2 / 3,
-        max_duration_secs: target * 4 / 3,
-        vad_aware: vad_enabled,
-    };
-
-    // Spawn chunker task
-    let mut chunker = ProgressiveChunker::new(chunker_config, chunk_tx);
-    tauri::async_runtime::spawn(async move {
-        let _ = chunker.consume_stream(audio_rx_unbounded, None).await;
-    });
-
     // Create oneshot channel for transcription result
     let (result_tx, result_rx) = oneshot::channel();
 
-    // Preload models in background to reduce latency (before spawning async tasks)
+    // Preload models in background to reduce latency
     {
         let settings = state.settings.lock().unwrap();
 
@@ -125,20 +111,82 @@ pub fn start_recording_sync(_app: &AppHandle, state: &AppState) -> Result<(), St
 
             preload_ollama(&ollama_url, &ollama_model);
         }
+
+        // Warm HTTP client for cloud providers to reduce first-request latency
+        let _ = whis_core::warmup_http_client();
     }
 
-    // Spawn transcription task
-    tauri::async_runtime::spawn(async move {
-        let result: Result<String, String> = {
-            #[cfg(feature = "local-transcription")]
-            if provider == TranscriptionProvider::LocalParakeet {
-                match Settings::load().transcription.parakeet_model_path() {
-                    Some(model_path) => progressive_transcribe_local(&model_path, chunk_rx, None)
-                        .await
-                        .map_err(|e| e.to_string()),
-                    None => Err("Parakeet model path not configured".to_string()),
+    // Branch based on provider type: realtime streaming vs chunked progressive
+    if is_realtime {
+        // REALTIME PATH: Stream audio directly to WebSocket (no chunking)
+        #[cfg(feature = "realtime")]
+        {
+            let realtime_backend =
+                whis_core::get_realtime_backend(&provider).map_err(|e| e.to_string())?;
+
+            tauri::async_runtime::spawn(async move {
+                let result = realtime_backend
+                    .transcribe_stream(&api_key, audio_rx_unbounded, language)
+                    .await
+                    .map_err(|e| e.to_string());
+                let _ = result_tx.send(result);
+            });
+
+            println!("Recording started (realtime streaming mode)...");
+        }
+
+        #[cfg(not(feature = "realtime"))]
+        {
+            return Err(format!(
+                "Provider '{}' requires the 'realtime' feature (not enabled in this build)",
+                provider.as_str()
+            ));
+        }
+    } else {
+        // NON-REALTIME PATH: Use chunking + progressive transcription
+        let (chunk_tx, chunk_rx) = mpsc::unbounded_channel();
+
+        // Create chunker config from settings
+        let target = state.settings.lock().unwrap().ui.chunk_duration_secs;
+        let chunker_config = ChunkerConfig {
+            target_duration_secs: target,
+            min_duration_secs: target * 2 / 3,
+            max_duration_secs: target * 4 / 3,
+            vad_aware: vad_enabled,
+        };
+
+        // Spawn chunker task
+        let mut chunker = ProgressiveChunker::new(chunker_config, chunk_tx);
+        tauri::async_runtime::spawn(async move {
+            let _ = chunker.consume_stream(audio_rx_unbounded, None).await;
+        });
+
+        // Spawn transcription task
+        tauri::async_runtime::spawn(async move {
+            let result: Result<String, String> = {
+                #[cfg(feature = "local-transcription")]
+                if provider == TranscriptionProvider::LocalParakeet {
+                    match Settings::load().transcription.parakeet_model_path() {
+                        Some(model_path) => {
+                            progressive_transcribe_local(&model_path, chunk_rx, None)
+                                .await
+                                .map_err(|e| e.to_string())
+                        }
+                        None => Err("Parakeet model path not configured".to_string()),
+                    }
+                } else {
+                    progressive_transcribe_cloud(
+                        &provider,
+                        &api_key,
+                        language.as_deref(),
+                        chunk_rx,
+                        None,
+                    )
+                    .await
+                    .map_err(|e| e.to_string())
                 }
-            } else {
+
+                #[cfg(not(feature = "local-transcription"))]
                 progressive_transcribe_cloud(
                     &provider,
                     &api_key,
@@ -148,22 +196,18 @@ pub fn start_recording_sync(_app: &AppHandle, state: &AppState) -> Result<(), St
                 )
                 .await
                 .map_err(|e| e.to_string())
-            }
+            };
 
-            #[cfg(not(feature = "local-transcription"))]
-            progressive_transcribe_cloud(&provider, &api_key, language.as_deref(), chunk_rx, None)
-                .await
-                .map_err(|e| e.to_string())
-        };
+            let _ = result_tx.send(result);
+        });
 
-        let _ = result_tx.send(result);
-    });
+        println!("Recording started (progressive mode)...");
+    }
 
     // Store receiver for later retrieval
     *state.transcription_rx.lock().unwrap() = Some(result_rx);
     *state.recorder.lock().unwrap() = Some(recorder);
     *state.state.lock().unwrap() = RecordingState::Recording;
 
-    println!("Recording started (progressive mode)...");
     Ok(())
 }

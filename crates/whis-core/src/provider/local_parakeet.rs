@@ -7,8 +7,8 @@
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use once_cell::sync::OnceCell;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, OnceLock};
 
 use super::{TranscriptionBackend, TranscriptionRequest, TranscriptionResult, TranscriptionStage};
 
@@ -86,9 +86,14 @@ fn transcribe_samples(model_path: &str, samples: Vec<f32>) -> Result<Transcripti
     const CHUNK_SIZE: usize = 1_440_000; // 90 seconds at 16kHz
     const OVERLAP: usize = 16_000; // 1 second overlap for context at chunk boundaries
 
-    // Get or load shared engine from global cache
-    let engine_mutex = get_or_load_engine(model_path)?;
-    let mut engine = engine_mutex.lock().unwrap();
+    // Load engine if not already cached
+    get_or_load_engine(model_path)?;
+
+    // Get the cache and lock the engine
+    let mut cache = get_cache().lock().unwrap();
+    let cached = cache.as_mut().ok_or_else(|| {
+        anyhow::anyhow!("Parakeet engine not loaded (cache empty after get_or_load_engine)")
+    })?;
 
     // Configure inference parameters
     let params = ParakeetInferenceParams {
@@ -96,37 +101,46 @@ fn transcribe_samples(model_path: &str, samples: Vec<f32>) -> Result<Transcripti
     };
 
     // If audio is short, transcribe directly (no chunking needed)
-    if samples.len() <= CHUNK_SIZE {
-        return transcribe_chunk_with_engine(&mut engine, samples, &params);
-    }
+    let result = if samples.len() <= CHUNK_SIZE {
+        transcribe_chunk_with_engine(&mut cached.engine, samples, &params)?
+    } else {
+        // Split long audio into chunks with overlap
+        let mut chunks = Vec::new();
+        let mut start = 0;
+        while start < samples.len() {
+            let end = (start + CHUNK_SIZE).min(samples.len());
+            chunks.push(&samples[start..end]);
+            start += CHUNK_SIZE - OVERLAP;
+        }
 
-    // Split long audio into chunks with overlap
-    let mut chunks = Vec::new();
-    let mut start = 0;
-    while start < samples.len() {
-        let end = (start + CHUNK_SIZE).min(samples.len());
-        chunks.push(&samples[start..end]);
-        start += CHUNK_SIZE - OVERLAP;
-    }
+        // Transcribe each chunk using the same engine instance
+        let mut results = Vec::new();
+        for (i, chunk) in chunks.iter().enumerate() {
+            crate::verbose!(
+                "Transcribing chunk {}/{} ({:.1}s)...",
+                i + 1,
+                chunks.len(),
+                chunk.len() as f32 / 16000.0
+            );
 
-    // Transcribe each chunk using the same engine instance
-    let mut results = Vec::new();
-    for (i, chunk) in chunks.iter().enumerate() {
-        crate::verbose!(
-            "Transcribing chunk {}/{} ({:.1}s)...",
-            i + 1,
-            chunks.len(),
-            chunk.len() as f32 / 16000.0
-        );
+            let chunk_result =
+                transcribe_chunk_with_engine(&mut cached.engine, chunk.to_vec(), &params)?;
+            results.push(chunk_result.text);
+        }
 
-        let result = transcribe_chunk_with_engine(&mut engine, chunk.to_vec(), &params)?;
-        results.push(result.text);
-    }
+        // Concatenate chunk results with space separator
+        TranscriptionResult {
+            text: results.join(" "),
+        }
+    };
 
-    // Concatenate chunk results with space separator
-    Ok(TranscriptionResult {
-        text: results.join(" "),
-    })
+    // Release the lock before maybe_unload
+    drop(cache);
+
+    // Conditionally unload based on KEEP_LOADED flag
+    maybe_unload();
+
+    Ok(result)
 }
 
 /// Transcribe a single chunk of audio using an already-loaded engine
@@ -187,33 +201,74 @@ fn decode_mp3_to_samples(mp3_data: &[u8]) -> Result<Vec<f32>> {
     crate::resample::resample_to_16k(&samples, sample_rate, channels)
 }
 
-/// Global shared Parakeet engine (loaded once, reused for all transcriptions)
-static PARAKEET_ENGINE: OnceCell<Mutex<transcribe_rs::engines::parakeet::ParakeetEngine>> =
-    OnceCell::new();
+// ============================================================================
+// Engine Caching (matches local_whisper.rs pattern)
+// ============================================================================
+
+/// Global shared Parakeet engine (can be unloaded unlike OnceCell)
+static PARAKEET_ENGINE: OnceLock<Mutex<Option<CachedParakeetEngine>>> = OnceLock::new();
+
+/// Keep the engine loaded after transcription (for desktop recording mode)
+static KEEP_LOADED: AtomicBool = AtomicBool::new(false);
+
+struct CachedParakeetEngine {
+    engine: transcribe_rs::engines::parakeet::ParakeetEngine,
+    path: String,
+}
+
+fn get_cache() -> &'static Mutex<Option<CachedParakeetEngine>> {
+    PARAKEET_ENGINE.get_or_init(|| Mutex::new(None))
+}
 
 /// Get or load the shared Parakeet engine
 ///
 /// This function ensures the model is loaded only once and then cached globally.
 /// All subsequent calls reuse the same engine instance, reducing memory usage
 /// and eliminating repeated model loading overhead.
-fn get_or_load_engine(
-    model_path: &str,
-) -> Result<&'static Mutex<transcribe_rs::engines::parakeet::ParakeetEngine>> {
+fn get_or_load_engine(model_path: &str) -> Result<()> {
     use std::path::Path;
     use transcribe_rs::TranscriptionEngine;
     use transcribe_rs::engines::parakeet::{ParakeetEngine, ParakeetModelParams};
 
-    PARAKEET_ENGINE.get_or_try_init(|| {
-        crate::verbose!("Loading Parakeet model: {}", model_path);
+    let mut cache = get_cache().lock().unwrap();
 
-        let mut engine = ParakeetEngine::new();
-        engine
-            .load_model_with_params(Path::new(model_path), ParakeetModelParams::int8())
-            .map_err(|e| anyhow::anyhow!("Failed to load Parakeet model: {}", e))?;
+    // Check if already loaded with same path
+    if let Some(ref cached) = *cache
+        && cached.path == model_path
+    {
+        return Ok(()); // Already loaded
+    }
 
-        crate::verbose!("✓ Parakeet model loaded");
-        Ok(Mutex::new(engine))
-    })
+    // Validate model path
+    if model_path.is_empty() {
+        anyhow::bail!(
+            "Parakeet model path not configured. Set LOCAL_PARAKEET_MODEL_PATH or use: whis config --parakeet-model-path <path>"
+        );
+    }
+
+    if !Path::new(model_path).exists() {
+        anyhow::bail!(
+            "Parakeet model not found at: {}\n\
+             Download a model using: whis setup local",
+            model_path
+        );
+    }
+
+    crate::verbose!("Loading Parakeet model: {}", model_path);
+
+    let mut engine = ParakeetEngine::new();
+    engine
+        .load_model_with_params(Path::new(model_path), ParakeetModelParams::int8())
+        .map_err(|e| anyhow::anyhow!("Failed to load Parakeet model: {}", e))?;
+
+    crate::verbose!("✓ Parakeet model loaded");
+
+    *cache = Some(CachedParakeetEngine {
+        engine,
+        path: model_path.to_string(),
+    });
+
+    Ok(())
 }
 
 /// Preload Parakeet model in background to reduce first-transcription latency
@@ -235,6 +290,17 @@ fn get_or_load_engine(
 /// // Model loads in background while recording...
 /// ```
 pub fn preload_parakeet(model_path: &str) {
+    // Check if model is already loaded
+    {
+        let cache = get_cache().lock().unwrap();
+        if let Some(ref cached) = *cache
+            && cached.path == model_path
+        {
+            crate::verbose!("Engine already cached, skipping preload");
+            return;
+        }
+    }
+
     let model_path = model_path.to_string();
     std::thread::spawn(move || {
         crate::verbose!("Preloading Parakeet model: {}", model_path);
@@ -247,4 +313,40 @@ pub fn preload_parakeet(model_path: &str) {
 
         crate::verbose!("✓ Parakeet model preloaded");
     });
+}
+
+/// Set whether to keep the model loaded after transcription.
+///
+/// When `true`, the model stays in memory for faster subsequent transcriptions.
+/// When `false` (default), the model is unloaded after each use.
+///
+/// # Arguments
+/// * `keep` - Whether to keep the model loaded
+pub fn set_keep_loaded(keep: bool) {
+    KEEP_LOADED.store(keep, Ordering::SeqCst);
+    crate::verbose!("Parakeet engine keep_loaded set to: {}", keep);
+}
+
+/// Check if models should be kept loaded.
+pub fn should_keep_loaded() -> bool {
+    KEEP_LOADED.load(Ordering::SeqCst)
+}
+
+/// Unload the cached model (if any).
+///
+/// This frees the memory used by the model. Call this when you're done
+/// with transcription and don't expect more requests soon.
+pub fn unload_parakeet() {
+    let mut cache = get_cache().lock().unwrap();
+    if cache.is_some() {
+        crate::verbose!("Unloading Parakeet engine from cache");
+        *cache = None;
+    }
+}
+
+/// Called after transcription to conditionally unload the model.
+fn maybe_unload() {
+    if !should_keep_loaded() {
+        unload_parakeet();
+    }
 }

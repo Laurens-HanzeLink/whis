@@ -35,6 +35,7 @@ pub use preset::{Preset, PresetSource};
 pub use provider::DeepgramRealtimeProvider;
 #[cfg(feature = "realtime")]
 pub use provider::OpenAIRealtimeProvider;
+pub use provider::is_realtime_provider;
 #[cfg(feature = "local-transcription")]
 pub use provider::preload_parakeet;
 #[cfg(feature = "local-transcription")]
@@ -45,6 +46,10 @@ pub use provider::{
     DEFAULT_TIMEOUT_SECS, ProgressCallback, TranscriptionBackend, TranscriptionRequest,
     TranscriptionResult, TranscriptionStage, registry,
 };
+#[cfg(feature = "realtime")]
+pub use provider::{RealtimeTranscriptionBackend, get_realtime_backend};
+#[cfg(feature = "local-transcription")]
+pub use provider::{parakeet_set_keep_loaded, unload_parakeet};
 #[cfg(feature = "local-transcription")]
 pub use provider::{whisper_preload_model, whisper_set_keep_loaded, whisper_unload_model};
 pub use settings::Settings;

@@ -187,6 +187,9 @@ pub fn run(config: RecordConfig) -> Result<()> {
 /// This function overlaps recording and transcription using the progressive
 /// architecture. Audio is chunked during recording and transcribed immediately
 /// (cloud providers transcribe chunks in parallel, local providers sequentially).
+///
+/// For realtime providers (deepgram-realtime, openai-realtime), audio is streamed
+/// directly to WebSocket without chunking for lower latency.
 async fn progressive_record_and_transcribe(
     mic_config: modes::MicrophoneConfig,
     transcription_config: &app::TranscriptionConfig,
@@ -200,12 +203,15 @@ async fn progressive_record_and_transcribe(
         WarmupConfig, progressive_transcribe_cloud, warmup_configured,
     };
 
+    // Check if this is a realtime provider (for branching later)
+    let is_realtime = whis_core::is_realtime_provider(&transcription_config.provider);
+
     // Create recorder
     let mut recorder = AudioRecorder::new()?;
 
-    // Configure VAD
+    // Configure VAD (disabled for realtime - they handle silence detection)
     let settings = Settings::load();
-    let vad_enabled = settings.ui.vad.enabled && !mic_config.no_vad;
+    let vad_enabled = settings.ui.vad.enabled && !mic_config.no_vad && !is_realtime;
     recorder.set_vad(vad_enabled, settings.ui.vad.threshold);
 
     // Preload models in background (same as batch mode)
@@ -265,57 +271,96 @@ async fn progressive_record_and_transcribe(
         }
     });
 
-    // Create channels for progressive chunking
-    let (chunk_tx, chunk_rx) = mpsc::unbounded_channel();
+    // Branch based on provider type: realtime streaming vs chunked progressive
+    let (transcription_task, chunker_task): (
+        tokio::task::JoinHandle<anyhow::Result<String>>,
+        Option<tokio::task::JoinHandle<anyhow::Result<()>>>,
+    ) = if is_realtime {
+        // REALTIME PATH: Stream audio directly to WebSocket (no chunking)
+        #[cfg(feature = "realtime")]
+        {
+            let realtime_backend = whis_core::get_realtime_backend(&transcription_config.provider)?;
+            let api_key = transcription_config.api_key.clone();
+            let language = transcription_config.language.clone();
 
-    // Create chunker config from settings
-    let target = settings.ui.chunk_duration_secs;
-    let chunker_config = ChunkerConfig {
-        target_duration_secs: target,
-        min_duration_secs: target * 2 / 3,
-        max_duration_secs: target * 4 / 3,
-        vad_aware: vad_enabled,
-    };
+            let task = tokio::spawn(async move {
+                realtime_backend
+                    .transcribe_stream(&api_key, audio_rx_unbounded, language)
+                    .await
+            });
 
-    // Spawn chunker task
-    let mut chunker = ProgressiveChunker::new(chunker_config, chunk_tx);
-    let chunker_task = tokio::spawn(async move {
-        // Note: VAD state streaming not yet implemented, using fixed-duration chunking
-        chunker
-            .consume_stream(audio_rx_unbounded, None)
-            .await
-            .map_err(|e| anyhow::anyhow!(e))
-    });
+            (task, None) // No chunker task for realtime
+        }
 
-    // Spawn transcription task based on provider
-    let transcription_task = {
-        let provider = transcription_config.provider.clone();
-        let api_key = transcription_config.api_key.clone();
-        let language = transcription_config.language.clone();
+        #[cfg(not(feature = "realtime"))]
+        {
+            anyhow::bail!(
+                "Provider '{}' requires the 'realtime' feature (not enabled in this build)",
+                transcription_config.provider.as_str()
+            );
+        }
+    } else {
+        // NON-REALTIME PATH: Use chunking + progressive transcription
+        let (chunk_tx, chunk_rx) = mpsc::unbounded_channel();
 
-        tokio::spawn(async move {
-            #[cfg(feature = "local-transcription")]
-            if provider == TranscriptionProvider::LocalParakeet {
-                // Local Parakeet progressive transcription
-                let model_path = Settings::load()
-                    .transcription
-                    .parakeet_model_path()
-                    .ok_or_else(|| anyhow::anyhow!("Parakeet model path not configured"))?;
+        // Create chunker config from settings
+        let target = settings.ui.chunk_duration_secs;
+        let chunker_config = ChunkerConfig {
+            target_duration_secs: target,
+            min_duration_secs: target * 2 / 3,
+            max_duration_secs: target * 4 / 3,
+            vad_aware: vad_enabled,
+        };
 
-                return progressive_transcribe_local(&model_path, chunk_rx, None).await;
-            }
-
-            // Cloud provider progressive transcription
-            progressive_transcribe_cloud(&provider, &api_key, language.as_deref(), chunk_rx, None)
+        // Spawn chunker task
+        let mut chunker = ProgressiveChunker::new(chunker_config, chunk_tx);
+        let chunker_task = tokio::spawn(async move {
+            chunker
+                .consume_stream(audio_rx_unbounded, None)
                 .await
-        })
+                .map_err(|e| anyhow::anyhow!(e))
+        });
+
+        // Spawn transcription task based on provider
+        let transcription_task = {
+            let provider = transcription_config.provider.clone();
+            let api_key = transcription_config.api_key.clone();
+            let language = transcription_config.language.clone();
+
+            tokio::spawn(async move {
+                #[cfg(feature = "local-transcription")]
+                if provider == TranscriptionProvider::LocalParakeet {
+                    // Local Parakeet progressive transcription
+                    let model_path = Settings::load()
+                        .transcription
+                        .parakeet_model_path()
+                        .ok_or_else(|| anyhow::anyhow!("Parakeet model path not configured"))?;
+
+                    return progressive_transcribe_local(&model_path, chunk_rx, None).await;
+                }
+
+                // Cloud provider progressive transcription
+                progressive_transcribe_cloud(
+                    &provider,
+                    &api_key,
+                    language.as_deref(),
+                    chunk_rx,
+                    None,
+                )
+                .await
+            })
+        };
+
+        (transcription_task, Some(chunker_task))
     };
 
     // Wait for recording to complete (user input or duration)
     if let Some(dur) = mic_config.duration {
         // Timed recording
         if !quiet {
-            println!("Recording for {} seconds...", dur.as_secs());
+            print!("Recording for {} seconds...", dur.as_secs());
+            use std::io::Write;
+            std::io::stdout().flush()?;
         }
         tokio::time::sleep(dur).await;
     } else {
@@ -335,11 +380,13 @@ async fn progressive_record_and_transcribe(
         }
     }
 
-    // Stop recording (closes audio stream, signals chunker to finish)
+    // Stop recording (closes audio stream, signals chunker/realtime to finish)
     recorder.stop_recording()?;
 
-    // Wait for chunker to finish
-    chunker_task.await??;
+    // Wait for chunker to finish (only for non-realtime path)
+    if let Some(chunker_task) = chunker_task {
+        chunker_task.await??;
+    }
 
     // Wait for transcription to finish
     if !quiet {
