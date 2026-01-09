@@ -11,7 +11,7 @@ use crate::state::{AppState, RecordingState};
 use tauri::{AppHandle, Emitter, Manager};
 use whis_core::{
     DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, RecordingOutput, batch_transcribe,
-    copy_to_clipboard, ollama, post_process, transcribe_audio,
+    copy_to_clipboard, ollama, post_process, preload_ollama, transcribe_audio,
 };
 
 /// Stop recording and run the full transcription pipeline (progressive mode)
@@ -63,7 +63,7 @@ async fn do_progressive_transcription(app: &AppHandle, state: &AppState) -> Resu
     // Extract post-processing config and clipboard method from settings
     let (post_process_config, clipboard_method) = {
         let settings = state.settings.lock().unwrap();
-        let clipboard_method = settings.ui.clipboard_method.clone();
+        let clipboard_method = settings.ui.clipboard_backend.clone();
         let post_process_config = if settings.post_processing.processor != PostProcessor::None {
             let post_processor = settings.post_processing.processor.clone();
             let prompt = settings
@@ -118,6 +118,15 @@ async fn do_progressive_transcription(app: &AppHandle, state: &AppState) -> Resu
                 );
                 let _ = app.emit("transcription-complete", &transcription);
                 return Ok(());
+            }
+        }
+
+        // Re-warm Ollama model (in case it unloaded during long recording > 5 min)
+        if post_processor == PostProcessor::Ollama {
+            if let Some(model_name) = ollama_model.as_deref() {
+                preload_ollama(&key_or_url, model_name);
+                // Brief pause to allow warmup to complete (runs in background thread)
+                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
             }
         }
 
@@ -206,7 +215,7 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
     // Extract post-processing config and clipboard method from settings (lock scope limited)
     let (post_process_config, clipboard_method) = {
         let settings = state.settings.lock().unwrap();
-        let clipboard_method = settings.ui.clipboard_method.clone();
+        let clipboard_method = settings.ui.clipboard_backend.clone();
         let post_process_config = if settings.post_processing.processor != PostProcessor::None {
             let post_processor = settings.post_processing.processor.clone();
             let prompt = settings

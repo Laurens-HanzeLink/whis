@@ -4,6 +4,7 @@ import type { BubblePosition, PostProcessor, Provider, SelectOption } from '../t
 import { invoke } from '@tauri-apps/api/core'
 import { computed, onMounted, ref, watch } from 'vue'
 import AppSelect from '../components/AppSelect.vue'
+import AppSlider from '../components/AppSlider.vue'
 import CloudProviderConfig from '../components/settings/CloudProviderConfig.vue'
 import LocalWhisperConfig from '../components/settings/LocalWhisperConfig.vue'
 import ModeCards from '../components/settings/ModeCards.vue'
@@ -241,6 +242,13 @@ function handleMicrophoneChange(value: string | null) {
   settingsStore.setMicrophoneDevice(value)
 }
 
+// Chunk duration for progressive transcription
+const chunkDuration = computed(() => settingsStore.state.ui.chunk_duration_secs)
+
+function handleChunkDurationChange(value: number) {
+  settingsStore.setChunkDuration(value)
+}
+
 // Model path settings (for local mode)
 const isParakeet = computed(() => provider.value === 'local-parakeet')
 const parakeetModelPath = computed(() => settingsStore.state.transcription.local_models.parakeet_path)
@@ -414,6 +422,20 @@ function handleBubblePositionChange(value: string | null) {
             />
           </div>
 
+          <!-- Chunk Duration -->
+          <div class="field-row">
+            <label>Chunk Size</label>
+            <AppSlider
+              :model-value="chunkDuration"
+              :min="10"
+              :max="300"
+              :step="10"
+              unit="sec"
+              aria-label="Chunk duration in seconds"
+              @update:model-value="handleChunkDurationChange"
+            />
+          </div>
+
           <!-- Model Path (only when local mode) -->
           <div v-if="transcriptionMode === 'local'" class="field-row">
             <label>Model Path</label>
@@ -529,6 +551,11 @@ function handleBubblePositionChange(value: string | null) {
           <div class="help-section">
             <h3>microphone</h3>
             <p>Select which audio input device to use. "System Default" uses your system's current default microphone.</p>
+          </div>
+
+          <div class="help-section">
+            <h3>chunk size</h3>
+            <p>How often audio is sent for transcription during recording. Smaller values (30-60s) feel more responsive but may reduce accuracy. Larger values (90-180s) give the model more context for better accuracy. Default: 90 seconds.</p>
           </div>
 
           <div class="help-section">
