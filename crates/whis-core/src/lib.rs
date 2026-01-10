@@ -4,10 +4,13 @@ pub mod clipboard;
 pub mod config;
 pub mod defaults;
 pub mod error;
+#[cfg(feature = "hotkey")]
+pub mod hotkey;
 pub mod http;
 pub mod model;
 pub mod ollama;
 pub mod ollama_manager;
+pub mod platform;
 pub mod post_processing;
 pub mod preset;
 pub mod provider;
@@ -69,3 +72,6 @@ pub use defaults::{
     DEFAULT_PROVIDER, DEFAULT_SHORTCUT, DEFAULT_SHORTCUT_MODE, DEFAULT_VAD_ENABLED,
     DEFAULT_VAD_THRESHOLD,
 };
+#[cfg(feature = "hotkey")]
+pub use hotkey::{Hotkey, HotkeyParseError, key_to_string, lock_or_recover, parse_key};
+pub use platform::{Compositor, Platform, PlatformInfo, detect_platform, is_flatpak};

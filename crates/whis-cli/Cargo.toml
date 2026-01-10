@@ -26,16 +26,18 @@ global-hotkey.workspace = true
 crossbeam-channel.workspace = true
 interprocess.workspace = true
 reqwest.workspace = true
-dirs = "6"
+dirs.workspace = true
 crossterm = "0.29"
 dialoguer = "0.12"
-hound = "3.5"
+hound.workspace = true
 
 [features]
-default = ["vad", "local-transcription", "realtime"]
+default = ["vad", "local-transcription", "realtime", "hotkey"]
 # Voice Activity Detection to skip silence during recording
 vad = ["whis-core/vad"]
 # Local transcription via transcribe-rs (Whisper + Parakeet models)
 local-transcription = ["whis-core/local-transcription"]
 # OpenAI Realtime API for streaming transcription
 realtime = ["whis-core/realtime"]
+# Hotkey parsing (shared with desktop)
+hotkey = ["whis-core/hotkey"]

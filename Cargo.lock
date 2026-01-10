@@ -6007,7 +6007,6 @@ dependencies = [
 name = "tauri-plugin-floating-bubble"
 version = "0.1.0"
 dependencies = [
- "log",
  "serde",
  "serde_json",
  "tauri",
@@ -7336,6 +7335,7 @@ dependencies = [
  "minimp3",
  "mp3lame-encoder",
  "once_cell",
+ "rdev",
  "reqwest 0.13.1",
  "rubato",
  "rustls",
@@ -7360,6 +7360,7 @@ dependencies = [
  "futures-util",
  "gtk",
  "image",
+ "rdev",
  "reqwest 0.13.1",
  "serde",
  "serde_json",

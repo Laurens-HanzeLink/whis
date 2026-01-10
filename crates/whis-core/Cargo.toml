@@ -8,6 +8,7 @@ description = "Core library for whis voice-to-text functionality"
 
 [dependencies]
 anyhow.workspace = true
+rdev = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio.workspace = true
 serde.workspace = true
@@ -18,7 +19,7 @@ cpal.workspace = true
 hound = { workspace = true, optional = true }
 arboard = { workspace = true, optional = true }
 dotenvy.workspace = true
-dirs = "6"
+dirs.workspace = true
 async-trait = "0.1"
 once_cell = "1.20"
 
@@ -74,3 +75,5 @@ local-transcription = ["minimp3", "transcribe-rs", "tar", "flate2", "tempfile", 
 vad = ["voice_activity_detector"]
 # OpenAI Realtime API for streaming transcription
 realtime = ["tokio-tungstenite", "base64"]
+# Hotkey parsing and matching (used by CLI and Desktop)
+hotkey = ["rdev"]
