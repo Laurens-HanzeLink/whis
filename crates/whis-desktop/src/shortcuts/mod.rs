@@ -22,9 +22,12 @@
 //! ```
 
 pub mod backend;
+pub mod instructions;
 pub mod ipc;
 pub mod manual;
 pub mod portal;
+#[cfg(target_os = "linux")]
+pub mod rdev_grab;
 pub mod tauri_plugin;
 
 // Re-export backend detection
@@ -36,17 +39,25 @@ pub use backend::{
 // Re-export portal functions
 pub use portal::{
     bind_shortcut_with_trigger, configure_with_preferred_trigger, open_configure_shortcuts,
-    read_portal_shortcut_from_dconf, register_app_with_portal, setup_portal_shortcuts,
+    read_gnome_custom_shortcut, read_portal_shortcut_from_dconf, register_app_with_portal,
+    setup_portal_shortcuts,
 };
 
 // Re-export tauri plugin functions
 pub use tauri_plugin::{setup_tauri_shortcut, update_tauri_shortcut};
+
+// Re-export rdev_grab functions (Linux only)
+#[cfg(target_os = "linux")]
+pub use rdev_grab::{RdevGrabGuard, setup_rdev_grab};
 
 // Re-export IPC functions
 pub use ipc::{send_toggle_command, start_ipc_listener};
 
 // Re-export manual instructions
 pub use manual::print_manual_setup_instructions;
+
+// Re-export instructions for UI
+pub use instructions::{get_config_path, get_config_snippet, get_instructions};
 
 use tauri::{AppHandle, Manager};
 
@@ -58,9 +69,10 @@ pub fn setup_shortcuts(app: &tauri::App) {
     let shortcut_str = settings.ui.shortcut_key.clone();
     drop(settings);
 
+    let compositor_name = capability.platform_info.compositor.display_name();
     println!(
         "Detected environment: {} (backend: {:?})",
-        capability.compositor, capability.backend
+        compositor_name, capability.backend
     );
 
     match capability.backend {
@@ -68,8 +80,38 @@ pub fn setup_shortcuts(app: &tauri::App) {
             if let Err(e) = setup_tauri_shortcut(app, &shortcut_str) {
                 eprintln!("Failed to setup Tauri shortcut: {e}");
                 eprintln!("Falling back to manual setup mode");
-                print_manual_setup_instructions(&capability.compositor, &shortcut_str);
+                print_manual_setup_instructions(
+                    &capability.platform_info.compositor,
+                    &shortcut_str,
+                );
             }
+        }
+        #[cfg(target_os = "linux")]
+        ShortcutBackend::RdevGrab => {
+            match setup_rdev_grab(app, &shortcut_str) {
+                Ok(guard) => {
+                    // Store the guard to keep the thread alive
+                    state.rdev_guard.lock().unwrap().replace(guard);
+                    // Clear any previous error
+                    state.rdev_grab_error.lock().unwrap().take();
+                    println!("RdevGrab shortcut registered: {shortcut_str}");
+                }
+                Err(e) => {
+                    eprintln!("RdevGrab failed: {e}");
+                    // Store the error for UI display
+                    state.rdev_grab_error.lock().unwrap().replace(e.to_string());
+                    eprintln!("Falling back to manual setup");
+                    print_manual_setup_instructions(
+                        &capability.platform_info.compositor,
+                        &shortcut_str,
+                    );
+                }
+            }
+        }
+        #[cfg(not(target_os = "linux"))]
+        ShortcutBackend::RdevGrab => {
+            // RdevGrab only available on Linux
+            print_manual_setup_instructions(&capability.platform_info.compositor, &shortcut_str);
         }
         #[cfg(target_os = "linux")]
         ShortcutBackend::PortalGlobalShortcuts => {
@@ -97,10 +139,10 @@ pub fn setup_shortcuts(app: &tauri::App) {
         #[cfg(not(target_os = "linux"))]
         ShortcutBackend::PortalGlobalShortcuts => {
             // Portal shortcuts only available on Linux
-            print_manual_setup_instructions(&capability.compositor, &shortcut_str);
+            print_manual_setup_instructions(&capability.platform_info.compositor, &shortcut_str);
         }
         ShortcutBackend::ManualSetup => {
-            print_manual_setup_instructions(&capability.compositor, &shortcut_str);
+            print_manual_setup_instructions(&capability.platform_info.compositor, &shortcut_str);
         }
     }
 }

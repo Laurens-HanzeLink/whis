@@ -73,3 +73,89 @@ pub fn reset_shortcut() -> Result<(), String> {
 pub fn portal_bind_error(state: State<'_, AppState>) -> Option<String> {
     state.portal_bind_error.lock().unwrap().clone()
 }
+
+/// Get any error from rdev grab (Linux only)
+#[cfg(target_os = "linux")]
+#[tauri::command]
+pub fn rdev_grab_error(state: State<'_, AppState>) -> Option<String> {
+    state.rdev_grab_error.lock().unwrap().clone()
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+pub fn rdev_grab_error() -> Option<String> {
+    None
+}
+
+/// Check if current user is in the 'input' group (Linux only)
+/// Required for rdev::grab() to work on Wayland
+#[tauri::command]
+pub fn check_input_group_membership() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("id")
+            .args(["-nG"])
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).contains("input"))
+            .unwrap_or(false)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        true // Non-Linux platforms don't need input group
+    }
+}
+
+/// Open native keyboard settings app for the given compositor
+#[tauri::command]
+pub fn open_keyboard_settings(compositor: String) -> Result<(), String> {
+    let cmd = match compositor.to_lowercase().as_str() {
+        s if s.contains("gnome") => "gnome-control-center keyboard",
+        s if s.contains("kde") || s.contains("plasma") => "systemsettings kcm_keys",
+        _ => return Err("No settings app available for this compositor".into()),
+    };
+
+    std::process::Command::new("sh")
+        .args(["-c", cmd])
+        .spawn()
+        .map_err(|e| format!("Failed to open settings: {e}"))?;
+
+    Ok(())
+}
+
+/// Get setup instructions for the current compositor
+#[tauri::command]
+pub fn get_shortcut_instructions(shortcut: String) -> ShortcutInstructions {
+    let capability = crate::shortcuts::detect_backend();
+    let compositor = &capability.platform_info.compositor;
+
+    ShortcutInstructions {
+        compositor_name: compositor.display_name().to_string(),
+        instructions: crate::shortcuts::get_instructions(compositor, &shortcut),
+        config_path: crate::shortcuts::get_config_path(compositor).map(|s| s.to_string()),
+        config_snippet: crate::shortcuts::get_config_snippet(compositor, &shortcut),
+        has_settings_app: matches!(
+            compositor,
+            whis_core::Compositor::Gnome | whis_core::Compositor::KdePlasma
+        ),
+    }
+}
+
+/// Instructions for setting up shortcuts
+#[derive(Clone, serde::Serialize)]
+pub struct ShortcutInstructions {
+    pub compositor_name: String,
+    pub instructions: String,
+    pub config_path: Option<String>,
+    pub config_snippet: Option<String>,
+    pub has_settings_app: bool,
+}
+
+/// Get the custom shortcut configured in GNOME Settings (if any)
+///
+/// Scans GNOME's dconf custom shortcuts for any shortcut that
+/// executes `whis-desktop --toggle`. Returns the binding in
+/// human-readable format like "Ctrl+Alt+F".
+#[tauri::command]
+pub fn system_shortcut_from_dconf() -> Option<String> {
+    crate::shortcuts::read_gnome_custom_shortcut()
+}

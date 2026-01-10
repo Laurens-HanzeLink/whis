@@ -27,9 +27,11 @@ tauri-plugin-single-instance = "2.3.6"
 gtk = "0.18"
 ashpd = { version = "0.12", features = ["tokio"] }
 zbus = { version = "5", features = ["tokio"] }
+rdev.workspace = true
 
 [features]
-default = ["custom-protocol", "local-transcription", "realtime"]
+default = ["custom-protocol", "local-transcription", "realtime", "hotkey"]
 custom-protocol = ["tauri/custom-protocol"]
 local-transcription = ["whis-core/local-transcription"]
 realtime = ["whis-core/realtime"]
+hotkey = ["whis-core/hotkey"]

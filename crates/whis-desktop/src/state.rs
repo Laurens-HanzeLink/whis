@@ -4,6 +4,9 @@ use tokio::sync::oneshot;
 pub use whis_core::RecordingState;
 use whis_core::{AudioRecorder, Settings, TranscriptionProvider};
 
+#[cfg(target_os = "linux")]
+use crate::shortcuts::RdevGrabGuard;
+
 /// Cached transcription configuration (provider + API key + language)
 pub struct TranscriptionConfig {
     pub provider: TranscriptionProvider,
@@ -36,6 +39,12 @@ pub struct AppState {
     pub active_download: Mutex<Option<DownloadState>>,
     /// Progressive transcription result receiver (if progressive mode active)
     pub transcription_rx: Mutex<Option<oneshot::Receiver<Result<String, String>>>>,
+    /// Guard for rdev::grab() keyboard listener (Linux only)
+    #[cfg(target_os = "linux")]
+    pub rdev_guard: Mutex<Option<RdevGrabGuard>>,
+    /// Error message if rdev grab failed (Linux only)
+    #[cfg(target_os = "linux")]
+    pub rdev_grab_error: Mutex<Option<String>>,
 }
 
 impl AppState {
@@ -51,6 +60,10 @@ impl AppState {
             tray_available: Mutex::new(tray_available),
             active_download: Mutex::new(None),
             transcription_rx: Mutex::new(None),
+            #[cfg(target_os = "linux")]
+            rdev_guard: Mutex::new(None),
+            #[cfg(target_os = "linux")]
+            rdev_grab_error: Mutex::new(None),
         }
     }
 

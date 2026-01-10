@@ -7,13 +7,30 @@ use crate::state::AppState;
 use tauri::{AppHandle, State};
 use whis_core::{Settings, WarmupConfig, warmup_configured};
 
+/// Get the command to toggle recording from an external source (e.g., GNOME custom shortcut).
+/// Returns the actual executable path so users can copy-paste into their compositor settings.
 #[tauri::command]
 pub fn get_toggle_command() -> String {
+    // Flatpak: use flatpak run command (required for sandboxed apps)
     if std::path::Path::new("/.flatpak-info").exists() {
-        "flatpak run ink.whis.Whis --toggle".to_string()
-    } else {
-        "whis-desktop --toggle".to_string()
+        return "flatpak run ink.whis.Whis --toggle".to_string();
     }
+
+    // AppImage: use APPIMAGE env var (the actual .AppImage file path)
+    // Note: current_exe() returns /tmp/.mount_*/usr/bin/... which is ephemeral
+    if let Ok(appimage_path) = std::env::var("APPIMAGE") {
+        return format!("{} --toggle", appimage_path);
+    }
+
+    // Native/dev builds: use actual executable path
+    if let Ok(exe_path) = std::env::current_exe()
+        && let Ok(canonical) = exe_path.canonicalize()
+    {
+        return format!("{} --toggle", canonical.display());
+    }
+
+    // Fallback (shouldn't happen, but provides a reasonable default)
+    "whis-desktop --toggle".to_string()
 }
 
 /// Check if user can reopen the window after closing

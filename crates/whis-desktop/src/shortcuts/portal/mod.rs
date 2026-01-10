@@ -21,7 +21,7 @@ pub mod registry;
 pub use binding::{
     bind_shortcut_with_trigger, configure_with_preferred_trigger, open_configure_shortcuts,
 };
-pub use dconf::read_portal_shortcut_from_dconf;
+pub use dconf::{read_gnome_custom_shortcut, read_portal_shortcut_from_dconf};
 pub use registry::register_app_with_portal;
 
 use tauri::{AppHandle, Manager};

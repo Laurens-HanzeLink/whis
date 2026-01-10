@@ -117,6 +117,11 @@ pub fn run(start_in_tray: bool) {
             commands::portal_shortcut,
             commands::reset_shortcut,
             commands::portal_bind_error,
+            commands::rdev_grab_error,
+            commands::check_input_group_membership,
+            commands::open_keyboard_settings,
+            commands::get_shortcut_instructions,
+            commands::system_shortcut_from_dconf,
             // Model commands
             commands::download_whisper_model,
             commands::get_whisper_models,

@@ -2,17 +2,20 @@
 //!
 //! Detects the appropriate global shortcut backend for the current platform:
 //! - TauriPlugin: X11, macOS, Windows
-//! - PortalGlobalShortcuts: Wayland with portal support
-//! - ManualSetup: Wayland without portal (fallback to IPC)
+//! - RdevGrab: Linux via evdev (requires input group permissions)
+//! - PortalGlobalShortcuts: Wayland with portal support (GNOME 48+, KDE, Hyprland)
+//! - ManualSetup: Fallback to IPC (`whis-desktop --toggle`)
 
 use serde::Serialize;
-use std::env;
+use whis_core::platform::{Platform, PlatformInfo, detect_platform};
 
 /// Backend for global keyboard shortcuts
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum ShortcutBackend {
     /// Tauri plugin - works on X11, macOS, Windows
     TauriPlugin,
+    /// rdev::grab() - works on Linux (X11 and Wayland) via evdev
+    RdevGrab,
     /// XDG Portal GlobalShortcuts - works on Wayland with GNOME 48+, KDE, Hyprland
     PortalGlobalShortcuts,
     /// Manual setup - user configures compositor to run `whis-desktop --toggle`
@@ -22,7 +25,7 @@ pub enum ShortcutBackend {
 /// Information about shortcut capability on current system
 pub struct ShortcutCapability {
     pub backend: ShortcutBackend,
-    pub compositor: String,
+    pub platform_info: PlatformInfo,
 }
 
 /// Backend info for frontend consumption
@@ -32,102 +35,59 @@ pub struct ShortcutBackendInfo {
     pub requires_restart: bool,
     pub compositor: String,
     pub portal_version: u32,
+    pub is_flatpak: bool,
 }
 
 /// Get the GlobalShortcuts portal version (0 if unavailable)
-#[cfg(target_os = "linux")]
 pub fn portal_version() -> u32 {
-    std::process::Command::new("busctl")
-        .args([
-            "--user",
-            "get-property",
-            "org.freedesktop.portal.Desktop",
-            "/org/freedesktop/portal/desktop",
-            "org.freedesktop.portal.GlobalShortcuts",
-            "version",
-        ])
-        .output()
-        .ok()
-        .and_then(|o| {
-            let output = String::from_utf8_lossy(&o.stdout);
-            // Output format: "u 1" or "u 2"
-            output.split_whitespace().last()?.parse().ok()
-        })
-        .unwrap_or(0)
-}
-
-#[cfg(not(target_os = "linux"))]
-pub fn portal_version() -> u32 {
-    0
+    detect_platform().portal_version
 }
 
 /// Get backend info for the frontend
 pub fn backend_info() -> ShortcutBackendInfo {
     let capability = detect_backend();
-    let portal_version = if capability.backend == ShortcutBackend::PortalGlobalShortcuts {
-        portal_version()
-    } else {
-        0
-    };
+
+    // RdevGrab and Portal require restart to update shortcuts
+    let requires_restart = !matches!(capability.backend, ShortcutBackend::TauriPlugin);
 
     ShortcutBackendInfo {
         backend: format!("{:?}", capability.backend),
-        requires_restart: !matches!(capability.backend, ShortcutBackend::TauriPlugin),
-        compositor: capability.compositor,
-        portal_version,
+        requires_restart,
+        compositor: capability
+            .platform_info
+            .compositor
+            .display_name()
+            .to_string(),
+        portal_version: capability.platform_info.portal_version,
+        is_flatpak: capability.platform_info.is_flatpak,
     }
 }
 
 /// Detect the best shortcut backend for the current environment
 pub fn detect_backend() -> ShortcutCapability {
-    let session_type = env::var("XDG_SESSION_TYPE").unwrap_or_default();
-    let wayland_display = env::var("WAYLAND_DISPLAY").is_ok();
+    let platform_info = detect_platform();
 
-    // Check if running on Wayland
-    if session_type == "wayland" || wayland_display {
-        if is_portal_available() {
-            ShortcutCapability {
-                backend: ShortcutBackend::PortalGlobalShortcuts,
-                compositor: detect_compositor(),
-            }
-        } else {
-            ShortcutCapability {
-                backend: ShortcutBackend::ManualSetup,
-                compositor: detect_compositor(),
+    let backend = match platform_info.platform {
+        Platform::MacOS | Platform::Windows => ShortcutBackend::TauriPlugin,
+        Platform::LinuxX11 => ShortcutBackend::TauriPlugin,
+        Platform::LinuxWayland => {
+            if platform_info.is_flatpak {
+                // Flatpak sandbox blocks /dev/input/* access
+                // Must use Portal or manual compositor config
+                if platform_info.portal_version >= 1 {
+                    ShortcutBackend::PortalGlobalShortcuts
+                } else {
+                    ShortcutBackend::ManualSetup
+                }
+            } else {
+                // Non-sandboxed: use rdev::grab() via evdev
+                ShortcutBackend::RdevGrab
             }
         }
-    } else {
-        // X11 or other - use Tauri plugin
-        ShortcutCapability {
-            backend: ShortcutBackend::TauriPlugin,
-            compositor: "X11".into(),
-        }
+    };
+
+    ShortcutCapability {
+        backend,
+        platform_info,
     }
-}
-
-/// Check if GlobalShortcuts portal is available via D-Bus
-#[cfg(target_os = "linux")]
-fn is_portal_available() -> bool {
-    std::process::Command::new("busctl")
-        .args([
-            "--user",
-            "introspect",
-            "org.freedesktop.portal.Desktop",
-            "/org/freedesktop/portal/desktop",
-        ])
-        .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).contains("GlobalShortcuts"))
-        .unwrap_or(false)
-}
-
-#[cfg(not(target_os = "linux"))]
-fn is_portal_available() -> bool {
-    false
-}
-
-/// Detect the current desktop compositor
-fn detect_compositor() -> String {
-    env::var("XDG_CURRENT_DESKTOP")
-        .or_else(|_| env::var("DESKTOP_SESSION"))
-        .unwrap_or_else(|_| "Unknown".into())
 }
