@@ -20,7 +20,7 @@ const toggleCommand = ref('whis-desktop --toggle')
 const activeTab = ref<'system' | 'direct'>('system')
 
 // Use keyboard capture composable
-const { capturedShortcut, setShortcut } = useKeyboardCapture(settingsStore.state.ui.shortcut_key)
+const { capturedShortcut, setShortcut } = useKeyboardCapture(settingsStore.state.shortcuts.desktop_key)
 
 // Computed properties from store
 const backendInfo = computed(() => settingsStore.state.backendInfo ?? null)
@@ -88,7 +88,7 @@ const tabs = computed(() => [
 ])
 
 onMounted(async () => {
-  setShortcut(settingsStore.state.ui.shortcut_key)
+  setShortcut(settingsStore.state.shortcuts.desktop_key)
   try {
     toggleCommand.value = await invoke<string>('get_toggle_command')
   }
@@ -106,7 +106,7 @@ watch([backendInfo, directCaptureWorking], () => {
 
 async function saveShortcut() {
   try {
-    settingsStore.setShortcutKey(currentShortcut.value)
+    settingsStore.setDesktopKey(currentShortcut.value)
     const restartNeeded = await settingsStore.save()
     if (restartNeeded) {
       needsRestart.value = true

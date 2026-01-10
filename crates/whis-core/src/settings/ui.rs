@@ -1,101 +1,20 @@
 //! User interface and recording settings.
 //!
 //! This module contains settings for:
-//! - Keyboard shortcuts and triggering mode
 //! - Audio recording configuration (microphone, VAD, chunking)
 //! - Output handling (clipboard backend, presets)
 //! - Desktop-specific features (floating bubble overlay)
+//!
+//! Note: Keyboard shortcuts are now in the `shortcuts` module.
 
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "clipboard")]
 use crate::clipboard::ClipboardMethod;
 
-/// CLI keyboard shortcut triggering mode.
-///
-/// Determines how the CLI (`whis` command) listens for the recording hotkey.
-///
-/// **NOTE**: This setting only affects the CLI. The desktop app (whis-desktop)
-/// auto-detects the best shortcut backend based on your environment.
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum CliShortcutMode {
-    /// Desktop environment handles the hotkey.
-    ///
-    /// Configure a keyboard shortcut in your desktop settings
-    /// (GNOME Settings → Keyboard → Shortcuts) to run: `whis toggle`
-    ///
-    /// This is the recommended mode as it works reliably across
-    /// all Linux desktop environments without special permissions.
-    #[default]
-    System,
-
-    /// CLI captures the hotkey directly.
-    ///
-    /// The CLI will listen for the global keyboard shortcut specified
-    /// in `shortcut_key`. This requires special permissions on Linux
-    /// (typically input group membership or running as root).
-    ///
-    /// Use this mode if you can't configure system shortcuts or
-    /// need the shortcut to work in specific applications.
-    Direct,
-}
-
-impl CliShortcutMode {
-    /// Returns the string representation for config display.
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            CliShortcutMode::System => "system",
-            CliShortcutMode::Direct => "direct",
-        }
-    }
-}
-
-impl std::fmt::Display for CliShortcutMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-impl std::str::FromStr for CliShortcutMode {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "system" => Ok(CliShortcutMode::System),
-            "direct" => Ok(CliShortcutMode::Direct),
-            _ => Err(format!(
-                "Invalid shortcut mode: '{}'. Use 'system' or 'direct'",
-                s
-            )),
-        }
-    }
-}
-
 /// Settings for UI behavior and device configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiSettings {
-    /// CLI keyboard shortcut triggering mode.
-    ///
-    /// - `system`: Configure hotkey in desktop settings to run "whis toggle"
-    /// - `direct`: CLI captures the hotkey globally (requires permissions)
-    ///
-    /// **NOTE**: This setting only affects the CLI (`whis` command).
-    /// The desktop app auto-detects its shortcut backend.
-    ///
-    /// See [`CliShortcutMode`] for details on each mode.
-    #[serde(default)]
-    pub cli_shortcut_mode: CliShortcutMode,
-
-    /// Global keyboard shortcut (e.g., "Ctrl+Alt+W").
-    ///
-    /// **NOTE**: Only used by CLI when `cli_shortcut_mode` is `direct`.
-    /// In `system` mode, this field is ignored - configure your
-    /// hotkey in desktop settings instead.
-    ///
-    /// Format: Modifier keys + key, e.g., "Ctrl+Alt+W", "Super+Shift+R"
-    pub shortcut_key: String,
-
     /// Clipboard backend for pasting transcriptions.
     ///
     /// - `auto`: Auto-detect the best option for your system (recommended)
@@ -238,8 +157,6 @@ impl Default for BubbleSettings {
 impl Default for UiSettings {
     fn default() -> Self {
         Self {
-            cli_shortcut_mode: CliShortcutMode::default(),
-            shortcut_key: crate::configuration::DEFAULT_SHORTCUT.to_string(),
             #[cfg(feature = "clipboard")]
             clipboard_backend: ClipboardMethod::default(),
             microphone_device: None,

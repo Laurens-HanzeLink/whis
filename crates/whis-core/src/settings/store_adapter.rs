@@ -20,7 +20,9 @@
 //! active_preset         → ui.active_preset
 //! ollama_url            → services.ollama.url
 //! ollama_model          → services.ollama.model
-//! shortcut_key          → ui.shortcut_key
+//! cli_mode              → shortcuts.cli_mode
+//! cli_key               → shortcuts.cli_key
+//! desktop_key           → shortcuts.desktop_key
 //! vad_enabled           → ui.vad.enabled
 //! vad_threshold         → ui.vad.threshold
 //! ```
@@ -38,6 +40,7 @@
 //! }
 //! ```
 
+use super::shortcuts::CliShortcutMode;
 use super::Settings;
 use crate::configuration::TranscriptionProvider;
 use crate::transcription::PostProcessor;
@@ -97,8 +100,19 @@ impl Settings {
                 settings.ui.active_preset = Some(preset.clone());
             }
 
-        if let Some(Value::String(shortcut)) = map.get("shortcut_key") {
-            settings.ui.shortcut_key = shortcut.clone();
+        // Shortcuts settings
+        if let Some(Value::String(mode)) = map.get("cli_mode")
+            && let Ok(m) = mode.parse::<CliShortcutMode>()
+        {
+            settings.shortcuts.cli_mode = m;
+        }
+
+        if let Some(Value::String(key)) = map.get("cli_key") {
+            settings.shortcuts.cli_key = key.clone();
+        }
+
+        if let Some(Value::String(key)) = map.get("desktop_key") {
+            settings.shortcuts.desktop_key = key.clone();
         }
 
         if let Some(Value::Bool(enabled)) = map.get("vad_enabled") {
@@ -160,9 +174,18 @@ impl Settings {
             map.insert("active_preset".to_string(), Value::String(preset.clone()));
         }
 
+        // Shortcuts settings
         map.insert(
-            "shortcut_key".to_string(),
-            Value::String(self.ui.shortcut_key.clone()),
+            "cli_mode".to_string(),
+            Value::String(self.shortcuts.cli_mode.as_str().to_string()),
+        );
+        map.insert(
+            "cli_key".to_string(),
+            Value::String(self.shortcuts.cli_key.clone()),
+        );
+        map.insert(
+            "desktop_key".to_string(),
+            Value::String(self.shortcuts.desktop_key.clone()),
         );
 
         map.insert("vad_enabled".to_string(), Value::Bool(self.ui.vad.enabled));

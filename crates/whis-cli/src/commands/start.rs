@@ -21,11 +21,14 @@ pub fn run() -> Result<()> {
     // Create Tokio runtime
     let runtime = tokio::runtime::Runtime::new()?;
 
-    // Based on cli_shortcut_mode, decide how to run
-    match settings.ui.cli_shortcut_mode {
+    // Validate shortcuts before starting (check for conflicts with Desktop)
+    settings.shortcuts.validate()?;
+
+    // Based on cli_mode, decide how to run
+    match settings.shortcuts.cli_mode {
         CliShortcutMode::Direct => {
             // Try to set up hotkey via evdev/rdev
-            let shortcut = &settings.ui.shortcut_key;
+            let shortcut = &settings.shortcuts.cli_key;
             match hotkey::setup(shortcut) {
                 Ok((hotkey_rx, _guard)) => {
                     println!("Listening. Press {} to record. Ctrl+C to stop.", shortcut);
@@ -49,7 +52,7 @@ pub fn run() -> Result<()> {
                     eprintln!("Then logout and login again.");
                     eprintln!();
                     eprintln!("Or switch to system mode:");
-                    eprintln!("  whis config cli-shortcut-mode system");
+                    eprintln!("  whis config cli-mode system");
                     std::process::exit(1);
                 }
             }

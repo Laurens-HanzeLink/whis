@@ -9,7 +9,8 @@
 //!   ├── Transcription  - Provider, API keys, local models
 //!   ├── PostProcessing - LLM processor, prompts
 //!   ├── Services       - Ollama, external services
-//!   └── UI             - Shortcut, clipboard, microphone, VAD, presets, bubble
+//!   ├── Shortcuts      - CLI and Desktop keyboard shortcuts
+//!   └── UI             - Clipboard, microphone, VAD, presets, bubble
 //! ```
 //!
 //! # Usage
@@ -38,14 +39,16 @@
 
 mod post_processing;
 mod services;
+mod shortcuts;
 mod store_adapter;
 mod transcription;
 mod ui;
 
 pub use post_processing::PostProcessingSettings;
 pub use services::{OllamaConfig, ServicesSettings};
+pub use shortcuts::{CliShortcutMode, ShortcutsSettings};
 pub use transcription::{LocalModelsConfig, TranscriptionSettings};
-pub use ui::{BubblePosition, BubbleSettings, CliShortcutMode, UiSettings, VadSettings};
+pub use ui::{BubblePosition, BubbleSettings, UiSettings, VadSettings};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -58,12 +61,14 @@ use std::path::PathBuf;
 /// - `transcription`: Provider configuration and API keys
 /// - `post_processing`: LLM post-processing settings
 /// - `services`: External service configuration (Ollama, etc.)
+/// - `shortcuts`: CLI and Desktop keyboard shortcuts
 /// - `ui`: User interface preferences
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Settings {
     pub transcription: TranscriptionSettings,
     pub post_processing: PostProcessingSettings,
     pub services: ServicesSettings,
+    pub shortcuts: ShortcutsSettings,
     pub ui: UiSettings,
 }
 
@@ -128,10 +133,12 @@ impl Settings {
     /// Checks that:
     /// - Transcription provider is properly configured
     /// - Post-processing (if enabled) has required credentials
+    /// - Shortcuts don't conflict (CLI direct mode with same key as desktop)
     pub fn validate(&self) -> Result<()> {
         self.transcription.validate()?;
         self.post_processing
             .validate(&self.transcription.api_keys)?;
+        self.shortcuts.validate()?;
         Ok(())
     }
 }

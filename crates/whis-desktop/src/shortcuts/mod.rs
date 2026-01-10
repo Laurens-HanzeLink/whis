@@ -66,7 +66,7 @@ pub fn setup_shortcuts(app: &tauri::App) {
     let capability = detect_backend();
     let state = app.state::<crate::state::AppState>();
     let settings = state.settings.lock().unwrap();
-    let shortcut_str = settings.ui.shortcut_key.clone();
+    let shortcut_str = settings.shortcuts.desktop_key.clone();
     drop(settings);
 
     let compositor_name = capability.platform_info.compositor.display_name();

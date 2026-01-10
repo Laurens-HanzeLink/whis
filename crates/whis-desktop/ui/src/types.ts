@@ -26,6 +26,9 @@ export type PostProcessor = 'none' | 'openai' | 'mistral' | 'ollama'
 // Bubble overlay position
 export type BubblePosition = 'none' | 'top' | 'center' | 'bottom'
 
+// CLI shortcut mode
+export type CliShortcutMode = 'system' | 'direct'
+
 // All settings from the backend (nested structure)
 export interface Settings {
   transcription: {
@@ -47,8 +50,12 @@ export interface Settings {
       model: string | null
     }
   }
+  shortcuts: {
+    cli_mode: CliShortcutMode
+    cli_key: string
+    desktop_key: string
+  }
   ui: {
-    shortcut_key: string
     clipboard_backend: string
     microphone_device: string | null
     chunk_duration_secs: number

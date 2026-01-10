@@ -1,4 +1,4 @@
-import type { BackendInfo, BubblePosition, PostProcessor, Provider, Settings } from '../types'
+import type { BackendInfo, BubblePosition, CliShortcutMode, PostProcessor, Provider, Settings } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 import { reactive, readonly, watch } from 'vue'
 
@@ -7,7 +7,7 @@ interface Defaults {
   provider: Provider
   ollama_url: string
   ollama_model: string
-  shortcut_key: string
+  desktop_key: string
   vad_enabled: boolean
   vad_threshold: number
 }
@@ -41,7 +41,7 @@ let defaults: Defaults = {
   provider: 'deepgram',
   ollama_url: 'http://localhost:11434',
   ollama_model: 'qwen2.5:1.5b',
-  shortcut_key: 'Ctrl+Alt+W',
+  desktop_key: 'Ctrl+Alt+W',
   vad_enabled: false,
   vad_threshold: 0.5,
 }
@@ -68,8 +68,12 @@ function getDefaultSettings(): Settings {
         model: defaults.ollama_model,
       },
     },
+    shortcuts: {
+      cli_mode: 'system' as CliShortcutMode,
+      cli_key: defaults.desktop_key,
+      desktop_key: defaults.desktop_key,
+    },
     ui: {
-      shortcut_key: defaults.shortcut_key,
       clipboard_backend: 'auto',
       microphone_device: null,
       chunk_duration_secs: 90,
@@ -128,6 +132,7 @@ const debouncedSave = debounce(async () => {
         transcription: state.transcription,
         post_processing: state.post_processing,
         services: state.services,
+        shortcuts: state.shortcuts,
         ui: state.ui,
       },
     })
@@ -143,6 +148,7 @@ watch(
     state.transcription,
     state.post_processing,
     state.services,
+    state.shortcuts,
     state.ui,
   ],
   () => {
@@ -176,8 +182,12 @@ async function load() {
         model: settings.services.ollama.model || defaults.ollama_model,
       },
     }
+    state.shortcuts = {
+      cli_mode: settings.shortcuts?.cli_mode || 'system',
+      cli_key: settings.shortcuts?.cli_key || defaults.desktop_key,
+      desktop_key: settings.shortcuts?.desktop_key || defaults.desktop_key,
+    }
     state.ui = {
-      shortcut_key: settings.ui.shortcut_key || defaults.shortcut_key,
       clipboard_backend: settings.ui.clipboard_backend,
       microphone_device: settings.ui.microphone_device,
       chunk_duration_secs: Math.max(10, Math.min(300, settings.ui.chunk_duration_secs ?? 90)),
@@ -204,6 +214,7 @@ async function save(): Promise<boolean> {
         transcription: state.transcription,
         post_processing: state.post_processing,
         services: state.services,
+        shortcuts: state.shortcuts,
         ui: state.ui,
       },
     })
@@ -292,8 +303,8 @@ async function initialize() {
   // Sync detected system shortcut to settings.json
   // Must be after state.loaded = true so watcher triggers auto-save
   if (state.backendInfo?.backend === 'RdevGrab' && state.systemShortcut) {
-    if (state.systemShortcut !== state.ui.shortcut_key) {
-      state.ui.shortcut_key = state.systemShortcut
+    if (state.systemShortcut !== state.shortcuts.desktop_key) {
+      state.shortcuts.desktop_key = state.systemShortcut
       // Watcher automatically saves since state.loaded is true
     }
   }
@@ -332,6 +343,7 @@ async function flush(): Promise<void> {
         transcription: state.transcription,
         post_processing: state.post_processing,
         services: state.services,
+        shortcuts: state.shortcuts,
         ui: state.ui,
       },
     })
@@ -378,8 +390,8 @@ function setPostProcessingPrompt(value: string | null) {
   state.post_processing.prompt = value
 }
 
-function setShortcutKey(value: string) {
-  state.ui.shortcut_key = value
+function setDesktopKey(value: string) {
+  state.shortcuts.desktop_key = value
 }
 
 function setPortalShortcut(value: string | null) {
@@ -489,7 +501,7 @@ export const settingsStore = {
   setOllamaUrl,
   setOllamaModel,
   setPostProcessingPrompt,
-  setShortcutKey,
+  setDesktopKey,
   setPortalShortcut,
   setMicrophoneDevice,
   setBubbleEnabled,

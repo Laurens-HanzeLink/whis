@@ -21,8 +21,9 @@ const VALID_KEYS: &[&str] = &[
     "ollama-url",
     "ollama-model",
     "microphone-device",
-    "cli-shortcut-mode",
-    "shortcut-key",
+    "cli-mode",
+    "cli-key",
+    "desktop-key",
     "vad",
     "vad-threshold",
     "chunk-size",
@@ -221,19 +222,32 @@ fn set_config(key: &str, value: &str) -> Result<()> {
             settings.ui.chunk_duration_secs = size;
             println!("chunk-size = {}s", size);
         }
-        "cli-shortcut-mode" => {
+        "cli-mode" => {
             let mode: CliShortcutMode = value_trimmed
                 .parse()
                 .map_err(|e: String| anyhow!("{}", e))?;
-            settings.ui.cli_shortcut_mode = mode;
-            println!("cli-shortcut-mode = {}", mode);
+            settings.shortcuts.cli_mode = mode;
+            // Validate before saving (check for conflicts)
+            settings.shortcuts.validate()?;
+            println!("cli-mode = {}", mode);
         }
-        "shortcut-key" => {
+        "cli-key" => {
             if value_trimmed.is_empty() {
-                anyhow::bail!("Invalid shortcut key: cannot be empty");
+                anyhow::bail!("Invalid CLI shortcut key: cannot be empty");
             }
-            settings.ui.shortcut_key = value_trimmed.to_string();
-            println!("shortcut-key = {}", value_trimmed);
+            settings.shortcuts.cli_key = value_trimmed.to_string();
+            // Validate before saving (check for conflicts)
+            settings.shortcuts.validate()?;
+            println!("cli-key = {}", value_trimmed);
+        }
+        "desktop-key" => {
+            if value_trimmed.is_empty() {
+                anyhow::bail!("Invalid Desktop shortcut key: cannot be empty");
+            }
+            settings.shortcuts.desktop_key = value_trimmed.to_string();
+            // Validate before saving (check for conflicts)
+            settings.shortcuts.validate()?;
+            println!("desktop-key = {}", value_trimmed);
         }
         _ => unreachable!("Key validation should prevent this"),
     }
@@ -302,8 +316,9 @@ fn get_config(key: &str) -> Result<()> {
         "vad" => println!("{}", settings.ui.vad.enabled),
         "vad-threshold" => println!("{:.2}", settings.ui.vad.threshold),
         "chunk-size" => println!("{}s", settings.ui.chunk_duration_secs),
-        "cli-shortcut-mode" => println!("{}", settings.ui.cli_shortcut_mode),
-        "shortcut-key" => println!("{}", settings.ui.shortcut_key),
+        "cli-mode" => println!("{}", settings.shortcuts.cli_mode),
+        "cli-key" => println!("{}", settings.shortcuts.cli_key),
+        "desktop-key" => println!("{}", settings.shortcuts.desktop_key),
         _ => unreachable!("Key validation should prevent this"),
     }
 
@@ -399,8 +414,9 @@ fn show_all_settings() -> Result<()> {
 
     println!();
     println!("[Shortcuts]");
-    println!("cli-shortcut-mode = {}", settings.ui.cli_shortcut_mode);
-    println!("shortcut-key = {}", settings.ui.shortcut_key);
+    println!("cli-mode = {}", settings.shortcuts.cli_mode);
+    println!("cli-key = {}", settings.shortcuts.cli_key);
+    println!("desktop-key = {}", settings.shortcuts.desktop_key);
 
     println!();
     println!("[Presets]");

@@ -50,7 +50,7 @@ pub async fn save_settings(
                     != settings.transcription.local_models.whisper_path
                 || current.transcription.local_models.parakeet_path
                     != settings.transcription.local_models.parakeet_path,
-            current.ui.shortcut_key != settings.ui.shortcut_key,
+            current.shortcuts.desktop_key != settings.shortcuts.desktop_key,
         )
     };
 
@@ -67,7 +67,7 @@ pub async fn save_settings(
 
     // Only update shortcut if it actually changed
     let needs_restart = if shortcut_changed {
-        crate::shortcuts::update_shortcut(&app, &settings.ui.shortcut_key)
+        crate::shortcuts::update_shortcut(&app, &settings.shortcuts.desktop_key)
             .map_err(|e| e.to_string())?
     } else {
         false
@@ -181,7 +181,7 @@ pub fn get_defaults() -> serde_json::Value {
         "provider": DEFAULT_PROVIDER.as_str(),
         "ollama_url": DEFAULT_OLLAMA_URL,
         "ollama_model": DEFAULT_OLLAMA_MODEL,
-        "shortcut": DEFAULT_SHORTCUT,
+        "desktop_key": DEFAULT_SHORTCUT,
         "vad_enabled": DEFAULT_VAD_ENABLED,
         "vad_threshold": DEFAULT_VAD_THRESHOLD,
     })
