@@ -3,12 +3,14 @@
 import type { SelectOption } from '../types'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: string | null
   options: SelectOption[]
   disabled?: boolean
   ariaLabel?: string
-}>()
+}>(), {
+  disabled: false,
+})
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | null]

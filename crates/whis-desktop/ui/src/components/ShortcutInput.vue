@@ -2,11 +2,14 @@
 <script setup lang="ts">
 import { useKeyboardCapture } from '../composables/useKeyboardCapture'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: string
   disabled?: boolean
   readonly?: boolean
-}>()
+}>(), {
+  disabled: false,
+  readonly: false,
+})
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]

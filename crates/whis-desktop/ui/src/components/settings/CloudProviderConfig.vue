@@ -30,10 +30,14 @@ const cloudProviders: CloudProviderInfo[] = [
   { value: 'elevenlabs', label: 'ElevenLabs', desc: 'Best for voice projects', keyUrl: 'https://elevenlabs.io/app/settings/api-keys', placeholder: '...' },
 ]
 
-// Normalize provider for API key lookup (openai-realtime uses openai key)
-const normalizedProvider = computed(() =>
-  props.provider === 'openai-realtime' ? 'openai' : props.provider,
-)
+// Normalize provider for API key lookup (realtime variants use base provider key)
+const normalizedProvider = computed(() => {
+  if (props.provider === 'openai-realtime')
+    return 'openai'
+  if (props.provider === 'deepgram-realtime')
+    return 'deepgram'
+  return props.provider
+})
 
 const currentProvider = computed((): CloudProviderInfo => {
   const found = cloudProviders.find(p => p.value === normalizedProvider.value)
@@ -54,7 +58,7 @@ function handleApiKeyChange(event: Event) {
   <div v-if="showConfigCard" class="config-card">
     <div class="api-key-input">
       <input
-        :type="keyMasked[normalizedProvider] ? 'password' : 'text'"
+        :type="(keyMasked[normalizedProvider] ?? true) ? 'password' : 'text'"
         :value="currentApiKey"
         :placeholder="currentProvider.placeholder"
         spellcheck="false"
@@ -65,11 +69,11 @@ function handleApiKeyChange(event: Event) {
       <button
         class="toggle-btn"
         type="button"
-        :aria-pressed="!keyMasked[normalizedProvider]"
+        :aria-pressed="!(keyMasked[normalizedProvider] ?? true)"
         aria-label="Toggle API key visibility"
         @click="keyMasked[normalizedProvider] = !keyMasked[normalizedProvider]"
       >
-        {{ keyMasked[normalizedProvider] ? 'show' : 'hide' }}
+        {{ (keyMasked[normalizedProvider] ?? true) ? 'show' : 'hide' }}
       </button>
     </div>
     <p class="hint">

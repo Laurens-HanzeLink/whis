@@ -277,7 +277,7 @@ const configPathCopied = ref(false)
 
 async function copyConfigPath() {
   try {
-    await navigator.clipboard.writeText(configPath)
+    await invoke('copy_text', { text: configPath })
     configPathCopied.value = true
     setTimeout(() => {
       configPathCopied.value = false
