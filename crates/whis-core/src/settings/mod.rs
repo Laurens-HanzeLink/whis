@@ -38,6 +38,7 @@
 
 mod post_processing;
 mod services;
+mod store_adapter;
 mod transcription;
 mod ui;
 

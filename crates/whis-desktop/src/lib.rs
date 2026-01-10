@@ -27,7 +27,7 @@ pub mod tray;
 mod window;
 
 use tauri::{Emitter, Manager};
-use whis_core::{warn, Settings};
+use whis_core::{Settings, warn};
 
 pub fn run(start_in_tray: bool) {
     tauri::Builder::default()

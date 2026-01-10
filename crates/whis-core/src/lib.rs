@@ -28,12 +28,12 @@ pub use audio::{
 };
 
 // Re-export configuration types
-pub use configuration::{Preset, PresetSource, TranscriptionProvider};
 pub use configuration::{
     DEFAULT_LANGUAGE, DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL, DEFAULT_POST_PROCESSOR,
     DEFAULT_PROVIDER, DEFAULT_SHORTCUT, DEFAULT_SHORTCUT_MODE, DEFAULT_VAD_ENABLED,
     DEFAULT_VAD_THRESHOLD,
 };
+pub use configuration::{Preset, PresetSource, TranscriptionProvider};
 
 // Re-export transcription types
 pub use transcription::{
@@ -80,7 +80,6 @@ pub use verbose::set_verbose;
 #[cfg(feature = "hotkey")]
 pub use hotkey::{Hotkey, HotkeyParseError, key_to_string, lock_or_recover, parse_key};
 pub use platform::{Compositor, Platform, PlatformInfo, detect_platform, is_flatpak};
-
 
 // Legacy module aliases for backward compatibility
 #[doc(hidden)]

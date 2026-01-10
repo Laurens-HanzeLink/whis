@@ -93,7 +93,10 @@ pub async fn apply_post_processing(
     let api_key = match api_key {
         Some(key) if !key.is_empty() => key,
         _ => {
-            warn!("Post-processing: No API key configured for {}", post_processor);
+            warn!(
+                "Post-processing: No API key configured for {}",
+                post_processor
+            );
             return text;
         }
     };

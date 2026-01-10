@@ -3,10 +3,12 @@
 //! This module centralizes provider → API key mapping and validation logic,
 //! avoiding duplication across commands and config loading.
 
+use whis_core::Settings;
+
 /// Get the Tauri store key for a provider's API key.
 ///
-/// Maps provider strings (including realtime variants) to their
-/// corresponding API key store keys.
+/// Delegates to `Settings::api_key_store_key` from whis-core for a single
+/// source of truth across all apps.
 ///
 /// # Examples
 ///
@@ -17,14 +19,7 @@
 /// assert_eq!(api_key_store_key("unknown"), None);
 /// ```
 pub fn api_key_store_key(provider: &str) -> Option<&'static str> {
-    match provider {
-        "openai" | "openai-realtime" => Some("openai_api_key"),
-        "mistral" => Some("mistral_api_key"),
-        "groq" => Some("groq_api_key"),
-        "deepgram" | "deepgram-realtime" => Some("deepgram_api_key"),
-        "elevenlabs" => Some("elevenlabs_api_key"),
-        _ => None,
-    }
+    Settings::api_key_store_key(provider)
 }
 
 /// Validate API key format for a given provider.
