@@ -4,7 +4,7 @@ use crate::recording::provider::api_key_store_key;
 use crate::state::{AppState, RecordingState};
 use tauri::State;
 use tauri_plugin_store::StoreExt;
-use whis_core::{WarmupConfig, warmup_configured};
+use whis_core::{TranscriptionProvider, WarmupConfig, warmup_configured};
 
 /// Status response for the frontend.
 #[derive(serde::Serialize)]
@@ -93,4 +93,25 @@ pub async fn warmup_connections(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+/// Cloud provider option for the frontend dropdown.
+#[derive(serde::Serialize)]
+pub struct CloudProviderOption {
+    pub value: String,
+    pub label: String,
+}
+
+/// Get cloud providers in recommended order.
+///
+/// Returns cloud providers (excluding local and realtime variants) in the
+/// order defined by TranscriptionProvider::all() for consistent UI display.
+#[tauri::command]
+pub fn get_cloud_providers() -> Vec<CloudProviderOption> {
+    TranscriptionProvider::cloud_providers()
+        .map(|p| CloudProviderOption {
+            value: p.as_str().to_string(),
+            label: p.display_name().to_string(),
+        })
+        .collect()
 }

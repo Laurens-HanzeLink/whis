@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PostProcessor, Provider, SelectOption, TranscriptionMethod } from '../types'
+import { invoke } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import {
   hasOverlayPermission as checkOverlayPermissionApi,
@@ -18,14 +19,8 @@ import { settingsStore } from '../stores/settings'
 const hasOverlayPermission = ref(false)
 const bubbleError = ref<string | null>(null)
 
-// Provider options (ordered by recommendation)
-const providerOptions: SelectOption[] = [
-  { value: 'deepgram', label: 'Deepgram' },
-  { value: 'openai', label: 'OpenAI Whisper' },
-  { value: 'mistral', label: 'Mistral Voxtral' },
-  { value: 'groq', label: 'Groq' },
-  { value: 'elevenlabs', label: 'ElevenLabs' },
-]
+// Provider options (loaded from backend, ordered by recommendation from whis-core)
+const providerOptions = ref<SelectOption[]>([])
 
 // Language options
 const languageOptions: SelectOption[] = [
@@ -161,6 +156,15 @@ const floatingBubbleEnabled = computed({
 onMounted(async () => {
   presetsStore.loadPresets()
   await checkOverlayPermission()
+
+  // Load cloud providers from backend (ordered by recommendation from whis-core)
+  try {
+    const providers = await invoke<{ value: string, label: string }[]>('get_cloud_providers')
+    providerOptions.value = providers
+  }
+  catch (error) {
+    console.error('Failed to load cloud providers:', error)
+  }
 
   // If bubble was enabled but permission was revoked, disable it
   if (settingsStore.state.floating_bubble_enabled && !hasOverlayPermission.value) {

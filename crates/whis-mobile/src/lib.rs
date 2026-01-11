@@ -75,6 +75,7 @@ pub fn run() {
             commands::get_status,
             commands::validate_api_key,
             commands::warmup_connections,
+            commands::get_cloud_providers,
             // Preset commands
             commands::list_presets,
             commands::get_preset_details,
