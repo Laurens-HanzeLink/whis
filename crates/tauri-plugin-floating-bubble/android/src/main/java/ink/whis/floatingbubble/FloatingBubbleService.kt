@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -12,14 +13,20 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
+import android.view.GestureDetector
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
+import android.widget.PopupMenu
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.GestureDetectorCompat
 import app.tauri.annotation.InvokeArg
 
 /**
@@ -255,17 +262,30 @@ class FloatingBubbleService : Service() {
     }
 
     /**
-     * Touch listener that handles dragging the bubble.
+     * Touch listener that handles dragging the bubble and long-press gestures.
      */
-    private inner class BubbleTouchListener : View.OnTouchListener {
+    private inner class BubbleTouchListener : View.OnTouchListener,
+        GestureDetector.OnGestureListener {
+
         private var initialX = 0
         private var initialY = 0
         private var initialTouchX = 0f
         private var initialTouchY = 0f
         private var isDragging = false
+        private var longPressTriggered = false
         private val clickThreshold = 10 // pixels
 
+        private val gestureDetector = GestureDetectorCompat(
+            this@FloatingBubbleService,
+            this
+        ).apply {
+            setIsLongpressEnabled(true)
+        }
+
         override fun onTouch(view: View, event: MotionEvent): Boolean {
+            // Let gesture detector process for long-press detection
+            gestureDetector.onTouchEvent(event)
+
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = layoutParams?.x ?: 0
@@ -273,26 +293,27 @@ class FloatingBubbleService : Service() {
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
+                    longPressTriggered = false
                     return true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val deltaX = (event.rawX - initialTouchX).toInt()
                     val deltaY = (event.rawY - initialTouchY).toInt()
-                    
-                    if (kotlin.math.abs(deltaX) > clickThreshold || 
+
+                    if (kotlin.math.abs(deltaX) > clickThreshold ||
                         kotlin.math.abs(deltaY) > clickThreshold) {
                         isDragging = true
                     }
-                    
+
                     layoutParams?.x = initialX + deltaX
                     layoutParams?.y = initialY + deltaY
                     windowManager?.updateViewLayout(bubbleView, layoutParams)
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging) {
+                    if (!isDragging && !longPressTriggered) {
                         handleBubbleClick()
-                    } else {
+                    } else if (isDragging) {
                         animateToEdge()
                     }
                     return true
@@ -300,10 +321,91 @@ class FloatingBubbleService : Service() {
             }
             return false
         }
+
+        // GestureDetector.OnGestureListener implementation
+        override fun onDown(e: MotionEvent): Boolean = true
+
+        override fun onShowPress(e: MotionEvent) {}
+
+        override fun onSingleTapUp(e: MotionEvent): Boolean = false
+
+        override fun onScroll(
+            e1: MotionEvent?,
+            e2: MotionEvent,
+            distanceX: Float,
+            distanceY: Float
+        ): Boolean = false
+
+        override fun onLongPress(e: MotionEvent) {
+            if (!isDragging) {
+                longPressTriggered = true
+                triggerHapticFeedback()
+                showContextMenu()
+            }
+        }
+
+        override fun onFling(
+            e1: MotionEvent?,
+            e2: MotionEvent,
+            velocityX: Float,
+            velocityY: Float
+        ): Boolean = false
     }
 
     private fun handleBubbleClick() {
         FloatingBubblePlugin.sendBubbleClickEvent()
+    }
+
+    private fun showContextMenu() {
+        val view = bubbleView ?: return
+
+        try {
+            val popup = PopupMenu(this, view)
+            popup.menuInflater.inflate(R.menu.bubble_context_menu, popup.menu)
+
+            popup.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.menu_open_app -> {
+                        FloatingBubblePlugin.sendMenuActionEvent("open-app")
+                        true
+                    }
+                    R.id.menu_settings -> {
+                        FloatingBubblePlugin.sendMenuActionEvent("settings")
+                        true
+                    }
+                    R.id.menu_close_bubble -> {
+                        FloatingBubblePlugin.sendMenuActionEvent("close")
+                        true
+                    }
+                    else -> false
+                }
+            }
+
+            popup.show()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to show context menu", e)
+        }
+    }
+
+    private fun triggerHapticFeedback() {
+        try {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                vibratorManager.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(50)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to trigger haptic feedback", e)
+        }
     }
 
     private fun animateToEdge() {

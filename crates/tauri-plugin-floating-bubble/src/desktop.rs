@@ -37,4 +37,8 @@ impl<R: Runtime> FloatingBubble<R> {
     pub fn set_state(&self, _state: String) -> crate::Result<()> {
         Err(crate::Error::UnsupportedPlatform)
     }
+
+    pub fn bring_to_foreground(&self) -> crate::Result<()> {
+        Err(crate::Error::UnsupportedPlatform)
+    }
 }

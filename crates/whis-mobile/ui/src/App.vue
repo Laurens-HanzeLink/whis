@@ -1,17 +1,20 @@
 <script setup lang="ts">
+import type { BubbleMenuEvent } from 'tauri-plugin-floating-bubble'
 import { invoke } from '@tauri-apps/api/core'
-import { onBubbleClick, setBubbleState } from 'tauri-plugin-floating-bubble'
+import { bringToForeground, hideBubble, onBubbleClick, onBubbleMenuAction, setBubbleState } from 'tauri-plugin-floating-bubble'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { headerStore } from './stores/header'
 import { recordingStore } from './stores/recording'
 import { settingsStore } from './stores/settings'
 
 const route = useRoute()
+const router = useRouter()
 const loaded = computed(() => settingsStore.state.loaded)
 
-// Bubble-click event cleanup
+// Bubble event cleanup
 let unlistenBubbleClick: (() => void) | null = null
+let unlistenMenuAction: (() => void) | null = null
 const sidebarOpen = ref(false)
 
 const navItems = [
@@ -63,6 +66,44 @@ async function updateBubbleState() {
   }
 }
 
+/**
+ * Handle bubble menu action (long-press context menu).
+ */
+async function handleMenuAction(event: BubbleMenuEvent) {
+  switch (event.action) {
+    case 'close':
+      try {
+        await hideBubble()
+        settingsStore.setFloatingBubbleEnabled(false)
+      }
+      catch (error) {
+        console.error('[App.handleMenuAction] hideBubble failed:', error)
+      }
+      break
+
+    case 'open-app':
+      try {
+        await bringToForeground()
+      }
+      catch (error) {
+        console.error('[App.handleMenuAction] bringToForeground failed:', error)
+      }
+      break
+
+    case 'settings':
+      try {
+        await bringToForeground()
+        router.push('/settings')
+      }
+      catch (error) {
+        console.error('[App.handleMenuAction] bringToForeground failed:', error)
+        // Still try to navigate even if bring to foreground fails
+        router.push('/settings')
+      }
+      break
+  }
+}
+
 // Close sidebar on route change
 watch(() => route.path, () => {
   closeSidebar()
@@ -86,6 +127,14 @@ onMounted(async () => {
     // Plugin may not be available on this platform
   }
 
+  // Listen for bubble menu action events (long-press context menu)
+  try {
+    unlistenMenuAction = await onBubbleMenuAction(handleMenuAction)
+  }
+  catch {
+    // Plugin may not be available on this platform
+  }
+
   // Watch all recording states to update bubble appearance
   watch(
     () => [
@@ -103,6 +152,9 @@ onMounted(async () => {
 onUnmounted(() => {
   if (unlistenBubbleClick) {
     unlistenBubbleClick()
+  }
+  if (unlistenMenuAction) {
+    unlistenMenuAction()
   }
   recordingStore.cleanup()
 })

@@ -188,6 +188,21 @@ export async function setBubbleState(state: string): Promise<void> {
 }
 
 /**
+ * Bring the app to the foreground.
+ *
+ * Useful when the user selects "Open app" from the bubble's context menu.
+ *
+ * @example
+ * ```typescript
+ * import { bringToForeground } from 'tauri-plugin-floating-bubble'
+ * await bringToForeground()
+ * ```
+ */
+export async function bringToForeground(): Promise<void> {
+  await invoke('plugin:floating-bubble|bring_to_foreground')
+}
+
+/**
  * Event payload when the bubble is clicked.
  */
 export interface BubbleClickEvent {
@@ -228,5 +243,57 @@ export async function onBubbleClick(
   const { listen } = await import('@tauri-apps/api/event')
   return await listen(BUBBLE_CLICK_EVENT, (event) => {
     callback(event.payload as BubbleClickEvent)
+  })
+}
+
+/**
+ * Menu action types for the bubble long-press context menu.
+ */
+export type BubbleMenuAction = 'close' | 'open-app' | 'settings'
+
+/**
+ * Event payload when a menu action is selected from the bubble context menu.
+ */
+export interface BubbleMenuEvent {
+  /** The menu action that was selected */
+  action: BubbleMenuAction
+}
+
+/**
+ * The event name used for bubble menu events.
+ * Can be used with `listen()` from `@tauri-apps/api/event` directly.
+ */
+export const BUBBLE_MENU_EVENT = 'floating-bubble://menu'
+
+/**
+ * Register a listener for bubble menu action events.
+ *
+ * This is triggered when the user long-presses the bubble and selects
+ * an action from the context menu.
+ *
+ * @param callback - Function to call when a menu action is selected
+ * @returns A function to unregister the listener
+ *
+ * @example
+ * ```typescript
+ * import { onBubbleMenuAction, hideBubble } from 'tauri-plugin-floating-bubble'
+ *
+ * const unlisten = await onBubbleMenuAction(async (event) => {
+ *   console.log('Menu action:', event.action)
+ *   if (event.action === 'close') {
+ *     await hideBubble()
+ *   }
+ * })
+ *
+ * // Later, to stop listening:
+ * unlisten()
+ * ```
+ */
+export async function onBubbleMenuAction(
+  callback: (event: BubbleMenuEvent) => void,
+): Promise<() => void> {
+  const { listen } = await import('@tauri-apps/api/event')
+  return await listen(BUBBLE_MENU_EVENT, (event) => {
+    callback(event.payload as BubbleMenuEvent)
   })
 }
