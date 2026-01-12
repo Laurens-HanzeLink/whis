@@ -167,8 +167,15 @@ pub fn typewriter(text: &str, delay_ms: u64) {
 ///
 /// Automatically disables animation for real-time providers or when --verbose is used.
 /// This ensures status messages don't slow down the perceived performance of fast providers.
+/// In verbose mode, prints on its own line to avoid interleaving with verbose messages.
 pub fn print_status(message: &str, provider: Option<&TranscriptionProvider>) {
-    let use_animation = !is_realtime_provider(provider) && !whis_core::verbose::is_verbose();
+    if whis_core::verbose::is_verbose() {
+        // Verbose mode: print on own line to avoid interleaving
+        println!("{}", message.trim());
+        return;
+    }
+
+    let use_animation = !is_realtime_provider(provider);
 
     if use_animation {
         // Typewriter animation for batch providers (25ms per character)
