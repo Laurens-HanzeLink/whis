@@ -3,10 +3,25 @@
 use anyhow::Result;
 use cpal::traits::DeviceTrait;
 use cpal::{Device, Stream, StreamConfig};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use super::AudioStreamSender;
 use super::processor::SampleProcessor;
+
+/// Global counter for stream errors (reset per recording session)
+/// Used to provide rate-limited, user-friendly error reporting
+static STREAM_ERROR_COUNT: AtomicU64 = AtomicU64::new(0);
+
+/// Reset the stream error counter (call at start of new recording)
+pub fn reset_stream_error_count() {
+    STREAM_ERROR_COUNT.store(0, Ordering::Relaxed);
+}
+
+/// Get total stream errors from last recording session
+pub fn get_stream_error_count() -> u64 {
+    STREAM_ERROR_COUNT.load(Ordering::Relaxed)
+}
 
 /// Build a unified audio input stream that works with or without VAD.
 ///
@@ -25,7 +40,27 @@ where
 {
     // Wrap processor in Arc<Mutex> for sharing with audio callback
     let processor = Arc::new(Mutex::new(processor));
-    let err_fn = |err| eprintln!("Error in audio stream: {err}");
+
+    // Rate-limited error handler for ALSA stream errors
+    // These are common on Linux (especially with USB audio) and non-fatal
+    let err_fn = |err| {
+        let count = STREAM_ERROR_COUNT.fetch_add(1, Ordering::Relaxed);
+
+        // Log first error with helpful explanation
+        if count == 0 {
+            crate::verbose!(
+                "Audio stream error (common on Linux, non-fatal): {err}\n\
+                 This is usually caused by audio buffer timing and doesn't affect recording quality.\n\
+                 Subsequent similar errors will be suppressed."
+            );
+        }
+        // Log periodically to show it's ongoing (every 1000 errors)
+        else if count % 1000 == 0 {
+            crate::verbose!(
+                "Audio stream: {count} non-fatal errors (recording continues normally)"
+            );
+        }
+    };
 
     let stream = device.build_input_stream(
         config,
