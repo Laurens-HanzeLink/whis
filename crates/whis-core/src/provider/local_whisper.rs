@@ -6,13 +6,13 @@
 //! Uses engine-level caching to avoid reloading the model on every
 //! transcription (saves 200ms-2s per call in listen mode).
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 
-use super::{TranscriptionBackend, TranscriptionRequest, TranscriptionResult, TranscriptionStage};
+use super::{TranscriptionBackend, TranscriptionRequest, TranscriptionResult};
 
 // ============================================================================
 // stderr Suppression for GGML Vulkan Output
@@ -128,45 +128,25 @@ impl TranscriptionBackend for LocalWhisperProvider {
 
     fn transcribe_sync(
         &self,
-        model_path: &str, // Path to .bin model file
-        request: TranscriptionRequest,
+        _model_path: &str,
+        _request: TranscriptionRequest,
     ) -> Result<TranscriptionResult> {
-        transcribe_local(model_path, request)
+        anyhow::bail!("File transcription not supported. Use microphone recording with transcribe_raw().")
     }
 
     async fn transcribe_async(
         &self,
-        _client: &reqwest::Client, // Not used for local transcription
-        model_path: &str,
-        request: TranscriptionRequest,
+        _client: &reqwest::Client,
+        _model_path: &str,
+        _request: TranscriptionRequest,
     ) -> Result<TranscriptionResult> {
-        // Run CPU-bound transcription in blocking task
-        let model_path = model_path.to_string();
-        tokio::task::spawn_blocking(move || transcribe_local(&model_path, request))
-            .await
-            .context("Task join failed")?
+        anyhow::bail!("File transcription not supported. Use microphone recording with transcribe_raw().")
     }
 }
 
-/// Perform local transcription using transcribe-rs WhisperEngine
-fn transcribe_local(
-    model_path: &str,
-    request: TranscriptionRequest,
-) -> Result<TranscriptionResult> {
-    // Report transcribing stage
-    request.report(TranscriptionStage::Transcribing);
-
-    // Decode MP3 to PCM and resample to 16kHz mono
-    let pcm_samples = decode_and_resample(&request.audio_data)?;
-
-    // Transcribe the samples
-    transcribe_samples(model_path, &pcm_samples, request.language.as_deref())
-}
-
-/// Transcribe raw f32 samples directly (skips MP3 decoding).
+/// Transcribe raw f32 samples directly.
 ///
 /// Use this for local recordings where samples are already 16kHz mono.
-/// This is faster than going through MP3 encoding/decoding.
 ///
 /// # Arguments
 /// * `model_path` - Path to the whisper.cpp model file (.bin)
@@ -370,44 +350,4 @@ pub fn preload_model(path: &str) {
             crate::verbose!("Preload failed: {}", e);
         }
     });
-}
-
-// ============================================================================
-// Audio Decoding
-// ============================================================================
-
-/// Decode MP3 audio data and resample to 16kHz mono for whisper
-fn decode_and_resample(mp3_data: &[u8]) -> Result<Vec<f32>> {
-    use minimp3::{Decoder, Frame};
-
-    let mut decoder = Decoder::new(mp3_data);
-    let mut samples = Vec::new();
-    let mut sample_rate = 0u32;
-    let mut channels = 0u16;
-
-    // Decode all MP3 frames
-    loop {
-        match decoder.next_frame() {
-            Ok(Frame {
-                data,
-                sample_rate: sr,
-                channels: ch,
-                ..
-            }) => {
-                sample_rate = sr as u32;
-                channels = ch as u16;
-                // Convert i16 samples to f32 normalized to [-1.0, 1.0]
-                samples.extend(data.iter().map(|&s| s as f32 / i16::MAX as f32));
-            }
-            Err(minimp3::Error::Eof) => break,
-            Err(e) => anyhow::bail!("MP3 decode error: {:?}", e),
-        }
-    }
-
-    if samples.is_empty() {
-        anyhow::bail!("No audio data decoded from MP3");
-    }
-
-    // Resample to 16kHz mono
-    crate::resample::resample_to_16k(&samples, sample_rate, channels)
 }

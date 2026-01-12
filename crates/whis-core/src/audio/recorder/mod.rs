@@ -11,19 +11,10 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
 
 use super::devices;
-use super::encoder::create_encoder;
-use super::types::{AudioChunk, RecordingOutput};
 use super::vad::{VadConfig, VadProcessor};
 use crate::resample::{FrameResampler, WHISPER_SAMPLE_RATE};
 
 use processor::SampleProcessor;
-
-/// Threshold for chunking (files larger than this get split)
-const CHUNK_THRESHOLD_BYTES: usize = 20 * 1024 * 1024; // 20 MB
-/// Duration of each chunk in seconds
-const CHUNK_DURATION_SECS: usize = 300; // 5 minutes
-/// Overlap between chunks in seconds (to avoid cutting words)
-const CHUNK_OVERLAP_SECS: usize = 2;
 
 /// Sender type for streaming audio samples during recording
 pub type AudioStreamSender = tokio::sync::mpsc::Sender<Vec<f32>>;
@@ -292,17 +283,9 @@ impl AudioRecorder {
             self.sample_rate
         );
 
-        Ok(RecordingData {
-            samples,
-            sample_rate: self.sample_rate,
-            channels: self.channels,
-        })
+        Ok(RecordingData { samples })
     }
 
-    /// Stop recording and finalize in one step (convenience method for single-threaded use).
-    pub fn finalize_recording(&mut self) -> Result<RecordingOutput> {
-        self.stop_recording()?.finalize()
-    }
 }
 
 impl Default for AudioRecorder {
@@ -313,78 +296,17 @@ impl Default for AudioRecorder {
 
 /// Recording data extracted from AudioRecorder after stopping.
 /// This struct is Send-safe (unlike AudioRecorder on macOS where cpal::Stream isn't Send).
+/// Contains f32 samples at 16kHz mono, ready for progressive transcription.
 pub struct RecordingData {
     samples: Vec<f32>,
-    sample_rate: u32,
-    channels: u16,
 }
 
 impl RecordingData {
     /// Finalize the recording and return raw f32 samples (16kHz mono).
     ///
-    /// Use this for local whisper transcription to skip MP3 encoding.
     /// The samples are already resampled to 16kHz mono during recording.
+    /// Use this with ProgressiveChunker for transcription.
     pub fn finalize_raw(self) -> Vec<f32> {
         self.samples
-    }
-
-    /// Finalize the recording by converting samples to MP3.
-    /// This is Send-safe and can be called from spawn_blocking.
-    pub fn finalize(self) -> Result<RecordingOutput> {
-        // Try to convert the entire recording first
-        let mp3_data = self.samples_to_mp3(&self.samples, "main")?;
-
-        // If at or under threshold, return as single file (fast path)
-        if mp3_data.len() <= CHUNK_THRESHOLD_BYTES {
-            return Ok(RecordingOutput::Single(mp3_data));
-        }
-
-        // File is too large - need to chunk it
-        let samples_per_second = self.sample_rate as usize * self.channels as usize;
-        let chunk_samples = CHUNK_DURATION_SECS * samples_per_second;
-        let overlap_samples = CHUNK_OVERLAP_SECS * samples_per_second;
-
-        let mut chunks = Vec::new();
-        let mut chunk_start = 0usize;
-        let mut chunk_index = 0usize;
-
-        while chunk_start < self.samples.len() {
-            let chunk_end = (chunk_start + chunk_samples).min(self.samples.len());
-            let chunk_slice = &self.samples[chunk_start..chunk_end];
-
-            // Convert this chunk to MP3
-            let chunk_mp3 = self.samples_to_mp3(chunk_slice, &format!("chunk{chunk_index}"))?;
-
-            chunks.push(AudioChunk {
-                data: chunk_mp3,
-                index: chunk_index,
-                has_leading_overlap: chunk_index > 0,
-            });
-
-            chunk_index += 1;
-
-            // Check if we've reached the end
-            if chunk_end >= self.samples.len() {
-                break;
-            }
-
-            // Move to next chunk, stepping back by overlap amount
-            chunk_start = chunk_end.saturating_sub(overlap_samples);
-        }
-
-        crate::verbose!(
-            "Split recording into {} chunks for transcription",
-            chunks.len()
-        );
-
-        Ok(RecordingOutput::Chunked(chunks))
-    }
-
-    /// Convert samples to MP3 using the configured encoder.
-    fn samples_to_mp3(&self, samples: &[f32], suffix: &str) -> Result<Vec<u8>> {
-        let encoder = create_encoder();
-        encoder
-            .encode_samples(samples, self.sample_rate)
-            .with_context(|| format!("Failed to encode audio chunk '{}'", suffix))
     }
 }

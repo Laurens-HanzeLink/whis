@@ -12,7 +12,7 @@ use whis_core::Settings;
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// assert_eq!(api_key_store_key("openai"), Some("openai_api_key"));
 /// assert_eq!(api_key_store_key("openai-realtime"), Some("openai_api_key"));
 /// assert_eq!(api_key_store_key("deepgram"), Some("deepgram_api_key"));

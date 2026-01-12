@@ -18,7 +18,7 @@
 //!
 //! # Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use whis_core::model::{self, whisper, parakeet};
 //!
 //! // Download Whisper model

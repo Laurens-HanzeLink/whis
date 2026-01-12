@@ -1,5 +1,4 @@
 use clap::{Args, Parser, Subcommand, ValueHint};
-use std::path::PathBuf;
 use std::time::Duration;
 
 /// Parse a duration string like "10s", "30s", "1m", "90"
@@ -25,22 +24,6 @@ fn parse_duration(s: &str) -> Result<Duration, String> {
         let secs: u64 = s.parse().map_err(|_| format!("invalid duration: {}", s))?;
         Ok(Duration::from_secs(secs))
     }
-}
-
-/// Input source options for recording/transcription
-#[derive(Args)]
-pub struct InputSource {
-    /// Transcribe audio from file instead of recording
-    #[arg(short = 'f', long, value_hint = ValueHint::FilePath)]
-    pub file: Option<PathBuf>,
-
-    /// Read audio from stdin (use with pipes, e.g., `yt-dlp ... | whis --stdin`)
-    #[arg(long)]
-    pub stdin: bool,
-
-    /// Input audio format when using --stdin (default: mp3)
-    #[arg(long, default_value = "mp3")]
-    pub format: String,
 }
 
 /// Processing options for transcription
@@ -70,16 +53,12 @@ pub struct OutputOptions {
     /// Print output to stdout instead of copying to clipboard
     #[arg(long)]
     pub print: bool,
-
-    /// Save recorded audio to WAV file (16kHz mono f32)
-    #[arg(long, value_name = "PATH", value_hint = ValueHint::FilePath)]
-    pub save_raw: Option<PathBuf>,
 }
 
 #[derive(Parser)]
 #[command(name = "whis")]
 #[command(version)]
-#[command(about = "Voice-to-text CLI with multiple transcription providers")]
+#[command(about = "Voice-to-text CLI - transcribe speech from your microphone")]
 #[command(after_help = "Run 'whis' without arguments to record once (press Enter to stop).")]
 pub struct Cli {
     #[command(subcommand)]
@@ -89,15 +68,11 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub verbose: bool,
 
-    // Input source options (file, stdin, or microphone)
-    #[command(flatten)]
-    pub input: InputSource,
-
     // Processing options (post-processing, presets, duration, VAD)
     #[command(flatten)]
     pub processing: ProcessingOptions,
 
-    // Output options (print, save raw audio)
+    // Output options (print)
     #[command(flatten)]
     pub output: OutputOptions,
 }

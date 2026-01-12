@@ -22,9 +22,8 @@ pub mod verbose;
 
 // Re-export audio types
 pub use audio::{
-    AudioChunk, AudioDeviceInfo, AudioRecorder, ChunkerConfig, ProgressiveChunk,
-    ProgressiveChunker, RecordingData, RecordingOutput, VadConfig, list_audio_devices,
-    load_audio_file, load_audio_stdin,
+    AudioDeviceInfo, AudioRecorder, ChunkerConfig, ProgressiveChunk, ProgressiveChunker,
+    RecordingData, VadConfig, list_audio_devices,
 };
 
 // Re-export configuration types
@@ -37,13 +36,11 @@ pub use configuration::{Preset, PresetSource, TranscriptionProvider};
 
 // Re-export transcription types
 pub use transcription::{
-    ChunkTranscription, DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, WarmupConfig,
-    batch_transcribe, clear_warmup_cache, post_process, preload_ollama,
-    progressive_transcribe_cloud, transcribe_audio, transcribe_audio_async,
-    transcribe_audio_with_format, transcribe_audio_with_progress, warmup_configured,
+    DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, WarmupConfig, clear_warmup_cache, post_process,
+    preload_ollama, progressive_transcribe_cloud, warmup_configured,
 };
 #[cfg(feature = "local-transcription")]
-pub use transcription::{LocalAudioChunk, progressive_transcribe_local};
+pub use transcription::progressive_transcribe_local;
 
 // Re-export provider types
 #[cfg(feature = "realtime")]
@@ -108,12 +105,9 @@ pub mod post_processing {
 
 #[doc(hidden)]
 pub mod transcribe {
-    pub use crate::transcription::{
-        ChunkTranscription, batch_transcribe, progressive_transcribe_cloud, transcribe_audio,
-        transcribe_audio_async, transcribe_audio_with_format, transcribe_audio_with_progress,
-    };
+    pub use crate::transcription::progressive_transcribe_cloud;
     #[cfg(feature = "local-transcription")]
-    pub use crate::transcription::{LocalAudioChunk, progressive_transcribe_local};
+    pub use crate::transcription::progressive_transcribe_local;
 }
 
 #[doc(hidden)]

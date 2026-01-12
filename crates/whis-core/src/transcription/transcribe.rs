@@ -1,238 +1,25 @@
-//! Audio transcription using provider registry
+//! Progressive audio transcription using provider registry.
 //!
-//! This module supports two transcription modes:
+//! All audio inputs (microphone, file, stdin) use progressive transcription:
+//! - Cloud: `progressive_transcribe_cloud()` - sequential processing
+//! - Local: `progressive_transcribe_local()` - sequential with shared model cache
 //!
-//! ## Progressive Transcription (Live Recording)
-//! - Chunks are transcribed DURING recording (not after)
-//! - Cloud: `progressive_transcribe_cloud()` - parallel (max 3 concurrent)
-//! - Local: `progressive_transcribe_local()` - sequential (shared model cache)
-//!
-//! ## Batch Transcription (Pre-Recorded Audio)
-//! - Used for files and stdin
-//! - Single file: `transcribe_audio()`
-//! - Chunked: `batch_transcribe()` - parallel for cloud, sequential for local
-//!
-//! All modes support overlap merging for seamless chunk boundaries.
+//! Supports overlap merging for seamless chunk boundaries.
 
 use anyhow::{Context, Result};
-use std::sync::Arc;
-use tokio::sync::Semaphore;
 
-use crate::audio::AudioChunk;
 use crate::config::TranscriptionProvider;
 use crate::http::get_http_client;
-use crate::provider::{ProgressCallback, TranscriptionRequest, registry};
-
-/// Maximum concurrent API requests
-const MAX_CONCURRENT_REQUESTS: usize = 3;
+use crate::provider::{TranscriptionRequest, registry};
 
 /// Maximum words to search for overlap between chunks
 const MAX_OVERLAP_WORDS: usize = 15;
 
 /// Result of transcribing a single chunk
-pub struct ChunkTranscription {
-    pub index: usize,
-    pub text: String,
-    pub has_leading_overlap: bool,
-}
-
-/// Transcribe a single audio file (blocking, for simple single-file case)
-///
-/// # Arguments
-/// * `provider` - The transcription provider to use
-/// * `api_key` - API key for the provider
-/// * `language` - Optional language hint (ISO-639-1 code, e.g., "en", "de")
-/// * `audio_data` - Audio data to transcribe
-pub fn transcribe_audio(
-    provider: &TranscriptionProvider,
-    api_key: &str,
-    language: Option<&str>,
-    audio_data: Vec<u8>,
-) -> Result<String> {
-    transcribe_audio_with_progress(provider, api_key, language, audio_data, None, None, None)
-}
-
-/// Transcribe a single audio file with explicit format (blocking)
-pub fn transcribe_audio_with_format(
-    provider: &TranscriptionProvider,
-    api_key: &str,
-    language: Option<&str>,
-    audio_data: Vec<u8>,
-    mime_type: Option<&str>,
-    filename: Option<&str>,
-) -> Result<String> {
-    transcribe_audio_with_progress(
-        provider, api_key, language, audio_data, mime_type, filename, None,
-    )
-}
-
-/// Transcribe a single audio file with progress callback (blocking)
-pub fn transcribe_audio_with_progress(
-    provider: &TranscriptionProvider,
-    api_key: &str,
-    language: Option<&str>,
-    audio_data: Vec<u8>,
-    mime_type: Option<&str>,
-    filename: Option<&str>,
-    progress: Option<ProgressCallback>,
-) -> Result<String> {
-    let provider_impl = registry().get_by_kind(provider)?;
-    let request = TranscriptionRequest {
-        audio_data,
-        language: language.map(String::from),
-        filename: filename.unwrap_or("audio.mp3").to_string(),
-        mime_type: mime_type.unwrap_or("audio/mpeg").to_string(),
-        progress,
-    };
-
-    let result = provider_impl.transcribe_sync(api_key, request)?;
-    Ok(result.text)
-}
-
-/// Transcribe a single audio file with explicit format (async)
-///
-/// Use this version for mobile/environments where blocking HTTP is not supported.
-pub async fn transcribe_audio_async(
-    provider: &TranscriptionProvider,
-    api_key: &str,
-    language: Option<&str>,
-    audio_data: Vec<u8>,
-    mime_type: Option<&str>,
-    filename: Option<&str>,
-) -> Result<String> {
-    let provider_impl = registry().get_by_kind(provider)?;
-    let request = TranscriptionRequest {
-        audio_data,
-        language: language.map(String::from),
-        filename: filename.unwrap_or("audio.mp3").to_string(),
-        mime_type: mime_type.unwrap_or("audio/mpeg").to_string(),
-        progress: None,
-    };
-
-    let client = get_http_client()?;
-
-    let result = provider_impl
-        .transcribe_async(client, api_key, request)
-        .await?;
-    Ok(result.text)
-}
-
-/// Batch transcription for pre-recorded audio (files/stdin)
-///
-/// Transcribes multiple pre-chunked audio segments in parallel with rate limiting.
-/// This is NOT used for progressive transcription during recording—use
-/// `progressive_transcribe_cloud()` or `progressive_transcribe_local()` for that.
-///
-/// # Rate Limiting
-/// Cloud providers: Max 3 concurrent API requests
-/// Local providers: Sequential processing (not truly parallel)
-pub async fn batch_transcribe(
-    provider: &TranscriptionProvider,
-    api_key: &str,
-    language: Option<&str>,
-    chunks: Vec<AudioChunk>,
-    progress_callback: Option<Box<dyn Fn(usize, usize) + Send + Sync>>,
-) -> Result<String> {
-    let total_chunks = chunks.len();
-
-    // Get global HTTP client
-    let client = get_http_client()?;
-
-    // Semaphore to limit concurrent requests
-    let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_REQUESTS));
-    let client = Arc::new(client.clone());
-    let api_key = Arc::new(api_key.to_string());
-    let language = language.map(|s| Arc::new(s.to_string()));
-    let provider_impl = registry().get_by_kind(provider)?;
-    let completed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let progress_callback = progress_callback.map(Arc::new);
-
-    // Spawn ALL tasks immediately - they'll wait on semaphore inside
-    let mut handles = Vec::with_capacity(total_chunks);
-
-    for chunk in chunks {
-        let semaphore = semaphore.clone();
-        let client = client.clone();
-        let api_key = api_key.clone();
-        let language = language.clone();
-        let provider_impl = provider_impl.clone();
-        let completed = completed.clone();
-        let progress_callback = progress_callback.clone();
-
-        let handle = tokio::spawn(async move {
-            // Acquire permit INSIDE the task
-            let _permit = semaphore.acquire_owned().await?;
-
-            let chunk_index = chunk.index;
-            let has_leading_overlap = chunk.has_leading_overlap;
-
-            let request = TranscriptionRequest {
-                audio_data: chunk.data,
-                language: language.as_ref().map(|s| s.to_string()),
-                filename: format!("audio_chunk_{chunk_index}.mp3"),
-                mime_type: "audio/mpeg".to_string(),
-                progress: None,
-            };
-
-            let result = provider_impl
-                .transcribe_async(&client, &api_key, request)
-                .await;
-
-            let transcription = match result {
-                Ok(r) => ChunkTranscription {
-                    index: chunk_index,
-                    text: r.text,
-                    has_leading_overlap,
-                },
-                Err(e) => return Err(e),
-            };
-
-            let done = completed.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
-            if let Some(ref cb) = progress_callback {
-                cb(done, total_chunks);
-            }
-            Ok(transcription)
-        });
-
-        handles.push(handle);
-    }
-
-    // Collect results
-    let mut results = Vec::with_capacity(total_chunks);
-    let mut errors = Vec::new();
-
-    for handle in handles {
-        match handle.await {
-            Ok(Ok(transcription)) => results.push(transcription),
-            Ok(Err(e)) => errors.push(e),
-            Err(e) => errors.push(anyhow::anyhow!("Task panicked: {e}")),
-        }
-    }
-
-    // If any chunks failed, return error with details
-    if !errors.is_empty() {
-        let error_msgs: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
-        anyhow::bail!(
-            "Failed to transcribe {} of {} chunks:\n{}",
-            errors.len(),
-            total_chunks,
-            error_msgs.join("\n")
-        );
-    }
-
-    // Sort by index to ensure correct order
-    results.sort_by_key(|r| r.index);
-
-    // Merge transcriptions
-    Ok(merge_transcriptions(results))
-}
-
-/// Local audio chunk (raw f32 samples instead of encoded bytes)
-#[cfg(feature = "local-transcription")]
-pub struct LocalAudioChunk {
-    pub index: usize,
-    pub samples: Vec<f32>,
-    pub has_leading_overlap: bool,
+struct ChunkTranscription {
+    index: usize,
+    text: String,
+    has_leading_overlap: bool,
 }
 
 /// Merge transcription results, handling overlaps
@@ -332,8 +119,8 @@ use crate::audio::chunker::AudioChunk as ProgressiveChunk;
 /// Progressive transcription for cloud providers
 ///
 /// Transcribes audio chunks DURING recording (true progressive). As each 90-second
-/// chunk is produced, it's immediately sent to the API for transcription in parallel
-/// (max 3 concurrent requests). Results are collected and merged when recording ends.
+/// chunk is produced, it's immediately sent to the API for transcription sequentially.
+/// Results are collected and merged when recording ends.
 ///
 /// # Arguments
 /// * `provider` - The transcription provider to use
@@ -348,114 +135,48 @@ pub async fn progressive_transcribe_cloud(
     mut chunk_rx: tokio::sync::mpsc::UnboundedReceiver<ProgressiveChunk>,
     progress_callback: Option<Box<dyn Fn(usize, usize) + Send + Sync>>,
 ) -> Result<String> {
-    // Get global HTTP client
-    let client = Arc::new(get_http_client()?.clone());
-
-    // Semaphore to limit concurrent requests (max 3)
-    let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_REQUESTS));
-    let api_key = Arc::new(api_key.to_string());
-    let language = language.map(|s| Arc::new(s.to_string()));
+    let client = get_http_client()?;
     let provider_impl = registry().get_by_kind(provider)?;
-    let completed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let total_chunks = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let progress_callback = progress_callback.map(Arc::new);
+    let mut transcriptions = Vec::new();
+    let mut chunk_count = 0;
 
-    // Spawn tasks as chunks arrive (true progressive)
-    let mut handles = Vec::new();
-
+    // Process chunks sequentially as they arrive (true progressive)
     while let Some(chunk) = chunk_rx.recv().await {
-        // Increment total chunks
-        total_chunks.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-
-        // Extract chunk data (MP3 encoding happens inside task to avoid orphaned tasks on error)
-        let samples = chunk.samples;
+        chunk_count += 1;
         let chunk_index = chunk.index;
         let has_leading_overlap = chunk.has_leading_overlap;
 
-        // Clone Arc references for task
-        let semaphore = semaphore.clone();
-        let client = client.clone();
-        let api_key = api_key.clone();
-        let language = language.clone();
-        let provider_impl = provider_impl.clone();
-        let completed = completed.clone();
-        let total_chunks = total_chunks.clone();
-        let progress_callback = progress_callback.clone();
+        // Convert samples to MP3
+        let mp3_data = samples_to_mp3(&chunk.samples)
+            .context("Failed to encode audio chunk to MP3")?;
 
-        // Spawn task immediately (don't wait for more chunks)
-        let handle = tokio::spawn(async move {
-            // Acquire semaphore permit (limits to 3 concurrent)
-            let _permit = semaphore
-                .acquire_owned()
-                .await
-                .expect("Semaphore is never closed");
+        let request = TranscriptionRequest {
+            audio_data: mp3_data,
+            language: language.map(|s| s.to_string()),
+            filename: format!("audio_chunk_{chunk_index}.mp3"),
+            mime_type: "audio/mpeg".to_string(),
+            progress: None,
+        };
 
-            // Convert to MP3 inside task so encoding errors only affect this chunk
-            let mp3_data = samples_to_mp3(&samples)?;
+        let result = provider_impl
+            .transcribe_async(&client, api_key, request)
+            .await
+            .with_context(|| format!("Failed to transcribe chunk {chunk_index}"))?;
 
-            let request = TranscriptionRequest {
-                audio_data: mp3_data,
-                language: language.as_ref().map(|s| s.to_string()),
-                filename: format!("audio_chunk_{chunk_index}.mp3"),
-                mime_type: "audio/mpeg".to_string(),
-                progress: None,
-            };
-
-            let result = provider_impl
-                .transcribe_async(&client, &api_key, request)
-                .await;
-
-            let transcription = match result {
-                Ok(r) => ChunkTranscription {
-                    index: chunk_index,
-                    text: r.text,
-                    has_leading_overlap,
-                },
-                Err(e) => return Err(e),
-            };
-
-            // Report progress (total can increase as new chunks arrive during recording)
-            let done = completed.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
-            let total = total_chunks.load(std::sync::atomic::Ordering::SeqCst);
-            if let Some(ref cb) = progress_callback {
-                cb(done, total);
-            }
-
-            Ok(transcription)
+        transcriptions.push(ChunkTranscription {
+            index: chunk_index,
+            text: result.text,
+            has_leading_overlap,
         });
 
-        handles.push(handle);
-    }
-
-    // Collect results
-    let total = total_chunks.load(std::sync::atomic::Ordering::SeqCst);
-    let mut results = Vec::with_capacity(total);
-    let mut errors = Vec::new();
-
-    for handle in handles {
-        match handle.await {
-            Ok(Ok(transcription)) => results.push(transcription),
-            Ok(Err(e)) => errors.push(e),
-            Err(e) => errors.push(anyhow::anyhow!("Task panicked: {e}")),
+        // Progress reporting (total unknown until channel closes)
+        if let Some(ref callback) = progress_callback {
+            callback(chunk_count, 0); // Total is 0 since we don't know how many more chunks will arrive
         }
     }
 
-    // If any chunks failed, return error with details
-    if !errors.is_empty() {
-        let error_msgs: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
-        anyhow::bail!(
-            "Failed to transcribe {} of {} chunks:\n{}",
-            errors.len(),
-            total,
-            error_msgs.join("\n")
-        );
-    }
-
-    // Sort by index to ensure correct order
-    results.sort_by_key(|r| r.index);
-
-    // Merge with overlap deduplication
-    Ok(merge_transcriptions(results))
+    // Results are already in correct order (sequential processing, no sorting needed)
+    Ok(merge_transcriptions(transcriptions))
 }
 
 /// Progressive transcription for local providers (Whisper + Parakeet)

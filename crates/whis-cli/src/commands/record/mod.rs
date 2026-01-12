@@ -1,35 +1,33 @@
 //! Record Command - Voice-to-Text Pipeline
 //!
 //! This module implements the main recording/transcription workflow using a clean
-//! pipeline architecture. It handles audio input from multiple sources, transcribes
-//! it using configured providers, optionally post-processes the text, and outputs
+//! pipeline architecture. It captures audio from the microphone, transcribes it
+//! using configured providers, optionally post-processes the text, and outputs
 //! the result.
 //!
 //! # Architecture
 //!
-//! The record command follows a four-phase pipeline:
+//! Microphone input uses progressive transcription:
 //!
 //! ```text
 //! ┌─────────────┐      ┌──────────────┐      ┌─────────────┐      ┌────────────┐
-//! │   Record    │  →   │  Transcribe  │  →   │   Process   │  →   │   Output   │
-//! │  (modes/)   │      │ (pipeline/)  │      │ (pipeline/) │      │(pipeline/) │
+//! │   Record    │  →   │  Progressive │  →   │   Process   │  →   │   Output   │
+//! │  (modes/)   │      │  Transcribe  │      │ (pipeline/) │      │(pipeline/) │
 //! └─────────────┘      └──────────────┘      └─────────────┘      └────────────┘
 //!     ↓                      ↓                     ↓                    ↓
-//! Microphone          Cloud/Local API         LLM Cleanup         Clipboard/
-//! File Input          Parallel Chunks         Preset Transform    Stdout
-//! Stdin Stream        Language Detection
+//! Microphone          Sequential chunks       LLM Cleanup         Clipboard/
+//!                     to provider API         Preset Transform    Stdout
+//!                     ~90s chunks
 //! ```
 //!
 //! # Pipeline Phases
 //!
-//! 1. **Record Phase** (`modes/`): Capture or load audio
-//!    - `MicrophoneMode`: Record from system microphone with VAD
-//!    - `FileMode`: Load and decode audio file
-//!    - `StdinMode`: Stream audio from stdin
+//! 1. **Record Phase** (`modes/`): Capture audio from microphone with VAD
 //!
-//! 2. **Transcribe Phase** (`pipeline/transcribe.rs`): Convert audio to text
-//!    - Cloud providers: Single or chunked API calls
-//!    - Local providers: Raw samples with progressive transcription
+//! 2. **Transcribe Phase**: Progressive transcription
+//!    - Audio chunked into ~90s segments with overlap
+//!    - Chunks transcribed sequentially (cloud or local)
+//!    - Results merged with overlap deduplication
 //!
 //! 3. **Process Phase** (`pipeline/process.rs`): Enhance transcript
 //!    - Apply LLM post-processing (grammar, filler words)
@@ -38,37 +36,6 @@
 //! 4. **Output Phase** (`pipeline/output.rs`): Deliver result
 //!    - Copy to clipboard (default)
 //!    - Print to stdout (--print flag)
-//!
-//! # Execution Paths
-//!
-//! ## Progressive Mode (Microphone Only)
-//! - Recording and transcription happen CONCURRENTLY
-//! - 90-second chunks sent to API as they arrive
-//! - Faster perceived latency (overlapped phases)
-//!
-//! ## Batch Mode (File/Stdin)
-//! - Recording completes first, then transcription begins
-//! - Sequential phases: Record → Transcribe → Process → Output
-//!
-//! # Usage
-//!
-//! ```rust
-//! // Default: Record from microphone, copy to clipboard
-//! commands::record::run(false, None, None, false, "mp3", false, None, false, None)?;
-//!
-//! // Transcribe file with post-processing
-//! commands::record::run(
-//!     true,                             // post_process
-//!     None,                             // preset_name
-//!     Some(PathBuf::from("audio.mp3")), // file_path
-//!     false,                            // stdin_mode
-//!     "mp3",                            // input_format
-//!     false,                            // print
-//!     None,                             // duration
-//!     false,                            // no_vad
-//!     None,                             // save_raw
-//! )?;
-//! ```
 //!
 //! # Configuration
 //!
@@ -83,10 +50,9 @@ mod pipeline;
 mod types;
 
 // Re-export public types for external use
-pub use types::{InputSource, RecordConfig};
+pub use types::RecordConfig;
 
 use anyhow::Result;
-use std::path::PathBuf;
 
 use crate::app;
 
@@ -97,68 +63,21 @@ pub fn run(config: RecordConfig) -> Result<()> {
     // Create Tokio runtime for async operations
     let runtime = tokio::runtime::Runtime::new()?;
 
-    // Ensure FFmpeg is available
-    app::ensure_ffmpeg_installed()?;
-
     // Load transcription configuration
     let transcription_config = app::load_transcription_config()?;
 
-    // Microphone always uses progressive (record + transcribe concurrently)
-    // File/stdin use batch (record fully, then transcribe)
-    let use_progressive = matches!(config.input_source, InputSource::Microphone);
-
-    let transcription_result = if use_progressive {
-        // Progressive path: Record and transcribe concurrently (overlap recording with transcription)
-        let mic_config = modes::MicrophoneConfig {
-            duration: config.duration,
-            no_vad: config.no_vad,
-            provider: transcription_config.provider.clone(),
-            will_post_process: config.post_process || config.preset.is_some(),
-        };
-        runtime.block_on(progressive_record_and_transcribe(
-            mic_config,
-            &transcription_config,
-            quiet,
-        ))?
-    } else {
-        // Batch path: Record first, then transcribe (for pre-recorded audio)
-        // Note: Microphone always uses progressive path (see line 119)
-        let record_result = match config.input_source {
-            InputSource::File(path) => {
-                let mode = modes::FileMode::new(path);
-                mode.execute(quiet)?
-            }
-            InputSource::Stdin { format } => {
-                let mode = modes::StdinMode::new(format);
-                mode.execute(quiet)?
-            }
-            InputSource::Microphone => {
-                unreachable!("Microphone input always uses progressive transcription path")
-            }
-        };
-
-        // Save raw samples if requested
-        if let Some(save_path) = &config.save_raw
-            && let Some((samples, sample_rate)) = &record_result.raw_samples
-        {
-            save_raw_samples_as_wav(samples, *sample_rate, save_path)?;
-            if !quiet {
-                eprintln!("✓ Saved raw audio to: {}", save_path.display());
-            }
-        }
-
-        // Phase 2: Transcribe audio to text
-        let transcription_cfg = pipeline::TranscriptionConfig {
-            provider: transcription_config.provider,
-            api_key: transcription_config.api_key,
-            language: transcription_config.language,
-        };
-        runtime.block_on(pipeline::transcribe(
-            record_result,
-            &transcription_cfg,
-            quiet,
-        ))?
+    // Microphone: Record and transcribe concurrently (streaming)
+    let mic_config = modes::MicrophoneConfig {
+        duration: config.duration,
+        no_vad: config.no_vad,
+        provider: transcription_config.provider.clone(),
+        will_post_process: config.post_process || config.preset.is_some(),
     };
+    let transcription_result = runtime.block_on(progressive_record_and_transcribe(
+        mic_config,
+        &transcription_config,
+        quiet,
+    ))?;
 
     // Phase 3: Post-process and apply presets
     let processing_cfg = pipeline::ProcessingConfig {
@@ -437,24 +356,4 @@ fn preload_models(config: &modes::MicrophoneConfig) {
             whis_core::preload_ollama(&url, &model);
         }
     }
-}
-
-/// Save raw audio samples as WAV file
-fn save_raw_samples_as_wav(samples: &[f32], sample_rate: u32, path: &PathBuf) -> Result<()> {
-    let spec = hound::WavSpec {
-        channels: 1,
-        sample_rate,
-        bits_per_sample: 16,
-        sample_format: hound::SampleFormat::Int,
-    };
-
-    let mut writer = hound::WavWriter::create(path, spec)?;
-
-    for &sample in samples {
-        let sample_i16 = (sample * 32767.0).clamp(-32768.0, 32767.0) as i16;
-        writer.write_sample(sample_i16)?;
-    }
-
-    writer.finalize()?;
-    Ok(())
 }

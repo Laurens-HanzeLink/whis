@@ -41,26 +41,13 @@ fn run() -> Result<()> {
         Some(args::Commands::Setup) => commands::setup::run(),
         Some(args::Commands::Model { action }) => commands::model::run(action),
         None => {
-            // Determine input source from CLI arguments
-            let input_source = if let Some(path) = cli.input.file {
-                commands::record::InputSource::File(path)
-            } else if cli.input.stdin {
-                commands::record::InputSource::Stdin {
-                    format: cli.input.format.clone(),
-                }
-            } else {
-                commands::record::InputSource::Microphone
-            };
-
-            // Create configuration and run record command
+            // Microphone recording (default mode)
             let config = commands::record::RecordConfig::new(
-                input_source,
                 cli.processing.post_process,
                 cli.processing.preset,
                 cli.output.print,
                 cli.processing.duration,
                 cli.processing.no_vad,
-                cli.output.save_raw,
             )?;
             commands::record::run(config)
         }

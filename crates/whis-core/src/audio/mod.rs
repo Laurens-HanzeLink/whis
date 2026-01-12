@@ -3,7 +3,7 @@
 //! This module provides cross-platform audio recording with the following features:
 //! - Real-time resampling to 16kHz mono
 //! - Voice Activity Detection (optional, via `vad` feature)
-//! - Multiple output formats (MP3 via FFmpeg or embedded encoder)
+//! - MP3 encoding via embedded encoder
 //!
 //! # Architecture
 //!
@@ -18,13 +18,13 @@
 //! # Usage
 //!
 //! ```rust,no_run
-//! use whis_core::audio::{AudioRecorder, RecorderConfig};
+//! use whis_core::audio::AudioRecorder;
 //!
-//! let config = RecorderConfig::default();
-//! let mut recorder = AudioRecorder::new(config)?;
-//! recorder.start()?;
+//! let mut recorder = AudioRecorder::new()?;
+//! recorder.start_recording()?;
 //! // ... wait for input ...
-//! let output = recorder.stop()?;
+//! let recording_data = recorder.stop_recording()?;
+//! let samples = recording_data.finalize_raw();
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -37,7 +37,6 @@ pub mod chunker;
 mod devices;
 mod encoder;
 pub mod error;
-mod loader;
 mod recorder;
 mod types;
 mod vad;
@@ -51,9 +50,8 @@ pub use chunker::{AudioChunk as ProgressiveChunk, ChunkerConfig, ProgressiveChun
 pub use devices::list_audio_devices;
 pub use encoder::{AudioEncoder, create_encoder};
 pub use error::AudioError;
-pub use loader::{load_audio_file, load_audio_stdin};
 pub use recorder::{AudioRecorder, AudioStreamSender, RecorderConfig, RecordingData};
-pub use types::{AudioChunk, AudioDeviceInfo, RecordingOutput};
+pub use types::AudioDeviceInfo;
 
 // Re-export VAD types (always available - no-op when feature disabled)
 pub use vad::{VadConfig, VadProcessor, VadState};

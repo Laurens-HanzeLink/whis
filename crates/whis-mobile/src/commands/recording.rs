@@ -80,17 +80,26 @@ async fn transcribe_audio_inner(
         "audio.mp3"
     };
 
-    // Transcribe using async API (blocking reqwest doesn't work on Android)
-    let text = whis_core::transcribe_audio_async(
-        &provider,
-        &api_key,
-        language.as_deref(),
+    // Transcribe using provider registry directly
+    let client = whis_core::get_http_client().map_err(|e| e.to_string())?;
+    let provider_impl = whis_core::registry()
+        .get_by_kind(&provider)
+        .map_err(|e| e.to_string())?;
+
+    let request = whis_core::TranscriptionRequest {
         audio_data,
-        Some(&mime_type),
-        Some(filename),
-    )
-    .await
-    .map_err(|e| e.to_string())?;
+        language: language.clone(),
+        filename: filename.to_string(),
+        mime_type: mime_type.clone(),
+        progress: None,
+    };
+
+    let result = provider_impl
+        .transcribe_async(&client, &api_key, request)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let text = result.text;
 
     // Apply post-processing if enabled (requires active preset + post-processor)
     if is_post_processing_enabled(&store) {

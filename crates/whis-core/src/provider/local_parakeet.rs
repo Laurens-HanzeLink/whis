@@ -5,12 +5,12 @@
 //!
 //! Parakeet models offer high accuracy and speed for speech-to-text.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 
-use super::{TranscriptionBackend, TranscriptionRequest, TranscriptionResult, TranscriptionStage};
+use super::{TranscriptionBackend, TranscriptionRequest, TranscriptionResult};
 
 /// Local Parakeet transcription provider
 #[derive(Debug, Default, Clone)]
@@ -28,39 +28,20 @@ impl TranscriptionBackend for LocalParakeetProvider {
 
     fn transcribe_sync(
         &self,
-        model_path: &str, // Path to Parakeet model directory
-        request: TranscriptionRequest,
+        _model_path: &str,
+        _request: TranscriptionRequest,
     ) -> Result<TranscriptionResult> {
-        transcribe_local(model_path, request)
+        anyhow::bail!("File transcription not supported. Use microphone recording with transcribe_raw().")
     }
 
     async fn transcribe_async(
         &self,
-        _client: &reqwest::Client, // Not used for local transcription
-        model_path: &str,
-        request: TranscriptionRequest,
+        _client: &reqwest::Client,
+        _model_path: &str,
+        _request: TranscriptionRequest,
     ) -> Result<TranscriptionResult> {
-        // Run CPU-bound transcription in blocking task
-        let model_path = model_path.to_string();
-        tokio::task::spawn_blocking(move || transcribe_local(&model_path, request))
-            .await
-            .context("Task join failed")?
+        anyhow::bail!("File transcription not supported. Use microphone recording with transcribe_raw().")
     }
-}
-
-/// Perform local transcription using parakeet-rs
-fn transcribe_local(
-    model_path: &str,
-    request: TranscriptionRequest,
-) -> Result<TranscriptionResult> {
-    // Report transcribing stage
-    request.report(TranscriptionStage::Transcribing);
-
-    // Decode MP3 to PCM samples
-    let pcm_samples = decode_mp3_to_samples(&request.audio_data)?;
-
-    // Transcribe the samples
-    transcribe_samples(model_path, pcm_samples)
 }
 
 /// Transcribe raw f32 samples directly.
@@ -165,42 +146,6 @@ fn transcribe_chunk_with_engine(
     })
 }
 
-/// Decode MP3 audio data to f32 samples at 16kHz mono
-fn decode_mp3_to_samples(mp3_data: &[u8]) -> Result<Vec<f32>> {
-    use minimp3::{Decoder, Frame};
-
-    let mut decoder = Decoder::new(mp3_data);
-    let mut samples = Vec::new();
-    let mut sample_rate = 0u32;
-    let mut channels = 0u16;
-
-    // Decode all MP3 frames
-    loop {
-        match decoder.next_frame() {
-            Ok(Frame {
-                data,
-                sample_rate: sr,
-                channels: ch,
-                ..
-            }) => {
-                sample_rate = sr as u32;
-                channels = ch as u16;
-                // Convert i16 samples to f32 normalized to [-1.0, 1.0]
-                samples.extend(data.iter().map(|&s| s as f32 / i16::MAX as f32));
-            }
-            Err(minimp3::Error::Eof) => break,
-            Err(e) => anyhow::bail!("MP3 decode error: {:?}", e),
-        }
-    }
-
-    if samples.is_empty() {
-        anyhow::bail!("No audio data decoded from MP3");
-    }
-
-    // Resample to 16kHz mono if needed
-    crate::resample::resample_to_16k(&samples, sample_rate, channels)
-}
-
 // ============================================================================
 // Engine Caching (matches local_whisper.rs pattern)
 // ============================================================================
@@ -261,7 +206,7 @@ fn get_or_load_engine(model_path: &str) -> Result<()> {
         .load_model_with_params(Path::new(model_path), ParakeetModelParams::int8())
         .map_err(|e| anyhow::anyhow!("Failed to load Parakeet model: {}", e))?;
 
-    crate::verbose!("✓ Parakeet model loaded");
+    crate::verbose!("Parakeet model loaded");
 
     *cache = Some(CachedParakeetEngine {
         engine,
@@ -311,7 +256,7 @@ pub fn preload_parakeet(model_path: &str) {
             return;
         }
 
-        crate::verbose!("✓ Parakeet model preloaded");
+        crate::verbose!("Parakeet model preloaded");
     });
 }
 
