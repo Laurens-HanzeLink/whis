@@ -18,7 +18,9 @@ pub use ollama::{
     list_models, pull_model, pull_model_with_progress,
 };
 pub use ollama_manager::{clear_warmup_cache, preload_ollama};
-pub use post_processing::{DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, post_process};
+pub use post_processing::{
+    DEFAULT_POST_PROCESSING_PROMPT, PostProcessConfig, PostProcessor, post_process,
+};
 pub use transcribe::progressive_transcribe_cloud;
 #[cfg(feature = "local-transcription")]
 pub use transcribe::progressive_transcribe_local;

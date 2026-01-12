@@ -90,6 +90,24 @@ impl PostProcessor {
     }
 }
 
+/// Configuration for post-processing a transcript.
+///
+/// This struct bundles all the parameters needed to run post-processing,
+/// replacing ad-hoc tuples for better readability and maintainability.
+#[derive(Debug, Clone)]
+pub struct PostProcessConfig {
+    /// Which post-processor to use (OpenAI, Mistral, Ollama, None)
+    pub processor: PostProcessor,
+    /// System prompt for the LLM
+    pub prompt: String,
+    /// API key (for OpenAI/Mistral) or server URL (for Ollama)
+    pub api_key_or_url: String,
+    /// Ollama model name (only used when processor is Ollama)
+    pub ollama_model: Option<String>,
+    /// Ollama keep_alive duration (only used when processor is Ollama)
+    pub ollama_keep_alive: String,
+}
+
 #[derive(Debug, Deserialize)]
 struct ChatResponse {
     choices: Vec<Choice>,

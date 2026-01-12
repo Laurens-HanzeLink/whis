@@ -75,6 +75,13 @@ pub struct UiSettings {
     /// Experimental feature.
     #[serde(default)]
     pub bubble: BubbleSettings,
+
+    /// Model memory management settings.
+    ///
+    /// Controls when local transcription models are loaded/unloaded.
+    /// Helps balance transcription speed vs memory usage.
+    #[serde(default)]
+    pub model_memory: ModelMemorySettings,
 }
 
 fn default_chunk_duration() -> u64 {
@@ -154,6 +161,54 @@ impl Default for BubbleSettings {
     }
 }
 
+/// Model memory management settings.
+///
+/// Controls when local transcription models (Whisper/Parakeet) are
+/// loaded and unloaded from memory. These settings help balance
+/// transcription speed vs memory usage.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelMemorySettings {
+    /// Keep transcription model loaded between recordings.
+    ///
+    /// When true, the model stays in RAM/VRAM between recordings for
+    /// faster subsequent transcriptions (no ~3s reload delay).
+    /// When false, model is unloaded after each transcription to free memory.
+    ///
+    /// Default: true (matches CLI daemon behavior for fast UX)
+    #[serde(default = "default_keep_model_loaded")]
+    pub keep_model_loaded: bool,
+
+    /// Auto-unload after N minutes of inactivity.
+    ///
+    /// Only applies when `keep_model_loaded` is true.
+    /// After this many minutes without a recording, the model is
+    /// automatically unloaded to free memory.
+    ///
+    /// - 0: Never auto-unload (keep loaded until app closes)
+    /// - 5, 10, 30, 60: Unload after idle timeout
+    ///
+    /// Default: 10 minutes
+    #[serde(default = "default_unload_after_minutes")]
+    pub unload_after_minutes: u32,
+}
+
+fn default_keep_model_loaded() -> bool {
+    crate::configuration::DEFAULT_KEEP_MODEL_LOADED
+}
+
+fn default_unload_after_minutes() -> u32 {
+    crate::configuration::DEFAULT_MODEL_UNLOAD_MINUTES
+}
+
+impl Default for ModelMemorySettings {
+    fn default() -> Self {
+        Self {
+            keep_model_loaded: default_keep_model_loaded(),
+            unload_after_minutes: default_unload_after_minutes(),
+        }
+    }
+}
+
 impl Default for UiSettings {
     fn default() -> Self {
         Self {
@@ -164,6 +219,7 @@ impl Default for UiSettings {
             active_preset: None,
             chunk_duration_secs: crate::configuration::DEFAULT_CHUNK_DURATION_SECS,
             bubble: BubbleSettings::default(),
+            model_memory: ModelMemorySettings::default(),
         }
     }
 }

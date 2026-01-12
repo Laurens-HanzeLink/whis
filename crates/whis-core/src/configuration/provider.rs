@@ -158,6 +158,22 @@ impl TranscriptionProvider {
             _ => self.as_str(),
         }
     }
+
+    /// Configure model memory behavior for local providers.
+    ///
+    /// When `keep` is true, the model stays loaded in memory between
+    /// transcriptions for faster subsequent runs. When false, the model
+    /// is unloaded after each transcription to free memory.
+    ///
+    /// No-op for cloud providers (they don't have local model memory).
+    #[cfg(feature = "local-transcription")]
+    pub fn set_keep_loaded(&self, keep: bool) {
+        match self {
+            Self::LocalWhisper => crate::provider::whisper_set_keep_loaded(keep),
+            Self::LocalParakeet => crate::provider::parakeet_set_keep_loaded(keep),
+            _ => {} // Cloud providers don't have model memory
+        }
+    }
 }
 
 impl fmt::Display for TranscriptionProvider {

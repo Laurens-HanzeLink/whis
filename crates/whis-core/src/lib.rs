@@ -35,12 +35,13 @@ pub use configuration::{
 pub use configuration::{Preset, PresetSource, TranscriptionProvider};
 
 // Re-export transcription types
-pub use transcription::{
-    DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, WarmupConfig, clear_warmup_cache, post_process,
-    preload_ollama, progressive_transcribe_cloud, warmup_configured,
-};
 #[cfg(feature = "local-transcription")]
 pub use transcription::progressive_transcribe_local;
+pub use transcription::{
+    DEFAULT_POST_PROCESSING_PROMPT, PostProcessConfig, PostProcessor, WarmupConfig,
+    clear_warmup_cache, post_process, preload_ollama, progressive_transcribe_cloud,
+    warmup_configured,
+};
 
 // Re-export provider types
 #[cfg(feature = "realtime")]
@@ -100,7 +101,9 @@ pub mod preset {
 
 #[doc(hidden)]
 pub mod post_processing {
-    pub use crate::transcription::{DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, post_process};
+    pub use crate::transcription::{
+        DEFAULT_POST_PROCESSING_PROMPT, PostProcessConfig, PostProcessor, post_process,
+    };
 }
 
 #[doc(hidden)]

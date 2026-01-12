@@ -123,3 +123,32 @@ pub const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
 ///
 /// Users can switch to larger models via `whis config ollama-model <model>`.
 pub const DEFAULT_OLLAMA_MODEL: &str = "qwen2.5:1.5b";
+
+/// Default Ollama keep_alive duration
+///
+/// How long Ollama keeps the model loaded in VRAM after a request.
+/// "5m" is Ollama's native default. Users can configure:
+/// - "0": Unload immediately after each request
+/// - "5m", "10m", "30m": Unload after idle timeout
+/// - "-1": Keep loaded forever (until Ollama restarts)
+pub const DEFAULT_OLLAMA_KEEP_ALIVE: &str = "5m";
+
+// =============================================================================
+// MODEL MEMORY DEFAULTS
+// =============================================================================
+
+/// Whether to keep local transcription models (Whisper/Parakeet) loaded in memory
+///
+/// When true, models stay in memory between recordings for faster response.
+/// When false, models are unloaded after each transcription to save memory.
+/// Default is true to match CLI daemon behavior and provide fast UX.
+pub const DEFAULT_KEEP_MODEL_LOADED: bool = true;
+
+/// Auto-unload timeout in minutes (0 = never auto-unload)
+///
+/// When keep_model_loaded is true, this controls how long the model stays
+/// loaded after the last transcription before being automatically unloaded.
+/// - 0: Never auto-unload (keep loaded until app closes)
+/// - 10: Unload after 10 minutes of inactivity (default)
+/// - Higher values: For power users with plenty of RAM
+pub const DEFAULT_MODEL_UNLOAD_MINUTES: u32 = 10;
