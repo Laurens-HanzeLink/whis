@@ -76,6 +76,10 @@ struct Alternative {
     confidence: f64,
 }
 
+/// Retry configuration for WebSocket connections
+const MAX_RETRIES: u32 = 3;
+const BASE_BACKOFF_SECS: u64 = 1;
+
 impl DeepgramRealtimeProvider {
     /// Transcribe audio from a channel of f32 samples (16kHz mono)
     ///
@@ -92,22 +96,70 @@ impl DeepgramRealtimeProvider {
              &channels=1&smart_format=true&interim_results=true"
         );
 
-        if let Some(lang) = language {
+        if let Some(lang) = language.clone() {
             url.push_str(&format!("&language={}", lang));
         }
 
-        // 2. Build request with Authorization header
-        let mut request = url.into_client_request()?;
-        request.headers_mut().insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Token {api_key}"))?,
-        );
+        // 2. Connect to WebSocket with retry logic
+        let ws_stream = {
+            let mut last_error = None;
 
-        // 3. Connect WebSocket with timeout
-        let (ws_stream, _response) = timeout(Duration::from_secs(30), connect_async(request))
-            .await
-            .context("Connection timeout")?
-            .context("Failed to connect to Deepgram Live Streaming API")?;
+            let result = 'retry: {
+                for attempt in 0..MAX_RETRIES {
+                    // Build request fresh each attempt
+                    let mut request = match url.clone().into_client_request() {
+                        Ok(r) => r,
+                        Err(e) => {
+                            last_error = Some(format!("Failed to build request: {}", e));
+                            continue;
+                        }
+                    };
+
+                    match HeaderValue::from_str(&format!("Token {api_key}")) {
+                        Ok(header_value) => {
+                            request.headers_mut().insert(AUTHORIZATION, header_value);
+                        }
+                        Err(e) => {
+                            last_error = Some(format!("Failed to set auth header: {}", e));
+                            continue;
+                        }
+                    }
+
+                    // Attempt connection with timeout
+                    match timeout(Duration::from_secs(30), connect_async(request)).await {
+                        Ok(Ok((stream, _response))) => break 'retry Ok(stream),
+                        Ok(Err(e)) => {
+                            last_error = Some(format!("Connection failed: {}", e));
+                        }
+                        Err(_) => {
+                            last_error = Some("Connection timeout".to_string());
+                        }
+                    }
+
+                    // Retry with exponential backoff (1s, 2s, 4s)
+                    if attempt < MAX_RETRIES - 1 {
+                        let backoff = BASE_BACKOFF_SECS * (1 << attempt);
+                        if crate::verbose::is_verbose() {
+                            eprintln!(
+                                "[deepgram-realtime] Attempt {} failed: {}. Retrying in {}s...",
+                                attempt + 1,
+                                last_error.as_deref().unwrap_or("unknown"),
+                                backoff
+                            );
+                        }
+                        tokio::time::sleep(Duration::from_secs(backoff)).await;
+                    }
+                }
+
+                Err(anyhow!(
+                    "Failed to connect after {} attempts: {}",
+                    MAX_RETRIES,
+                    last_error.unwrap_or_else(|| "unknown error".to_string())
+                ))
+            };
+
+            result?
+        };
 
         let (write, read) = ws_stream.split();
         let write = Arc::new(Mutex::new(write));

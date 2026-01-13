@@ -70,6 +70,8 @@ export class AudioStreamer {
       this.isRecording = true
     }
     catch (error) {
+      // Clean up partial resources before propagating error
+      this.stop()
       this.callbacks.onError(error instanceof Error ? error : new Error(String(error)))
     }
   }

@@ -24,6 +24,9 @@ let audioStreamer: AudioStreamer | null = null
 let recordingStartTime: number | null = null
 const MIN_RECORDING_DURATION_MS = 500
 
+// Guard against concurrent toggle operations
+let toggleInProgress = false
+
 // Event listener cleanup functions
 let cleanupListeners: (() => void)[] = []
 
@@ -71,16 +74,32 @@ async function initialize() {
 /**
  * Cleanup event listeners - call when app is unmounting.
  */
-function cleanup() {
+async function cleanup() {
   cleanupListeners.forEach(fn => fn())
   cleanupListeners = []
   initialized = false
 
   if (audioStreamer) {
     audioStreamer.stop()
+
+    // Await backend cleanup based on current mode
     if (state.isProgressiveMode) {
-      invoke('stop_recording').catch(console.error)
+      try {
+        await invoke('stop_recording')
+      }
+      catch (error) {
+        console.error('Cleanup stop_recording error:', error)
+      }
     }
+    else if (state.isStreaming) {
+      try {
+        await invoke('transcribe_streaming_stop')
+      }
+      catch (error) {
+        console.error('Cleanup streaming stop error:', error)
+      }
+    }
+
     audioStreamer = null
   }
 }
@@ -264,19 +283,30 @@ async function stopRecording() {
  * Returns true if recording was started, false if stopped or unable to record.
  */
 async function toggleRecording(): Promise<boolean> {
+  // Guard against concurrent toggle operations (rapid clicks)
+  if (toggleInProgress) {
+    return state.isRecording
+  }
+
   const canRecord = state.configValid && !state.isTranscribing && !state.isPostProcessing
 
   if (!canRecord) {
     return false
   }
 
-  if (state.isRecording) {
-    await stopRecording()
-    return false
+  toggleInProgress = true
+  try {
+    if (state.isRecording) {
+      await stopRecording()
+      return false
+    }
+    else {
+      await startRecording()
+      return true
+    }
   }
-  else {
-    await startRecording()
-    return true
+  finally {
+    toggleInProgress = false
   }
 }
 

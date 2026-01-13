@@ -27,7 +27,8 @@ pub async fn transcribe_audio(
 ) -> Result<String, String> {
     // Set state to transcribing
     {
-        let mut recording_state = state.recording_state.lock().unwrap();
+        let mut recording_state = state.recording_state.lock()
+            .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Transcribing;
     }
 
@@ -36,7 +37,8 @@ pub async fn transcribe_audio(
 
     // Always reset state, regardless of success or failure
     {
-        let mut recording_state = state.recording_state.lock().unwrap();
+        let mut recording_state = state.recording_state.lock()
+            .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Idle;
     }
 
@@ -141,7 +143,8 @@ pub async fn transcribe_streaming_start(
 
     // Set state to transcribing
     {
-        let mut recording_state = state.recording_state.lock().unwrap();
+        let mut recording_state = state.recording_state.lock()
+            .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Transcribing;
     }
 
@@ -151,7 +154,8 @@ pub async fn transcribe_streaming_start(
 
     // Store sender in realtime_audio_tx (not audio_tx, which is for progressive)
     {
-        let mut state_tx = state.realtime_audio_tx.lock().unwrap();
+        let mut state_tx = state.realtime_audio_tx.lock()
+            .expect("realtime_audio_tx mutex poisoned");
         *state_tx = Some(audio_tx);
     }
 
@@ -207,13 +211,15 @@ pub async fn transcribe_streaming_start(
 
         // Reset state
         {
-            let mut recording_state = recording_state_arc.lock().unwrap();
+            let mut recording_state = recording_state_arc.lock()
+                .expect("recording_state mutex poisoned");
             *recording_state = RecordingState::Idle;
         }
 
         // Clear realtime_audio_tx
         {
-            let mut state_tx = realtime_tx_arc.lock().unwrap();
+            let mut state_tx = realtime_tx_arc.lock()
+                .expect("realtime_audio_tx mutex poisoned");
             *state_tx = None;
         }
     });
@@ -229,7 +235,8 @@ pub async fn transcribe_streaming_send_chunk(
     state: State<'_, AppState>,
     chunk: Vec<f32>,
 ) -> Result<(), String> {
-    let audio_tx = state.realtime_audio_tx.lock().unwrap();
+    let audio_tx = state.realtime_audio_tx.lock()
+        .expect("realtime_audio_tx mutex poisoned");
 
     if let Some(tx) = audio_tx.as_ref() {
         // Use unbounded send - won't block or drop chunks
@@ -251,7 +258,8 @@ pub async fn transcribe_streaming_send_chunk(
 pub async fn transcribe_streaming_stop(state: State<'_, AppState>) -> Result<(), String> {
     // Drop realtime_audio_tx to signal end of stream
     {
-        let mut audio_tx = state.realtime_audio_tx.lock().unwrap();
+        let mut audio_tx = state.realtime_audio_tx.lock()
+            .expect("realtime_audio_tx mutex poisoned");
         *audio_tx = None;
     }
 
@@ -293,7 +301,8 @@ pub async fn start_recording(
 
     // Set state to recording
     {
-        let mut recording_state = state.recording_state.lock().unwrap();
+        let mut recording_state = state.recording_state.lock()
+            .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Recording;
     }
 
@@ -302,7 +311,8 @@ pub async fn start_recording(
 
     // Store sender in state so frontend can send chunks
     {
-        let mut state_tx = state.audio_tx.lock().unwrap();
+        let mut state_tx = state.audio_tx.lock()
+            .expect("audio_tx mutex poisoned");
         *state_tx = Some(audio_tx);
     }
 
@@ -318,11 +328,15 @@ pub async fn start_recording(
     };
 
     // Spawn chunker task with error handling
+    // When chunker fails, it emits error event and drops chunk_tx, closing the channel
     let mut chunker = ProgressiveChunker::new(chunker_config, chunk_tx);
     let chunker_app = app.clone();
     tokio::spawn(async move {
         if let Err(e) = chunker.consume_stream(audio_rx, None).await {
             // Log error - chunker failures are critical but rare
+            // The error event notifies the frontend immediately
+            // Dropping chunk_tx (on task exit) will close the channel and let
+            // transcription complete with whatever chunks were processed
             error!("Chunker error: {}", e);
             let _ = chunker_app.emit(
                 "transcription-error",
@@ -334,7 +348,8 @@ pub async fn start_recording(
     // Create oneshot channel for transcription result
     let (result_tx, result_rx) = oneshot::channel();
 
-    // Spawn transcription task with error logging
+    // Spawn transcription task
+    // This task will complete when chunk_rx closes (either chunker finishes or fails)
     tokio::spawn(async move {
         let result =
             progressive_transcribe_cloud(&provider, &api_key, language.as_deref(), chunk_rx, None)
@@ -348,7 +363,8 @@ pub async fn start_recording(
 
     // Store result receiver for later retrieval
     {
-        let mut rx_guard = state.transcription_rx.lock().unwrap();
+        let mut rx_guard = state.transcription_rx.lock()
+            .expect("transcription_rx mutex poisoned");
         *rx_guard = Some(result_rx);
     }
 
@@ -361,7 +377,8 @@ pub async fn start_recording(
 /// Samples should be f32 PCM at 16kHz sample rate.
 #[tauri::command]
 pub async fn send_audio_chunk(state: State<'_, AppState>, samples: Vec<f32>) -> Result<(), String> {
-    let audio_tx = state.audio_tx.lock().unwrap();
+    let audio_tx = state.audio_tx.lock()
+        .expect("audio_tx mutex poisoned");
 
     if let Some(tx) = audio_tx.as_ref() {
         // Use unbounded send (won't block)
@@ -386,19 +403,22 @@ pub async fn stop_recording(
 ) -> Result<String, String> {
     // Set state to transcribing
     {
-        let mut recording_state = state.recording_state.lock().unwrap();
+        let mut recording_state = state.recording_state.lock()
+            .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Transcribing;
     }
 
     // Drop audio_tx to signal end of stream
     {
-        let mut audio_tx = state.audio_tx.lock().unwrap();
+        let mut audio_tx = state.audio_tx.lock()
+            .expect("audio_tx mutex poisoned");
         *audio_tx = None;
     }
 
     // Get the result receiver
     let result_rx = {
-        let mut rx_guard = state.transcription_rx.lock().unwrap();
+        let mut rx_guard = state.transcription_rx.lock()
+            .expect("transcription_rx mutex poisoned");
         rx_guard.take()
     };
 
@@ -427,13 +447,15 @@ pub async fn stop_recording(
 
     // Reset state
     {
-        let mut recording_state = state.recording_state.lock().unwrap();
+        let mut recording_state = state.recording_state.lock()
+            .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Idle;
     }
 
     // Clear config cache (in case settings changed)
     {
-        let mut config_guard = state.transcription_config.lock().unwrap();
+        let mut config_guard = state.transcription_config.lock()
+            .expect("transcription_config mutex poisoned");
         *config_guard = None;
     }
 

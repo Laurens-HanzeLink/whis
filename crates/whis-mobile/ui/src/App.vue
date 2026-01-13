@@ -11,9 +11,10 @@ import { settingsStore } from './stores/settings'
 const route = useRoute()
 const loaded = computed(() => settingsStore.state.loaded)
 
-// Bubble event cleanup
+// Event cleanup functions
 let unlistenBubbleClick: (() => void) | null = null
 let unlistenBubbleClose: (() => void) | null = null
+let unlistenVisibility: (() => void) | null = null
 const sidebarOpen = ref(false)
 
 const navItems = [
@@ -80,6 +81,18 @@ async function handleBubbleClose(event: BubbleCloseEvent) {
   }
 }
 
+/**
+ * Handle app going to background - stop recording silently.
+ * Mobile OS may restrict audio capture in background, causing broken recordings.
+ */
+function handleVisibilityChange() {
+  if (document.hidden && recordingStore.state.isRecording) {
+    recordingStore.stopRecording().catch((error) => {
+      console.error('[App.handleVisibilityChange] Failed to stop recording:', error)
+    })
+  }
+}
+
 // Close sidebar on route change
 watch(() => route.path, () => {
   closeSidebar()
@@ -111,6 +124,12 @@ onMounted(async () => {
     // Plugin may not be available on this platform
   }
 
+  // Stop recording when app goes to background (mobile-specific)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  unlistenVisibility = () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }
+
   // Watch all recording states to update bubble appearance
   watch(
     () => [
@@ -128,6 +147,7 @@ onMounted(async () => {
 onUnmounted(() => {
   unlistenBubbleClick?.()
   unlistenBubbleClose?.()
+  unlistenVisibility?.()
   recordingStore.cleanup()
 })
 </script>
