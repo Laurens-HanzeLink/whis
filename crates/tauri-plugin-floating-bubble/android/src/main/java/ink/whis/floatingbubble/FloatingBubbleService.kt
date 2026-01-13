@@ -1,10 +1,9 @@
 package ink.whis.floatingbubble
- 
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -13,20 +12,15 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.util.Log
-import android.view.GestureDetector
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.PopupMenu
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.GestureDetectorCompat
 import app.tauri.annotation.InvokeArg
 
 /**
@@ -34,6 +28,7 @@ import app.tauri.annotation.InvokeArg
  *
  * Uses standard Android WindowManager to create a draggable floating bubble.
  * Visual states change based on configured icons for each state.
+ * Supports drag-to-close with a close zone at the bottom center.
  */
 class FloatingBubbleService : Service() {
 
@@ -41,6 +36,8 @@ class FloatingBubbleService : Service() {
         private const val TAG = "FloatingBubbleService"
         private const val CHANNEL_ID = "floating_bubble_channel"
         private const val NOTIFICATION_ID = 1001
+        private const val CLOSE_ZONE_SIZE = 80
+        private const val CLOSE_ZONE_MARGIN = 16
 
         // Configuration passed from the plugin
         var bubbleSize: Int = 60
@@ -92,24 +89,32 @@ class FloatingBubbleService : Service() {
     private var bubbleView: ImageView? = null
     private var bubbleBackground: GradientDrawable? = null
     private var layoutParams: WindowManager.LayoutParams? = null
+    private var closeZoneParams: WindowManager.LayoutParams? = null
+    private var closeZoneView: FrameLayout? = null
+    private var closeZoneIcon: ImageView? = null
+    private var closeZoneBackground: GradientDrawable? = null
     private var currentStateName: String = "idle"
+    private var closeZoneVisible = false
+    private var closeZoneActivated = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         instance = this
-        
+
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
-        
+
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        createCloseZone()
         createBubble()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         instance = null
+        removeCloseZone()
         removeBubble()
         FloatingBubblePlugin.isBubbleVisible = false
     }
@@ -126,6 +131,97 @@ class FloatingBubbleService : Service() {
             }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun createCloseZone() {
+        val density = resources.displayMetrics.density
+        val sizePx = (CLOSE_ZONE_SIZE * density).toInt()
+        val marginPx = (CLOSE_ZONE_MARGIN * density).toInt()
+
+        closeZoneBackground = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.parseColor("#60CCCCCC"))
+            setStroke((2 * density).toInt(), Color.parseColor("#CC999999"))
+        }
+
+        closeZoneView = FrameLayout(this).apply {
+            visibility = View.GONE
+            this.background = closeZoneBackground
+
+            closeZoneIcon = ImageView(this@FloatingBubbleService).apply {
+                setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+                setColorFilter(Color.WHITE)
+                val padding = (sizePx * 0.3).toInt()
+                setPadding(padding, padding, padding, padding)
+            }
+
+            addView(closeZoneIcon, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            ))
+        }
+
+        @Suppress("DEPRECATION")
+        val windowType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+
+        closeZoneParams = WindowManager.LayoutParams(
+            sizePx,
+            sizePx,
+            windowType,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            y = marginPx + sizePx
+        }
+
+        windowManager?.addView(closeZoneView, closeZoneParams)
+    }
+
+    private fun removeCloseZone() {
+        closeZoneView?.let {
+            try {
+                windowManager?.removeView(it)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error removing close zone view", e)
+            }
+        }
+        closeZoneView = null
+    }
+
+    private fun showCloseZone() {
+        if (closeZoneVisible) return
+        closeZoneVisible = true
+        closeZoneView?.visibility = View.VISIBLE
+    }
+
+    private fun hideCloseZone() {
+        if (!closeZoneVisible) return
+        closeZoneVisible = false
+        closeZoneActivated = false
+        closeZoneView?.visibility = View.GONE
+        closeZoneBackground?.setColor(Color.parseColor("#60CCCCCC"))
+        closeZoneBackground?.setStroke((2 * resources.displayMetrics.density).toInt(), Color.parseColor("#CC999999"))
+    }
+
+    private fun updateCloseZoneFeedback(isClose: Boolean) {
+        if (isClose != closeZoneActivated) {
+            closeZoneActivated = isClose
+            if (isClose) {
+                closeZoneBackground?.setColor(Color.parseColor("#80FF4444"))
+                closeZoneBackground?.setStroke((4 * resources.displayMetrics.density).toInt(), Color.parseColor("#FFFF4444"))
+                closeZoneIcon?.setColorFilter(Color.parseColor("#FFFF4444"))
+            } else {
+                closeZoneBackground?.setColor(Color.parseColor("#60CCCCCC"))
+                closeZoneBackground?.setStroke((2 * resources.displayMetrics.density).toInt(), Color.parseColor("#CC999999"))
+                closeZoneIcon?.setColorFilter(Color.WHITE)
+            }
         }
     }
 
@@ -221,7 +317,7 @@ class FloatingBubbleService : Service() {
         }
         Log.d(TAG, "createBubble - Initial stateConfigs size: ${Companion.stateConfigs.size}")
     }
-    
+
     /**
      * Load the plugin's default icon or fallback to system icon.
      */
@@ -232,7 +328,7 @@ class FloatingBubbleService : Service() {
             "drawable",
             packageName
         )
-        
+
         if (defaultResId != 0) {
             try {
                 val defaultDrawable = ContextCompat.getDrawable(
@@ -245,7 +341,7 @@ class FloatingBubbleService : Service() {
                 // Fall through to system icon
             }
         }
-        
+
         // Fallback to system icon
         setImageResource(android.R.drawable.ic_btn_speak_now)
     }
@@ -262,30 +358,18 @@ class FloatingBubbleService : Service() {
     }
 
     /**
-     * Touch listener that handles dragging the bubble and long-press gestures.
+     * Touch listener that handles dragging the bubble.
      */
-    private inner class BubbleTouchListener : View.OnTouchListener,
-        GestureDetector.OnGestureListener {
+    private inner class BubbleTouchListener : View.OnTouchListener {
 
         private var initialX = 0
         private var initialY = 0
         private var initialTouchX = 0f
         private var initialTouchY = 0f
         private var isDragging = false
-        private var longPressTriggered = false
         private val clickThreshold = 10 // pixels
 
-        private val gestureDetector = GestureDetectorCompat(
-            this@FloatingBubbleService,
-            this
-        ).apply {
-            setIsLongpressEnabled(true)
-        }
-
         override fun onTouch(view: View, event: MotionEvent): Boolean {
-            // Let gesture detector process for long-press detection
-            gestureDetector.onTouchEvent(event)
-
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = layoutParams?.x ?: 0
@@ -293,7 +377,7 @@ class FloatingBubbleService : Service() {
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
-                    longPressTriggered = false
+                    showCloseZone()
                     return true
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -308,13 +392,20 @@ class FloatingBubbleService : Service() {
                     layoutParams?.x = initialX + deltaX
                     layoutParams?.y = initialY + deltaY
                     windowManager?.updateViewLayout(bubbleView, layoutParams)
+
+                    updateCloseZoneFeedback(isNearCloseZone())
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging && !longPressTriggered) {
+                    hideCloseZone()
+                    if (!isDragging) {
                         handleBubbleClick()
-                    } else if (isDragging) {
-                        animateToEdge()
+                    } else {
+                        if (isInCloseZone()) {
+                            handleCloseBubble()
+                        } else {
+                            animateToEdge()
+                        }
                     }
                     return true
                 }
@@ -322,89 +413,72 @@ class FloatingBubbleService : Service() {
             return false
         }
 
-        // GestureDetector.OnGestureListener implementation
-        override fun onDown(e: MotionEvent): Boolean = true
+        private fun isInCloseZone(): Boolean {
+            val bubble = bubbleView ?: return false
+            val closeZone = closeZoneView ?: return false
 
-        override fun onShowPress(e: MotionEvent) {}
+            val bubbleLocation = IntArray(2)
+            val closeZoneLocation = IntArray(2)
+            bubble.getLocationOnScreen(bubbleLocation)
+            closeZone.getLocationOnScreen(closeZoneLocation)
 
-        override fun onSingleTapUp(e: MotionEvent): Boolean = false
+            val bubbleCenterX = bubbleLocation[0] + bubble.width / 2
+            val bubbleCenterY = bubbleLocation[1] + bubble.height / 2
+            val closeZoneCenterX = closeZoneLocation[0] + closeZone.width / 2
+            val closeZoneCenterY = closeZoneLocation[1] + closeZone.height / 2
 
-        override fun onScroll(
-            e1: MotionEvent?,
-            e2: MotionEvent,
-            distanceX: Float,
-            distanceY: Float
-        ): Boolean = false
+            val distance = kotlin.math.sqrt(
+                Math.pow((bubbleCenterX - closeZoneCenterX).toDouble(), 2.0) +
+                Math.pow((bubbleCenterY - closeZoneCenterY).toDouble(), 2.0)
+            )
 
-        override fun onLongPress(e: MotionEvent) {
-            if (!isDragging) {
-                longPressTriggered = true
-                triggerHapticFeedback()
-                showContextMenu()
-            }
+            val maxDistance = (closeZone.width / 2 + bubble.width / 2) * 0.7
+
+            Log.d(TAG, "isInCloseZone: bubbleScreen=($bubbleCenterX, $bubbleCenterY), closeZoneScreen=($closeZoneCenterX, $closeZoneCenterY), distance=$distance, maxDistance=$maxDistance")
+
+            return distance < maxDistance
         }
 
-        override fun onFling(
-            e1: MotionEvent?,
-            e2: MotionEvent,
-            velocityX: Float,
-            velocityY: Float
-        ): Boolean = false
+        private fun isNearCloseZone(): Boolean {
+            val bubble = bubbleView ?: return false
+            val closeZone = closeZoneView ?: return false
+
+            val bubbleLocation = IntArray(2)
+            val closeZoneLocation = IntArray(2)
+            bubble.getLocationOnScreen(bubbleLocation)
+            closeZone.getLocationOnScreen(closeZoneLocation)
+
+            val bubbleCenterX = bubbleLocation[0] + bubble.width / 2
+            val bubbleCenterY = bubbleLocation[1] + bubble.height / 2
+            val closeZoneCenterX = closeZoneLocation[0] + closeZone.width / 2
+            val closeZoneCenterY = closeZoneLocation[1] + closeZone.height / 2
+
+            val distance = kotlin.math.sqrt(
+                Math.pow((bubbleCenterX - closeZoneCenterX).toDouble(), 2.0) +
+                Math.pow((bubbleCenterY - closeZoneCenterY).toDouble(), 2.0)
+            )
+
+            val nearDistance = (closeZone.width / 2 + bubble.width / 2) * 1.2
+
+            return distance < nearDistance
+        }
     }
 
     private fun handleBubbleClick() {
         FloatingBubblePlugin.sendBubbleClickEvent()
     }
 
-    private fun showContextMenu() {
-        val view = bubbleView ?: return
-
-        try {
-            val popup = PopupMenu(this, view)
-            popup.menuInflater.inflate(R.menu.bubble_context_menu, popup.menu)
-
-            popup.setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    R.id.menu_open_app -> {
-                        FloatingBubblePlugin.sendMenuActionEvent("open-app")
-                        true
-                    }
-                    R.id.menu_settings -> {
-                        FloatingBubblePlugin.sendMenuActionEvent("settings")
-                        true
-                    }
-                    R.id.menu_close_bubble -> {
-                        FloatingBubblePlugin.sendMenuActionEvent("close")
-                        true
-                    }
-                    else -> false
-                }
-            }
-
-            popup.show()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to show context menu", e)
-        }
+    private fun handleCloseBubble() {
+        FloatingBubblePlugin.sendCloseEvent()
+        hideBubble()
     }
 
-    private fun triggerHapticFeedback() {
+    private fun hideBubble() {
         try {
-            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                vibratorManager.defaultVibrator
-            } else {
-                @Suppress("DEPRECATION")
-                getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(50)
-            }
+            val intent = Intent(this, FloatingBubbleService::class.java)
+            stopService(intent)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to trigger haptic feedback", e)
+            Log.e(TAG, "Error hiding bubble", e)
         }
     }
 
@@ -412,17 +486,17 @@ class FloatingBubbleService : Service() {
         val screenWidth = resources.displayMetrics.widthPixels
         val bubbleWidth = bubbleView?.width ?: 0
         val currentX = layoutParams?.x ?: 0
-        
+
         val targetX = if (currentX + bubbleWidth / 2 < screenWidth / 2) {
             0
         } else {
             screenWidth - bubbleWidth
         }
-        
+
         layoutParams?.x = targetX
         windowManager?.updateViewLayout(bubbleView, layoutParams)
     }
-    
+
     /**
      * Update the visual state of the bubble.
      * Changes the icon based on state configuration.
@@ -484,7 +558,7 @@ class FloatingBubbleService : Service() {
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.notify(NOTIFICATION_ID, createNotification())
     }
-    
+
     private fun createNotification(): Notification {
         val (title, text) = when (currentStateName.lowercase()) {
             "recording" -> "Recording..." to "Tap bubble to stop"

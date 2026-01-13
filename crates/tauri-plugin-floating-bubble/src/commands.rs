@@ -46,9 +46,3 @@ pub(crate) async fn has_overlay_permission<R: Runtime>(
 pub(crate) async fn set_bubble_state<R: Runtime>(app: AppHandle<R>, state: String) -> Result<()> {
     app.floating_bubble().set_state(state)
 }
-
-/// Bring the app to the foreground.
-#[command]
-pub(crate) async fn bring_to_foreground<R: Runtime>(app: AppHandle<R>) -> Result<()> {
-    app.floating_bubble().bring_to_foreground()
-}

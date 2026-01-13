@@ -64,7 +64,6 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::request_overlay_permission,
             commands::has_overlay_permission,
             commands::set_bubble_state,
-            commands::bring_to_foreground,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

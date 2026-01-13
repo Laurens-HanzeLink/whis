@@ -67,11 +67,4 @@ impl<R: Runtime> FloatingBubble<R> {
             .run_mobile_plugin("setBubbleState", StateOptions { state })
             .map_err(Into::into)
     }
-
-    /// Bring the app to the foreground.
-    pub fn bring_to_foreground(&self) -> crate::Result<()> {
-        self.0
-            .run_mobile_plugin("bringToForeground", ())
-            .map_err(Into::into)
-    }
 }

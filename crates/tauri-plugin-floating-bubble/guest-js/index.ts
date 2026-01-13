@@ -188,21 +188,6 @@ export async function setBubbleState(state: string): Promise<void> {
 }
 
 /**
- * Bring the app to the foreground.
- *
- * Useful when the user selects "Open app" from the bubble's context menu.
- *
- * @example
- * ```typescript
- * import { bringToForeground } from 'tauri-plugin-floating-bubble'
- * await bringToForeground()
- * ```
- */
-export async function bringToForeground(): Promise<void> {
-  await invoke('plugin:floating-bubble|bring_to_foreground')
-}
-
-/**
  * Event payload when the bubble is clicked.
  */
 export interface BubbleClickEvent {
@@ -247,53 +232,46 @@ export async function onBubbleClick(
 }
 
 /**
- * Menu action types for the bubble long-press context menu.
+ * Event payload when the bubble is closed via drag-to-close.
  */
-export type BubbleMenuAction = 'close' | 'open-app' | 'settings'
-
-/**
- * Event payload when a menu action is selected from the bubble context menu.
- */
-export interface BubbleMenuEvent {
-  /** The menu action that was selected */
-  action: BubbleMenuAction
+export interface BubbleCloseEvent {
+  /** The action that triggered the event */
+  action: 'close'
 }
 
 /**
- * The event name used for bubble menu events.
+ * The event name used for bubble close events.
  * Can be used with `listen()` from `@tauri-apps/api/event` directly.
  */
-export const BUBBLE_MENU_EVENT = 'floating-bubble://menu'
+export const BUBBLE_CLOSE_EVENT = 'floating-bubble://close'
 
 /**
- * Register a listener for bubble menu action events.
+ * Register a listener for bubble close events.
  *
- * This is triggered when the user long-presses the bubble and selects
- * an action from the context menu.
+ * This is triggered when the user drags the bubble to the close zone
+ * at the bottom center of the screen.
  *
- * @param callback - Function to call when a menu action is selected
+ * @param callback - Function to call when the bubble is closed
  * @returns A function to unregister the listener
  *
  * @example
  * ```typescript
- * import { onBubbleMenuAction, hideBubble } from 'tauri-plugin-floating-bubble'
+ * import { onBubbleClose, hideBubble } from 'tauri-plugin-floating-bubble'
  *
- * const unlisten = await onBubbleMenuAction(async (event) => {
- *   console.log('Menu action:', event.action)
- *   if (event.action === 'close') {
- *     await hideBubble()
- *   }
+ * const unlisten = await onBubbleClose(async (event) => {
+ *   console.log('Bubble closed via drag-to-close!', event.action)
+ *   // Update settings to disable bubble, etc.
  * })
  *
  * // Later, to stop listening:
  * unlisten()
  * ```
  */
-export async function onBubbleMenuAction(
-  callback: (event: BubbleMenuEvent) => void,
+export async function onBubbleClose(
+  callback: (event: BubbleCloseEvent) => void,
 ): Promise<() => void> {
   const { listen } = await import('@tauri-apps/api/event')
-  return await listen(BUBBLE_MENU_EVENT, (event) => {
-    callback(event.payload as BubbleMenuEvent)
+  return await listen(BUBBLE_CLOSE_EVENT, (event) => {
+    callback(event.payload as BubbleCloseEvent)
   })
 }

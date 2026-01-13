@@ -1,20 +1,19 @@
 <script setup lang="ts">
-import type { BubbleMenuEvent } from 'tauri-plugin-floating-bubble'
+import type { BubbleCloseEvent } from 'tauri-plugin-floating-bubble'
 import { invoke } from '@tauri-apps/api/core'
-import { bringToForeground, hideBubble, onBubbleClick, onBubbleMenuAction, setBubbleState } from 'tauri-plugin-floating-bubble'
+import { hideBubble, onBubbleClick, onBubbleClose, setBubbleState } from 'tauri-plugin-floating-bubble'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { headerStore } from './stores/header'
 import { recordingStore } from './stores/recording'
 import { settingsStore } from './stores/settings'
 
 const route = useRoute()
-const router = useRouter()
 const loaded = computed(() => settingsStore.state.loaded)
 
 // Bubble event cleanup
 let unlistenBubbleClick: (() => void) | null = null
-let unlistenMenuAction: (() => void) | null = null
+let unlistenBubbleClose: (() => void) | null = null
 const sidebarOpen = ref(false)
 
 const navItems = [
@@ -67,40 +66,17 @@ async function updateBubbleState() {
 }
 
 /**
- * Handle bubble menu action (long-press context menu).
+ * Handle bubble close event (drag-to-close).
  */
-async function handleMenuAction(event: BubbleMenuEvent) {
-  switch (event.action) {
-    case 'close':
-      try {
-        await hideBubble()
-        settingsStore.setFloatingBubbleEnabled(false)
-      }
-      catch (error) {
-        console.error('[App.handleMenuAction] hideBubble failed:', error)
-      }
-      break
-
-    case 'open-app':
-      try {
-        await bringToForeground()
-      }
-      catch (error) {
-        console.error('[App.handleMenuAction] bringToForeground failed:', error)
-      }
-      break
-
-    case 'settings':
-      try {
-        await bringToForeground()
-        router.push('/settings')
-      }
-      catch (error) {
-        console.error('[App.handleMenuAction] bringToForeground failed:', error)
-        // Still try to navigate even if bring to foreground fails
-        router.push('/settings')
-      }
-      break
+async function handleBubbleClose(event: BubbleCloseEvent) {
+  if (event.action === 'close') {
+    try {
+      await hideBubble()
+      settingsStore.setFloatingBubbleEnabled(false)
+    }
+    catch (error) {
+      console.error('[App.handleBubbleClose] hideBubble failed:', error)
+    }
   }
 }
 
@@ -127,9 +103,9 @@ onMounted(async () => {
     // Plugin may not be available on this platform
   }
 
-  // Listen for bubble menu action events (long-press context menu)
+  // Listen for bubble close events (drag-to-close)
   try {
-    unlistenMenuAction = await onBubbleMenuAction(handleMenuAction)
+    unlistenBubbleClose = await onBubbleClose(handleBubbleClose)
   }
   catch {
     // Plugin may not be available on this platform
@@ -153,8 +129,8 @@ onUnmounted(() => {
   if (unlistenBubbleClick) {
     unlistenBubbleClick()
   }
-  if (unlistenMenuAction) {
-    unlistenMenuAction()
+  if (unlistenBubbleClose) {
+    unlistenBubbleClose()
   }
   recordingStore.cleanup()
 })

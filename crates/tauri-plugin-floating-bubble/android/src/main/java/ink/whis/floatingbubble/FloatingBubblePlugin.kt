@@ -104,27 +104,29 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
         }
 
         /**
-         * Called from FloatingBubbleService when a menu action is selected.
+         * Called from FloatingBubbleService when the bubble is closed via drag-to-close.
          * Emits a global Tauri event via WebView JavaScript evaluation.
          */
-        fun sendMenuActionEvent(action: String) {
+        fun sendCloseEvent() {
             val webView = webViewInstance ?: return
 
+            // Run on main thread to ensure WebView access is safe
             Handler(Looper.getMainLooper()).post {
                 try {
+                    // Emit event via Tauri's internal event system (same pattern as plugin-store)
                     val js = """
                         (function() {
                             if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {
                                 window.__TAURI_INTERNALS__.invoke('plugin:event|emit', {
-                                    event: 'floating-bubble://menu',
-                                    payload: { action: '$action' }
-                                }).catch(function(e) { console.error('Failed to emit menu event:', e); });
+                                    event: 'floating-bubble://close',
+                                    payload: { action: 'close' }
+                                }).catch(function(e) { console.error('Failed to emit event:', e); });
                             }
                         })();
                     """.trimIndent()
                     webView.evaluateJavascript(js, null)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error emitting menu action event", e)
+                    Log.e(TAG, "Error emitting bubble-close event", e)
                 }
             }
         }
@@ -268,25 +270,6 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update bubble state: ${e.message}", e)
             invoke.reject("Failed to update bubble state: ${e.message}")
-        }
-    }
-
-    /**
-     * Bring the app to the foreground.
-     */
-    @Command
-    fun bringToForeground(invoke: Invoke) {
-        try {
-            val intent = Intent(activity, activity.javaClass).apply {
-                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-            }
-            activity.startActivity(intent)
-            invoke.resolve()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to bring app to foreground: ${e.message}", e)
-            invoke.reject("Failed to bring app to foreground: ${e.message}")
         }
     }
 
