@@ -36,6 +36,9 @@ const rdevGrabError = computed(() =>
 const systemShortcut = computed(() =>
   backendInfo.value?.backend === 'RdevGrab' ? settingsStore.state.systemShortcut : null,
 )
+const pathMismatch = computed(() =>
+  backendInfo.value?.backend === 'RdevGrab' && settingsStore.state.shortcutPathMismatch != null,
+)
 const isInInputGroup = computed(() => settingsStore.state.isInInputGroup)
 const currentShortcut = computed({
   get: () => capturedShortcut.value,
@@ -196,6 +199,7 @@ async function openKeyboardSettings() {
               :compositor="backendInfo?.compositor"
               :is-flatpak="isFlatpak"
               :environment-hint="environmentHint"
+              :path-mismatch="pathMismatch"
               @open-settings="openKeyboardSettings"
             />
           </template>

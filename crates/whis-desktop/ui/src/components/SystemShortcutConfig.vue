@@ -3,6 +3,7 @@
 import { computed } from 'vue'
 import { displayKey } from '../utils/keys.js'
 import CommandBlock from './CommandBlock.vue'
+import PathMismatchWarning from './PathMismatchWarning.vue'
 
 const props = defineProps<{
   systemShortcut?: string | null
@@ -14,6 +15,7 @@ const props = defineProps<{
   compositor?: string
   isFlatpak: boolean
   environmentHint?: string | null
+  pathMismatch?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -123,6 +125,9 @@ const reloadCommand = computed(() => {
       <span class="hint-marker">[i]</span>
       Detected: {{ environmentHint }}
     </p>
+
+    <!-- Path mismatch hint (subtle warning) -->
+    <PathMismatchWarning v-if="pathMismatch" />
   </div>
 </template>
 

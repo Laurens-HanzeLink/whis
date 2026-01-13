@@ -118,3 +118,39 @@ pub fn read_gnome_custom_shortcut() -> Option<String> {
 pub fn read_gnome_custom_shortcut() -> Option<String> {
     None
 }
+
+/// Read the command from GNOME custom shortcut that points to whis-desktop --toggle
+///
+/// Scans `/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/`
+/// for any shortcut whose command contains "whis" and "--toggle".
+///
+/// Returns the full command string like "/path/to/whis-desktop --toggle" if found.
+#[cfg(target_os = "linux")]
+pub fn read_gnome_custom_shortcut_command() -> Option<String> {
+    let output = std::process::Command::new("dconf")
+        .args([
+            "dump",
+            "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/",
+        ])
+        .output()
+        .ok()?;
+
+    let dump = String::from_utf8_lossy(&output.stdout);
+
+    for line in dump.lines() {
+        if line.starts_with("command=") {
+            let cmd = line
+                .trim_start_matches("command=")
+                .trim_matches(|c| c == '\'' || c == '"');
+            if cmd.to_lowercase().contains("whis") && cmd.contains("--toggle") {
+                return Some(cmd.to_string());
+            }
+        }
+    }
+    None
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn read_gnome_custom_shortcut_command() -> Option<String> {
+    None
+}

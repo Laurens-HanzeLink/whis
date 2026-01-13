@@ -1,4 +1,4 @@
-import type { BackendInfo, BubblePosition, CliShortcutMode, PostProcessor, Provider, Settings } from '../types'
+import type { BackendInfo, BubblePosition, CliShortcutMode, PostProcessor, Provider, Settings, ShortcutPathMismatch } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 import { nextTick, reactive, readonly, watch } from 'vue'
 
@@ -110,6 +110,7 @@ const state = reactive({
   rdevGrabError: null as string | null,
   isInInputGroup: false,
   systemShortcut: null as string | null, // GNOME custom shortcut (RdevGrab backend)
+  shortcutPathMismatch: null as ShortcutPathMismatch | null, // Path mismatch warning
 
   // Loading state
   loaded: false,
@@ -256,6 +257,9 @@ async function loadBackendInfo() {
 
       // Try to read configured system shortcut from GNOME dconf
       state.systemShortcut = await invoke<string | null>('system_shortcut_from_dconf')
+
+      // Check for shortcut path mismatch (configured vs current binary)
+      state.shortcutPathMismatch = await invoke<ShortcutPathMismatch | null>('check_shortcut_path_mismatch')
     }
   }
   catch (e) {

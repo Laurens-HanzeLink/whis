@@ -86,6 +86,12 @@ export interface BackendInfo {
   is_flatpak: boolean
 }
 
+// Shortcut path mismatch information
+export interface ShortcutPathMismatch {
+  configured_command: string
+  current_command: string
+}
+
 // Status response from backend
 export interface StatusResponse {
   state: 'Idle' | 'Recording' | 'Transcribing'

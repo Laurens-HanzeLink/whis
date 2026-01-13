@@ -122,6 +122,8 @@ pub fn run(start_in_tray: bool) {
             commands::open_keyboard_settings,
             commands::get_shortcut_instructions,
             commands::system_shortcut_from_dconf,
+            commands::check_shortcut_path_mismatch,
+            commands::update_shortcut_command,
             // Model commands
             commands::download_whisper_model,
             commands::get_whisper_models,

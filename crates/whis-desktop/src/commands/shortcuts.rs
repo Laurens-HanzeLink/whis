@@ -159,3 +159,97 @@ pub struct ShortcutInstructions {
 pub fn system_shortcut_from_dconf() -> Option<String> {
     crate::shortcuts::read_gnome_custom_shortcut()
 }
+
+/// Information about a shortcut path mismatch
+#[derive(Clone, serde::Serialize)]
+pub struct ShortcutPathMismatch {
+    /// The command configured in dconf (may point to old binary)
+    pub configured_command: String,
+    /// The expected command for the current binary
+    pub current_command: String,
+}
+
+/// Check if the configured shortcut command path matches the current binary path
+///
+/// Returns mismatch information if the configured command in dconf differs
+/// from the current executable's toggle command. Returns None if they match
+/// or if no shortcut is configured.
+#[tauri::command]
+pub fn check_shortcut_path_mismatch() -> Option<ShortcutPathMismatch> {
+    // Get the currently configured command from dconf
+    let configured_command = crate::shortcuts::read_gnome_custom_shortcut_command()?;
+
+    // Get the current expected command
+    let current_command = super::system::get_toggle_command();
+
+    // Compare paths (ignoring trailing whitespace differences)
+    let configured_trimmed = configured_command.trim();
+    let current_trimmed = current_command.trim();
+
+    if configured_trimmed != current_trimmed {
+        Some(ShortcutPathMismatch {
+            configured_command,
+            current_command,
+        })
+    } else {
+        None
+    }
+}
+
+/// Update the GNOME custom shortcut command to use the current binary path
+///
+/// Finds the custom shortcut for whis and updates its command to the current binary path.
+#[cfg(target_os = "linux")]
+#[tauri::command]
+pub fn update_shortcut_command() -> Result<(), String> {
+    use std::process::Command;
+
+    // First, find which custom keybinding contains the whis command
+    let output = Command::new("dconf")
+        .args([
+            "dump",
+            "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/",
+        ])
+        .output()
+        .map_err(|e| format!("Failed to read dconf: {e}"))?;
+
+    let dump = String::from_utf8_lossy(&output.stdout);
+    let mut current_section: Option<String> = None;
+
+    for line in dump.lines() {
+        if line.starts_with('[') && line.ends_with(']') {
+            current_section = Some(line[1..line.len() - 1].to_string());
+        }
+
+        if line.starts_with("command=") {
+            let cmd = line
+                .trim_start_matches("command=")
+                .trim_matches(|c| c == '\'' || c == '"');
+            if cmd.to_lowercase().contains("whis") && cmd.contains("--toggle") {
+                if let Some(section) = &current_section {
+                    // Found the section, update the command
+                    let new_command = super::system::get_toggle_command();
+                    let dconf_path = format!(
+                        "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/{}/command",
+                        section
+                    );
+
+                    Command::new("dconf")
+                        .args(["write", &dconf_path, &format!("'{}'", new_command)])
+                        .status()
+                        .map_err(|e| format!("Failed to write dconf: {e}"))?;
+
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    Err("No whis shortcut found in GNOME custom keybindings".to_string())
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+pub fn update_shortcut_command() -> Result<(), String> {
+    Err("Not supported on this platform".to_string())
+}
