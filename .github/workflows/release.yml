@@ -215,6 +215,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Install dependencies
         run: just deps-desktop
 
@@ -223,9 +226,6 @@ jobs:
         with:
           vulkan_version: latest
           cache: true
-
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli
 
       - name: Build desktop app
         run: just build-release-desktop
@@ -374,6 +374,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Install dependencies
         run: just deps-desktop
 
@@ -382,9 +385,6 @@ jobs:
         with:
           vulkan_version: latest
           cache: true
-
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli
 
       - name: Build desktop app
         run: just build-release-desktop
