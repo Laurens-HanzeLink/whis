@@ -83,7 +83,7 @@ jobs:
   build-linux-arm64:
     name: "CLI: Linux ARM64"
     needs: [prepare]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04-arm
     steps:
       - uses: actions/checkout@v4
 
@@ -93,13 +93,10 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
-
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvulkan-dev libpulse-dev
+          sudo apt-get install -y libasound2-dev libx11-dev libxtst-dev libvulkan-dev libpulse-dev
 
       - name: Install Vulkan SDK
         uses: jakoch/install-vulkan-sdk-action@v1
@@ -107,17 +104,16 @@ jobs:
           vulkan_version: latest
           cache: true
 
-      - name: Build with cross
-        run: just build-release-cli-cross aarch64-unknown-linux-gnu
+      - name: Build CLI
+        run: just build-release-cli
         env:
           ORT_STRATEGY: system
           ORT_LIB_LOCATION: /opt/onnxruntime/lib
-          GGML_VULKAN: OFF
 
       - name: Package
         run: |
           mkdir -p dist
-          cp target/aarch64-unknown-linux-gnu/release/whis dist/
+          cp target/release/whis dist/
           cd dist
           tar -czvf whis-${{ needs.prepare.outputs.version_tag }}-aarch64-unknown-linux-gnu.tar.gz whis
 

@@ -13,6 +13,7 @@ pub fn shortcut_backend() -> ShortcutBackendInfo {
 }
 
 /// Open shortcut configuration dialog (Portal v2+) or bind directly (Portal v1)
+#[cfg(target_os = "linux")]
 #[tauri::command]
 pub async fn configure_shortcut(app: AppHandle) -> Result<Option<String>, String> {
     crate::shortcuts::open_configure_shortcuts(app)
@@ -20,8 +21,15 @@ pub async fn configure_shortcut(app: AppHandle) -> Result<Option<String>, String
         .map_err(|e| e.to_string())
 }
 
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+pub async fn configure_shortcut(_app: AppHandle) -> Result<Option<String>, String> {
+    Err("Portal shortcuts are only supported on Linux".to_string())
+}
+
 /// Configure shortcut with a preferred trigger from in-app key capture
 /// The trigger should be in human-readable format like "Ctrl+Alt+W" or "Cmd+Option+W"
+#[cfg(target_os = "linux")]
 #[tauri::command]
 pub async fn configure_shortcut_with_trigger(
     app: AppHandle,
@@ -32,8 +40,18 @@ pub async fn configure_shortcut_with_trigger(
         .map_err(|e| e.to_string())
 }
 
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+pub async fn configure_shortcut_with_trigger(
+    _app: AppHandle,
+    _trigger: String,
+) -> Result<Option<String>, String> {
+    Err("Portal shortcuts are only supported on Linux".to_string())
+}
+
 /// Get the currently configured portal shortcut
 /// Returns cached value or reads from dconf (GNOME)
+#[cfg(target_os = "linux")]
 #[tauri::command]
 pub fn portal_shortcut(state: State<'_, AppState>) -> Result<Option<String>, String> {
     // First check if we have it cached in state
@@ -44,6 +62,13 @@ pub fn portal_shortcut(state: State<'_, AppState>) -> Result<Option<String>, Str
 
     // Otherwise try reading from dconf (GNOME stores shortcuts there)
     Ok(crate::shortcuts::read_portal_shortcut_from_dconf())
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+pub fn portal_shortcut(state: State<'_, AppState>) -> Result<Option<String>, String> {
+    // On non-Linux, just return cached value (portal shortcuts are Linux-only)
+    Ok(state.portal_shortcut.lock().unwrap().clone())
 }
 
 /// Reset portal shortcuts by clearing dconf (GNOME)
@@ -155,9 +180,16 @@ pub struct ShortcutInstructions {
 /// Scans GNOME's dconf custom shortcuts for any shortcut that
 /// executes `whis-desktop --toggle`. Returns the binding in
 /// human-readable format like "Ctrl+Alt+F".
+#[cfg(target_os = "linux")]
 #[tauri::command]
 pub fn system_shortcut_from_dconf() -> Option<String> {
     crate::shortcuts::read_gnome_custom_shortcut()
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+pub fn system_shortcut_from_dconf() -> Option<String> {
+    None
 }
 
 /// Information about a shortcut path mismatch
@@ -174,15 +206,11 @@ pub struct ShortcutPathMismatch {
 /// Returns mismatch information if the configured command in dconf differs
 /// from the current executable's toggle command. Returns None if they match
 /// or if no shortcut is configured.
+#[cfg(target_os = "linux")]
 #[tauri::command]
 pub fn check_shortcut_path_mismatch() -> Option<ShortcutPathMismatch> {
-    // Get the currently configured command from dconf
     let configured_command = crate::shortcuts::read_gnome_custom_shortcut_command()?;
-
-    // Get the current expected command
     let current_command = super::system::get_toggle_command();
-
-    // Compare paths (ignoring trailing whitespace differences)
     let configured_trimmed = configured_command.trim();
     let current_trimmed = current_command.trim();
 
@@ -194,6 +222,12 @@ pub fn check_shortcut_path_mismatch() -> Option<ShortcutPathMismatch> {
     } else {
         None
     }
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+pub fn check_shortcut_path_mismatch() -> Option<ShortcutPathMismatch> {
+    None
 }
 
 /// Update the GNOME custom shortcut command to use the current binary path
@@ -225,8 +259,8 @@ pub fn update_shortcut_command() -> Result<(), String> {
             let cmd = line
                 .trim_start_matches("command=")
                 .trim_matches(|c| c == '\'' || c == '"');
-            if cmd.to_lowercase().contains("whis") && cmd.contains("--toggle") {
-                if let Some(section) = &current_section {
+            if cmd.to_lowercase().contains("whis") && cmd.contains("--toggle")
+                && let Some(section) = &current_section {
                     // Found the section, update the command
                     let new_command = super::system::get_toggle_command();
                     let dconf_path = format!(
@@ -241,7 +275,6 @@ pub fn update_shortcut_command() -> Result<(), String> {
 
                     return Ok(());
                 }
-            }
         }
     }
 
