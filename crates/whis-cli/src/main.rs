@@ -42,11 +42,8 @@ fn run() -> Result<()> {
         Some(args::Commands::Model { action }) => commands::model::run(action),
         None => {
             // Microphone recording or file transcription
-            let config = commands::record::RecordConfig::from_cli(
-                &cli.input,
-                &cli.processing,
-                &cli.output,
-            )?;
+            let config =
+                commands::record::RecordConfig::from_cli(&cli.input, &cli.processing, &cli.output)?;
             commands::record::run(config)
         }
     }

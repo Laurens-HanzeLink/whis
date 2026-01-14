@@ -25,8 +25,7 @@ pub fn read_audio_file(path: &Path) -> Result<Vec<f32>> {
 
 /// Read a WAV file and resample to 16kHz mono
 fn read_wav(path: &Path) -> Result<Vec<f32>> {
-    let mut reader =
-        hound::WavReader::open(path).context("Failed to open WAV file")?;
+    let mut reader = hound::WavReader::open(path).context("Failed to open WAV file")?;
 
     let spec = reader.spec();
     let sample_rate = spec.sample_rate;

@@ -39,8 +39,8 @@ pub use backend::{
 // Re-export portal functions
 pub use portal::{
     bind_shortcut_with_trigger, configure_with_preferred_trigger, open_configure_shortcuts,
-    read_gnome_custom_shortcut, read_gnome_custom_shortcut_command, read_portal_shortcut_from_dconf,
-    register_app_with_portal, setup_portal_shortcuts,
+    read_gnome_custom_shortcut, read_gnome_custom_shortcut_command,
+    read_portal_shortcut_from_dconf, register_app_with_portal, setup_portal_shortcuts,
 };
 
 // Re-export tauri plugin functions

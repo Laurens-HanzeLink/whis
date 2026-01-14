@@ -840,7 +840,10 @@ deps-mobile: _check-npm _check-tauri _check-android _init-android
     #!/usr/bin/env bash
     set -euo pipefail
     cargo fetch
-    cd crates/whis-mobile/ui && npm ci
+    # Build the local tauri-plugin-floating-bubble first
+    (cd crates/tauri-plugin-floating-bubble && npm install && npm run build)
+    # Use npm install instead of npm ci to properly handle local file: dependencies
+    (cd crates/whis-mobile/ui && npm install)
 
 # Run mobile app on connected Android device
 [group('mobile')]

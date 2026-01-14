@@ -27,7 +27,9 @@ pub async fn transcribe_audio(
 ) -> Result<String, String> {
     // Set state to transcribing
     {
-        let mut recording_state = state.recording_state.lock()
+        let mut recording_state = state
+            .recording_state
+            .lock()
             .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Transcribing;
     }
@@ -37,7 +39,9 @@ pub async fn transcribe_audio(
 
     // Always reset state, regardless of success or failure
     {
-        let mut recording_state = state.recording_state.lock()
+        let mut recording_state = state
+            .recording_state
+            .lock()
             .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Idle;
     }
@@ -143,7 +147,9 @@ pub async fn transcribe_streaming_start(
 
     // Set state to transcribing
     {
-        let mut recording_state = state.recording_state.lock()
+        let mut recording_state = state
+            .recording_state
+            .lock()
             .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Transcribing;
     }
@@ -154,7 +160,9 @@ pub async fn transcribe_streaming_start(
 
     // Store sender in realtime_audio_tx (not audio_tx, which is for progressive)
     {
-        let mut state_tx = state.realtime_audio_tx.lock()
+        let mut state_tx = state
+            .realtime_audio_tx
+            .lock()
             .expect("realtime_audio_tx mutex poisoned");
         *state_tx = Some(audio_tx);
     }
@@ -211,14 +219,16 @@ pub async fn transcribe_streaming_start(
 
         // Reset state
         {
-            let mut recording_state = recording_state_arc.lock()
+            let mut recording_state = recording_state_arc
+                .lock()
                 .expect("recording_state mutex poisoned");
             *recording_state = RecordingState::Idle;
         }
 
         // Clear realtime_audio_tx
         {
-            let mut state_tx = realtime_tx_arc.lock()
+            let mut state_tx = realtime_tx_arc
+                .lock()
                 .expect("realtime_audio_tx mutex poisoned");
             *state_tx = None;
         }
@@ -235,7 +245,9 @@ pub async fn transcribe_streaming_send_chunk(
     state: State<'_, AppState>,
     chunk: Vec<f32>,
 ) -> Result<(), String> {
-    let audio_tx = state.realtime_audio_tx.lock()
+    let audio_tx = state
+        .realtime_audio_tx
+        .lock()
         .expect("realtime_audio_tx mutex poisoned");
 
     if let Some(tx) = audio_tx.as_ref() {
@@ -258,7 +270,9 @@ pub async fn transcribe_streaming_send_chunk(
 pub async fn transcribe_streaming_stop(state: State<'_, AppState>) -> Result<(), String> {
     // Drop realtime_audio_tx to signal end of stream
     {
-        let mut audio_tx = state.realtime_audio_tx.lock()
+        let mut audio_tx = state
+            .realtime_audio_tx
+            .lock()
             .expect("realtime_audio_tx mutex poisoned");
         *audio_tx = None;
     }
@@ -301,7 +315,9 @@ pub async fn start_recording(
 
     // Set state to recording
     {
-        let mut recording_state = state.recording_state.lock()
+        let mut recording_state = state
+            .recording_state
+            .lock()
             .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Recording;
     }
@@ -311,8 +327,7 @@ pub async fn start_recording(
 
     // Store sender in state so frontend can send chunks
     {
-        let mut state_tx = state.audio_tx.lock()
-            .expect("audio_tx mutex poisoned");
+        let mut state_tx = state.audio_tx.lock().expect("audio_tx mutex poisoned");
         *state_tx = Some(audio_tx);
     }
 
@@ -363,7 +378,9 @@ pub async fn start_recording(
 
     // Store result receiver for later retrieval
     {
-        let mut rx_guard = state.transcription_rx.lock()
+        let mut rx_guard = state
+            .transcription_rx
+            .lock()
             .expect("transcription_rx mutex poisoned");
         *rx_guard = Some(result_rx);
     }
@@ -377,8 +394,7 @@ pub async fn start_recording(
 /// Samples should be f32 PCM at 16kHz sample rate.
 #[tauri::command]
 pub async fn send_audio_chunk(state: State<'_, AppState>, samples: Vec<f32>) -> Result<(), String> {
-    let audio_tx = state.audio_tx.lock()
-        .expect("audio_tx mutex poisoned");
+    let audio_tx = state.audio_tx.lock().expect("audio_tx mutex poisoned");
 
     if let Some(tx) = audio_tx.as_ref() {
         // Use unbounded send (won't block)
@@ -403,21 +419,24 @@ pub async fn stop_recording(
 ) -> Result<String, String> {
     // Set state to transcribing
     {
-        let mut recording_state = state.recording_state.lock()
+        let mut recording_state = state
+            .recording_state
+            .lock()
             .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Transcribing;
     }
 
     // Drop audio_tx to signal end of stream
     {
-        let mut audio_tx = state.audio_tx.lock()
-            .expect("audio_tx mutex poisoned");
+        let mut audio_tx = state.audio_tx.lock().expect("audio_tx mutex poisoned");
         *audio_tx = None;
     }
 
     // Get the result receiver
     let result_rx = {
-        let mut rx_guard = state.transcription_rx.lock()
+        let mut rx_guard = state
+            .transcription_rx
+            .lock()
             .expect("transcription_rx mutex poisoned");
         rx_guard.take()
     };
@@ -447,14 +466,18 @@ pub async fn stop_recording(
 
     // Reset state
     {
-        let mut recording_state = state.recording_state.lock()
+        let mut recording_state = state
+            .recording_state
+            .lock()
             .expect("recording_state mutex poisoned");
         *recording_state = RecordingState::Idle;
     }
 
     // Clear config cache (in case settings changed)
     {
-        let mut config_guard = state.transcription_config.lock()
+        let mut config_guard = state
+            .transcription_config
+            .lock()
             .expect("transcription_config mutex poisoned");
         *config_guard = None;
     }

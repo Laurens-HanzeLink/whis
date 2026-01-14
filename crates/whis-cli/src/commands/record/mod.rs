@@ -414,10 +414,12 @@ async fn transcribe_file(
         _ => {
             // Cloud providers: encode to MP3 and send
             let encoder = whis_core::audio::create_encoder();
-            let mp3_data = encoder.encode_samples(&samples, whis_core::resample::WHISPER_SAMPLE_RATE)?;
+            let mp3_data =
+                encoder.encode_samples(&samples, whis_core::resample::WHISPER_SAMPLE_RATE)?;
 
             let client = get_http_client()?;
-            let provider = whis_core::provider::registry().get_by_kind(&transcription_config.provider)?;
+            let provider =
+                whis_core::provider::registry().get_by_kind(&transcription_config.provider)?;
 
             let request = TranscriptionRequest {
                 audio_data: mp3_data,
