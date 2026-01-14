@@ -6,6 +6,8 @@
 //! Uses engine-level caching to avoid reloading the model on every
 //! transcription (saves 200ms-2s per call in listen mode).
 
+#![warn(missing_unsafe_on_extern)]
+
 use anyhow::Result;
 use async_trait::async_trait;
 use std::path::Path;
@@ -76,7 +78,7 @@ mod stderr_suppression {
     impl Drop for StderrGuard {
         fn drop(&mut self) {
             const STD_ERROR_HANDLE: u32 = 0xFFFF_FFF4; // -12 as u32
-            extern "system" {
+            unsafe extern "system" {
                 fn SetStdHandle(nStdHandle: u32, hHandle: *mut std::ffi::c_void) -> i32;
             }
             unsafe {
@@ -90,7 +92,7 @@ mod stderr_suppression {
         use std::os::windows::io::AsRawHandle;
         const STD_ERROR_HANDLE: u32 = 0xFFFF_FFF4; // -12 as u32
 
-        extern "system" {
+        unsafe extern "system" {
             fn GetStdHandle(nStdHandle: u32) -> *mut std::ffi::c_void;
             fn SetStdHandle(nStdHandle: u32, hHandle: *mut std::ffi::c_void) -> i32;
         }

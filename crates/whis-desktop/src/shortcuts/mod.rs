@@ -36,7 +36,8 @@ pub use backend::{
     portal_version,
 };
 
-// Re-export portal functions
+// Re-export portal functions (Linux only)
+#[cfg(target_os = "linux")]
 pub use portal::{
     bind_shortcut_with_trigger, configure_with_preferred_trigger, open_configure_shortcuts,
     read_gnome_custom_shortcut, read_gnome_custom_shortcut_command,

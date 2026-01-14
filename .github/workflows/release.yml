@@ -112,6 +112,7 @@ jobs:
         env:
           ORT_STRATEGY: system
           ORT_LIB_LOCATION: /opt/onnxruntime/lib
+          GGML_VULKAN: OFF
 
       - name: Package
         run: |
