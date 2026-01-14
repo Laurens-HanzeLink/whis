@@ -54,9 +54,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libasound2-dev libx11-dev libxtst-dev libvulkan-dev libpulse-dev
+        run: just deps-cli
 
       - name: Install Vulkan SDK
         uses: jakoch/install-vulkan-sdk-action@v1
@@ -94,9 +92,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libasound2-dev libx11-dev libxtst-dev libvulkan-dev libpulse-dev
+        run: just deps-cli
 
       - name: Install Vulkan SDK
         uses: jakoch/install-vulkan-sdk-action@v1
@@ -219,16 +215,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libasound2-dev \
-            libvulkan-dev
+      - name: Install dependencies
+        run: just deps-desktop
 
       - name: Install Vulkan SDK
         uses: jakoch/install-vulkan-sdk-action@v1
@@ -386,16 +374,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libasound2-dev \
-            libvulkan-dev
+      - name: Install dependencies
+        run: just deps-desktop
 
       - name: Install Vulkan SDK
         uses: jakoch/install-vulkan-sdk-action@v1

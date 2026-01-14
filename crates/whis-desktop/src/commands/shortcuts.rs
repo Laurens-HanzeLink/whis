@@ -259,22 +259,24 @@ pub fn update_shortcut_command() -> Result<(), String> {
             let cmd = line
                 .trim_start_matches("command=")
                 .trim_matches(|c| c == '\'' || c == '"');
-            if cmd.to_lowercase().contains("whis") && cmd.contains("--toggle")
-                && let Some(section) = &current_section {
-                    // Found the section, update the command
-                    let new_command = super::system::get_toggle_command();
-                    let dconf_path = format!(
-                        "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/{}/command",
-                        section
-                    );
+            if cmd.to_lowercase().contains("whis")
+                && cmd.contains("--toggle")
+                && let Some(section) = &current_section
+            {
+                // Found the section, update the command
+                let new_command = super::system::get_toggle_command();
+                let dconf_path = format!(
+                    "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/{}/command",
+                    section
+                );
 
-                    Command::new("dconf")
-                        .args(["write", &dconf_path, &format!("'{}'", new_command)])
-                        .status()
-                        .map_err(|e| format!("Failed to write dconf: {e}"))?;
+                Command::new("dconf")
+                    .args(["write", &dconf_path, &format!("'{}'", new_command)])
+                    .status()
+                    .map_err(|e| format!("Failed to write dconf: {e}"))?;
 
-                    return Ok(());
-                }
+                return Ok(());
+            }
         }
     }
 

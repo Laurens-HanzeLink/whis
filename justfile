@@ -228,10 +228,21 @@ setup-cli:
     echo ""
     echo "If all checks pass, run: just build-cli"
 
-# Fetch CLI dependencies
+# Fetch CLI dependencies and install system dependencies
 [group('cli')]
 deps-cli: _check-cargo
+    #!/usr/bin/env bash
+    set -euo pipefail
     cargo fetch
+    if [ "$(uname)" = "Linux" ]; then
+        sudo apt-get update
+        sudo apt-get install -y \
+            libasound2-dev \
+            libx11-dev \
+            libxtst-dev \
+            libvulkan-dev \
+            libpulse-dev
+    fi
 
 # Build CLI
 [group('cli')]
@@ -455,6 +466,16 @@ deps-desktop: _check-npm _check-tauri
     set -euo pipefail
     cargo fetch
     cd crates/whis-desktop/ui && npm ci
+    if [ "$(uname)" = "Linux" ]; then
+        sudo apt-get update
+        sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libasound2-dev \
+            libvulkan-dev
+    fi
 
 # Run desktop in dev mode
 [group('desktop')]
