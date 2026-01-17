@@ -63,12 +63,17 @@ pub fn setup_rdev_grab(
 /// This function blocks indefinitely while the grab is active.
 fn start_keyboard_grab(hotkey: Hotkey, app_handle: AppHandle) -> Result<(), String> {
     // Use shared callback from whis-core (same pattern as CLI)
-    let callback = whis_core::hotkey::create_grab_callback(hotkey, move || {
-        let handle = app_handle.clone();
-        tauri::async_runtime::spawn(async move {
-            crate::recording::toggle_recording(handle);
-        });
-    });
+    // Desktop uses toggle mode only, so on_release is a no-op
+    let callback = whis_core::hotkey::create_grab_callback(
+        hotkey,
+        move || {
+            let handle = app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                crate::recording::toggle_recording(handle);
+            });
+        },
+        || {}, // Desktop doesn't use push-to-talk
+    );
 
     // rdev::grab() blocks the thread
     if let Err(e) = rdev::grab(callback) {
