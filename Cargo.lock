@@ -7156,6 +7156,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "whis"
+version = "0.7.0"
+
+[[package]]
 name = "whis-cli"
 version = "0.7.1"
 dependencies = [

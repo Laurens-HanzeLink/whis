@@ -5,6 +5,7 @@ members = [
     "crates/whis-cli",
     "crates/whis-desktop",
     "crates/whis-mobile",
+    "crates/whis-deprecated",
     "crates/tauri-plugin-floating-bubble",
 ]
 
