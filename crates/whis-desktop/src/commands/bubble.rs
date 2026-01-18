@@ -25,7 +25,7 @@ pub fn bubble_get_position(app: AppHandle) -> Result<(f64, f64), String> {
     }
 }
 
-/// Move the bubble window by a delta (for drag operations)
+/// Move the bubble window by a delta (fallback for non-native drag)
 #[tauri::command]
 pub fn bubble_move_by(app: AppHandle, dx: f64, dy: f64) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("bubble") {

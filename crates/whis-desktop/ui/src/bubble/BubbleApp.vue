@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 type BubbleState = 'idle' | 'recording' | 'transcribing'
@@ -8,7 +9,7 @@ type BubbleState = 'idle' | 'recording' | 'transcribing'
 const state = ref<BubbleState>('idle')
 const isVisible = ref(false)
 
-// Drag state
+// Drag state - simplified for native dragging
 const isDragging = ref(false)
 const dragStart = ref({ x: 0, y: 0 })
 const hasMoved = ref(false)
@@ -57,23 +58,26 @@ function handleMouseDown(e: MouseEvent) {
   window.addEventListener('mouseup', handleWindowMouseUp)
 }
 
-function handleWindowMouseMove(e: MouseEvent) {
+async function handleWindowMouseMove(e: MouseEvent) {
   if (!isDragging.value)
     return
 
   const deltaX = e.screenX - dragStart.value.x
   const deltaY = e.screenY - dragStart.value.y
 
-  // Only start moving after exceeding threshold
+  // Only start native drag after exceeding threshold
   if (!hasMoved.value && (Math.abs(deltaX) > DRAG_THRESHOLD || Math.abs(deltaY) > DRAG_THRESHOLD)) {
     hasMoved.value = true
-  }
-
-  if (hasMoved.value) {
-    dragStart.value = { x: e.screenX, y: e.screenY }
-    invoke('bubble_move_by', { dx: deltaX, dy: deltaY }).catch((err) => {
-      console.error('Failed to move bubble:', err)
-    })
+    // Use native window dragging - compositor handles it on Wayland
+    try {
+      await getCurrentWindow().startDragging()
+    }
+    catch (err) {
+      console.error('Failed to start native drag:', err)
+      // Fallback to manual positioning
+      dragStart.value = { x: e.screenX, y: e.screenY }
+      invoke('bubble_move_by', { dx: deltaX, dy: deltaY }).catch(console.error)
+    }
   }
 }
 
