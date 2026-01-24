@@ -86,11 +86,10 @@ fn resolve_post_processor(
             ollama::ensure_ollama_running(&ollama_url)?;
 
             // Model priority: preset > settings
-            let model = if let Some(p) = preset {
-                p.model.clone()
-            } else {
-                settings.services.ollama.model()
-            };
+            let model = preset
+                .as_ref()
+                .and_then(|p| p.model.clone())
+                .or_else(|| settings.services.ollama.model());
 
             if model.is_none() {
                 return Err(anyhow!("Ollama model not configured"));
