@@ -131,6 +131,10 @@ pub struct Cli {
 pub enum Commands {
     /// Start the background service (uses shortcut_mode from settings)
     Start {
+        /// Override output method to autotype into active window
+        #[arg(long)]
+        autotype: bool,
+
         /// Output preset for transcript (run 'whis preset list' to see all)
         #[arg(long = "as", value_name = "PRESET")]
         preset: Option<String>,
@@ -141,6 +145,10 @@ pub enum Commands {
 
     /// Restart the background service
     Restart {
+        /// Override output method to autotype into active window
+        #[arg(long)]
+        autotype: bool,
+
         /// Output preset for transcript (run 'whis preset list' to see all)
         #[arg(long = "as", value_name = "PRESET")]
         preset: Option<String>,

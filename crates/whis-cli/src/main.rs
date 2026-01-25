@@ -26,9 +26,11 @@ fn run() -> Result<()> {
     whis_core::set_verbose(cli.verbose);
 
     match cli.command {
-        Some(args::Commands::Start { preset }) => commands::start::run(preset),
+        Some(args::Commands::Start { autotype, preset }) => commands::start::run(autotype, preset),
         Some(args::Commands::Stop) => commands::stop::run(),
-        Some(args::Commands::Restart { preset }) => commands::restart::run(preset),
+        Some(args::Commands::Restart { autotype, preset }) => {
+            commands::restart::run(autotype, preset)
+        }
         Some(args::Commands::Status) => commands::status::run(),
         Some(args::Commands::Toggle) => commands::toggle::run(),
         Some(args::Commands::Config {

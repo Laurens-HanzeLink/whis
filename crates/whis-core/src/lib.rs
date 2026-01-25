@@ -9,6 +9,8 @@ pub mod transcription;
 pub mod model;
 
 // Utility modules (cross-cutting concerns)
+#[cfg(feature = "autotyping")]
+pub mod autotyping;
 #[cfg(feature = "clipboard")]
 pub mod clipboard;
 pub mod error;
@@ -67,6 +69,10 @@ pub use provider::{parakeet_set_keep_loaded, unload_parakeet};
 pub use provider::{whisper_preload_model, whisper_set_keep_loaded, whisper_unload_model};
 
 // Re-export other utility types
+#[cfg(feature = "autotyping")]
+pub use autotyping::{
+    AutotypeBackend, AutotypeToolStatus, OutputMethod, autotype_text, get_autotype_tool_status,
+};
 #[cfg(feature = "clipboard")]
 pub use clipboard::{ClipboardMethod, copy_to_clipboard};
 pub use error::{AudioError, ProviderError, Result, WhisError};

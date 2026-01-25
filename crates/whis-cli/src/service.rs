@@ -41,8 +41,8 @@ use crate::hotkey::HotkeyEvent;
 use crate::ipc::{IpcMessage, IpcResponse, IpcServer};
 use std::time::Duration;
 use whis_core::{
-    AudioRecorder, PostProcessor, Preset, Settings, TranscriptionProvider, copy_to_clipboard,
-    post_process, resolve_post_processor_config,
+    AudioRecorder, OutputMethod, PostProcessor, Preset, Settings, TranscriptionProvider,
+    autotype_text, copy_to_clipboard, post_process, resolve_post_processor_config,
 };
 
 // Type aliases to reduce complexity warnings
@@ -66,10 +66,16 @@ pub struct Service {
     language: Option<String>,
     recording_counter: Arc<Mutex<u32>>,
     preset: Option<Preset>,
+    /// CLI override for output method (e.g., --autotype flag)
+    output_method_override: Option<OutputMethod>,
 }
 
 impl Service {
-    pub fn new(config: TranscriptionConfig, preset: Option<Preset>) -> Result<Self> {
+    pub fn new(
+        config: TranscriptionConfig,
+        preset: Option<Preset>,
+        output_method_override: Option<OutputMethod>,
+    ) -> Result<Self> {
         Ok(Self {
             state: Arc::new(Mutex::new(ServiceState::Idle)),
             recorder: Arc::new(Mutex::new(None)),
@@ -80,6 +86,7 @@ impl Service {
             language: config.language,
             recording_counter: Arc::new(Mutex::new(0)),
             preset,
+            output_method_override,
         })
     }
 
@@ -460,11 +467,33 @@ impl Service {
             transcription
         };
 
-        // Copy to clipboard (blocking operation)
+        // Output based on configured method (blocking operation)
+        // Use CLI override if present, otherwise use settings from config file
         let clipboard_method = settings.ui.clipboard_backend.clone();
-        tokio::task::spawn_blocking(move || copy_to_clipboard(&final_text, clipboard_method))
-            .await
-            .context("Failed to join task")??;
+        let output_method = self
+            .output_method_override
+            .clone()
+            .unwrap_or(settings.ui.output_method.clone());
+        let autotype_backend = settings.ui.autotype_backend.clone();
+        let autotype_delay_ms = settings.ui.autotype_delay_ms;
+
+        tokio::task::spawn_blocking(move || {
+            match output_method {
+                OutputMethod::Clipboard => {
+                    copy_to_clipboard(&final_text, clipboard_method)?;
+                }
+                OutputMethod::Autotype => {
+                    autotype_text(&final_text, autotype_backend, autotype_delay_ms)?;
+                }
+                OutputMethod::Both => {
+                    copy_to_clipboard(&final_text, clipboard_method)?;
+                    autotype_text(&final_text, autotype_backend, autotype_delay_ms)?;
+                }
+            }
+            Ok::<(), anyhow::Error>(())
+        })
+        .await
+        .context("Failed to join task")??;
 
         Ok(())
     }
