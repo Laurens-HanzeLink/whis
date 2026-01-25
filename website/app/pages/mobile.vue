@@ -1,47 +1,48 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref } from 'vue'
 
-const { t } = useI18n();
-const localePath = useLocalePath();
-const route = useRoute();
+const { t } = useI18n()
+const localePath = useLocalePath()
+const route = useRoute()
 
-const canonicalUrl = computed(() => `https://whis.ink${route.path}`);
+const canonicalUrl = computed(() => `https://whis.ink${route.path}`)
 
 useHead({
-  title: t("mobile.title"),
-  link: [{ rel: "canonical", href: canonicalUrl }],
+  title: t('mobile.title'),
+  link: [{ rel: 'canonical', href: canonicalUrl }],
   meta: [
-    { name: "description", content: t("mobile.metaDescription") },
-    { property: "og:title", content: t("mobile.title") },
-    { property: "og:description", content: t("mobile.metaDescription") },
-    { property: "og:url", content: canonicalUrl },
-    { property: "og:image", content: "https://whis.ink/og-image.jpg" },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: t("mobile.title") },
-    { name: "twitter:description", content: t("mobile.metaDescription") },
-    { name: "twitter:image", content: "https://whis.ink/og-image.jpg" },
+    { name: 'description', content: t('mobile.metaDescription') },
+    { property: 'og:title', content: t('mobile.title') },
+    { property: 'og:description', content: t('mobile.metaDescription') },
+    { property: 'og:url', content: canonicalUrl },
+    { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: t('mobile.title') },
+    { name: 'twitter:description', content: t('mobile.metaDescription') },
+    { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
   ],
-});
+})
 
-const { version, findAsset } = useGitHubRelease();
+const { version, findAsset } = useGitHubRelease()
 
-const lightboxOpen = ref(false);
+const lightboxOpen = ref(false)
 
 const demoImage = computed(() => [
   {
-    src: "/mobile-demo.png",
-    alt: t("mobile.demo.altText"),
-    caption: t("mobile.demo.caption"),
+    src: '/mobile-demo.png',
+    alt: t('mobile.demo.altText'),
+    caption: t('mobile.demo.caption'),
   },
-]);
+])
 
 const apkUrl = computed(() => {
-  const asset = findAsset(/\.apk$/);
-  if (asset) return asset.browser_download_url;
-  const v = version.value;
-  return `https://github.com/frankdierolf/whis/releases/download/${v}/app-universal-release-unsigned.apk`;
-});
+  const asset = findAsset(/\.apk$/)
+  if (asset)
+    return asset.browser_download_url
+  const v = version.value
+  return `https://github.com/frankdierolf/whis/releases/download/${v}/app-universal-release-unsigned.apk`
+})
 </script>
 
 <template>

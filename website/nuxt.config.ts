@@ -11,7 +11,6 @@ export default defineNuxtConfig({
 
   modules: ['@nuxt/image', '@nuxtjs/seo', '@nuxtjs/i18n', 'nuxt-security'],
 
-
   security: {
     headers: {
       crossOriginEmbedderPolicy:
@@ -51,6 +50,8 @@ export default defineNuxtConfig({
   robots: {
     allow: '/',
     sitemap: 'https://whis.ink/sitemap.xml',
+    // @ts-expect-error - blockNonProductionIndex IS supported in robots v4+ but types are lagging
+    blockNonProductionIndex: false,
   },
 
   i18n: {
@@ -149,6 +150,9 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
     typeCheck: false, // Disable vite-plugin-checker (removed vue-tsc)
+    tsConfig: {
+      exclude: ['../tests/**/*', '../playwright.config.ts'],
+    },
   },
 
   devtools: { enabled: false },

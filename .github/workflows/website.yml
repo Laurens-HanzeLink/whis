@@ -49,6 +49,16 @@ jobs:
         with:
           path: website/dist
 
+      - name: Run Playwright tests
+        working-directory: website
+        run: npx playwright install --with-deps && npm run test:e2e
+
+      - name: Run Lighthouse CI
+        working-directory: website
+        run: npm run lhs
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
   deploy:
     needs: build
     runs-on: ubuntu-latest

@@ -1,39 +1,39 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref } from 'vue'
 
-const { t } = useI18n();
-const localePath = useLocalePath();
-const route = useRoute();
+const { t } = useI18n()
+const localePath = useLocalePath()
+const route = useRoute()
 
-const canonicalUrl = computed(() => `https://whis.ink${route.path}`);
+const canonicalUrl = computed(() => `https://whis.ink${route.path}`)
 
 useHead({
-  title: t("cli.title"),
-  link: [{ rel: "canonical", href: canonicalUrl }],
+  title: t('cli.title'),
+  link: [{ rel: 'canonical', href: canonicalUrl }],
   meta: [
-    { name: "description", content: t("cli.metaDescription") },
-    { property: "og:title", content: t("cli.title") },
-    { property: "og:description", content: t("cli.metaDescription") },
-    { property: "og:url", content: canonicalUrl },
-    { property: "og:image", content: "https://whis.ink/og-image.jpg" },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: t("cli.title") },
-    { name: "twitter:description", content: t("cli.metaDescription") },
-    { name: "twitter:image", content: "https://whis.ink/og-image.jpg" },
+    { name: 'description', content: t('cli.metaDescription') },
+    { property: 'og:title', content: t('cli.title') },
+    { property: 'og:description', content: t('cli.metaDescription') },
+    { property: 'og:url', content: canonicalUrl },
+    { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: t('cli.title') },
+    { name: 'twitter:description', content: t('cli.metaDescription') },
+    { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
   ],
-});
+})
 
-const installTab = ref("cargo");
-const lightboxOpen = ref(false);
+const installTab = ref('cargo')
+const lightboxOpen = ref(false)
 
 const demoImage = computed(() => [
   {
-    src: "/demo.gif",
-    alt: t("cli.demo.altText"),
-    caption: t("cli.demo.caption"),
+    src: '/demo.gif',
+    alt: t('cli.demo.altText'),
+    caption: t('cli.demo.caption'),
   },
-]);
+])
 </script>
 
 <template>
@@ -145,7 +145,7 @@ const demoImage = computed(() => [
           loading="lazy"
           class="clickable"
           @click="lightboxOpen = true"
-        />
+        >
         <figcaption>{{ $t("cli.demo.caption") }}</figcaption>
       </figure>
     </section>

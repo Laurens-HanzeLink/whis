@@ -13,7 +13,9 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "typecheck": "nuxi typecheck"
+    "typecheck": "nuxi typecheck",
+    "lhs": "lhci autorun",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@nuxtjs/i18n": "^10.2.1",

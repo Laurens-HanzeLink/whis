@@ -1,59 +1,64 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import IconChevronLeft from "./icons/IconChevronLeft.vue";
-import IconChevronRight from "./icons/IconChevronRight.vue";
-import IconClose from "./icons/IconClose.vue";
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import IconChevronLeft from './icons/IconChevronLeft.vue'
+import IconChevronRight from './icons/IconChevronRight.vue'
+import IconClose from './icons/IconClose.vue'
 
 const props = defineProps<{
-  images: { src: string; alt: string }[];
-  initialIndex?: number;
-}>();
+  images: { src: string, alt: string }[]
+  initialIndex?: number
+}>()
 
-const isOpen = defineModel<boolean>("open", { default: false });
-const currentIndex = ref(props.initialIndex ?? 0);
+const isOpen = defineModel<boolean>('open', { default: false })
+const currentIndex = ref(props.initialIndex ?? 0)
 
-const currentImage = computed(() => props.images[currentIndex.value]);
+const currentImage = computed(() => props.images[currentIndex.value])
 
 function next() {
-  currentIndex.value = (currentIndex.value + 1) % props.images.length;
+  currentIndex.value = (currentIndex.value + 1) % props.images.length
 }
 
 function prev() {
-  currentIndex.value =
-    (currentIndex.value - 1 + props.images.length) % props.images.length;
+  currentIndex.value
+    = (currentIndex.value - 1 + props.images.length) % props.images.length
 }
 
 function close() {
-  isOpen.value = false;
+  isOpen.value = false
 }
 
 function handleBackdropClick(e: MouseEvent) {
   if (e.target === e.currentTarget) {
-    close();
+    close()
   }
 }
 
 function handleKeydown(e: KeyboardEvent) {
-  if (!isOpen.value) return;
-  if (e.key === "Escape") close();
-  if (e.key === "ArrowLeft") prev();
-  if (e.key === "ArrowRight") next();
+  if (!isOpen.value)
+    return
+  if (e.key === 'Escape')
+    close()
+  if (e.key === 'ArrowLeft')
+    prev()
+  if (e.key === 'ArrowRight')
+    next()
 }
 
 watch(
   () => props.initialIndex,
   (val) => {
-    if (val !== undefined) currentIndex.value = val;
+    if (val !== undefined)
+      currentIndex.value = val
   },
-);
+)
 
 onMounted(() => {
-  document.addEventListener("keydown", handleKeydown);
-});
+  document.addEventListener('keydown', handleKeydown)
+})
 
 onUnmounted(() => {
-  document.removeEventListener("keydown", handleKeydown);
-});
+  document.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>
