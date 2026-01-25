@@ -14,16 +14,17 @@ export default defineNuxtConfig({
   security: {
     headers: {
       crossOriginEmbedderPolicy:
+        // eslint-disable-next-line node/prefer-global/process
         process.env.NODE_ENV === 'development' ? 'unsafe-none' : 'require-corp',
       contentSecurityPolicy: {
         'img-src': [
-          "'self'",
+          '\'self\'',
           'data:',
           'https://avatars.githubusercontent.com',
           'https://api.github.com',
         ],
-        'script-src': ["'self'", "'unsafe-inline'"],
-        'connect-src': ["'self'", 'https://api.github.com'],
+        'script-src': ['\'self\'', '\'unsafe-inline\''],
+        'connect-src': ['\'self\'', 'https://api.github.com'],
       },
     },
     rateLimiter: false,

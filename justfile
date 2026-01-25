@@ -988,6 +988,13 @@ fmt-website: _check-npm
     set -euo pipefail
     cd website && npm run lint:fix
 
+# Run all checks (lint + typecheck)
+[group('website')]
+check-website:
+    cd website && npm run lint
+    cd website && npm run typecheck
+
+
 # ============================================================================
 # ALL
 # ============================================================================
