@@ -9,7 +9,25 @@ export default defineNuxtConfig({
 
   ssr: true,
 
-  modules: ['@nuxtjs/seo', '@nuxtjs/i18n'],
+  modules: ['@nuxtjs/seo', '@nuxtjs/i18n', 'nuxt-security'],
+
+  security: {
+    headers: {
+      crossOriginEmbedderPolicy:
+        process.env.NODE_ENV === 'development' ? 'unsafe-none' : 'require-corp',
+      contentSecurityPolicy: {
+        'img-src': [
+          "'self'",
+          'data:',
+          'https://avatars.githubusercontent.com',
+          'https://api.github.com',
+        ],
+        'script-src': ["'self'", "'unsafe-inline'"],
+        'connect-src': ["'self'", 'https://api.github.com'],
+      },
+    },
+    rateLimiter: false,
+  },
 
   site: {
     url: 'https://whis.ink',

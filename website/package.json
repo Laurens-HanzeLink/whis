@@ -27,6 +27,7 @@
     "@types/node": "^24.10.1",
     "@vue/tsconfig": "^0.8.1",
     "eslint": "^9.39.1",
+    "nuxt-security": "^2.5.1",
     "typescript": "~5.9.0"
   }
 }
