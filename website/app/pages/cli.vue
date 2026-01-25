@@ -139,11 +139,9 @@ const demoImage = computed(() => [
     <!-- Demo -->
     <section class="demo">
       <figure>
-        <NuxtImg
+        <img
           :src="demoImage[0]!.src"
           :alt="$t('cli.demo.altText')"
-          width="800"
-          format="webp"
           loading="lazy"
           class="clickable"
           @click="lightboxOpen = true"

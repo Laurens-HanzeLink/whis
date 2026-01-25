@@ -97,8 +97,7 @@ const apkUrl = computed(() => {
         <NuxtImg
           :src="demoImage[0]!.src"
           :alt="$t('mobile.demo.altText')"
-          width="400"
-          format="webp"
+          :quality="100"
           loading="lazy"
           class="clickable"
           @click="lightboxOpen = true"

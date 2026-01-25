@@ -50,7 +50,8 @@ function scrollNext() {
         <NuxtImg
           :src="image.src"
           :alt="image.alt"
-          width="800"
+          :quality="90"
+          densities="x1 x2"
           format="webp"
           loading="lazy"
         />

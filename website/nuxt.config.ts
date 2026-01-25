@@ -9,7 +9,8 @@ export default defineNuxtConfig({
 
   ssr: true,
 
-  modules: ['@nuxtjs/seo', '@nuxtjs/i18n', 'nuxt-security', '@nuxt/image'],
+  modules: ['@nuxt/image', '@nuxtjs/seo', '@nuxtjs/i18n', 'nuxt-security'],
+
 
   security: {
     headers: {
@@ -31,7 +32,7 @@ export default defineNuxtConfig({
   },
 
   image: {
-    quality: 80,
+    quality: 90,
     format: ['webp', 'jpeg', 'png'],
     domains: ['avatars.githubusercontent.com'],
   },
@@ -105,7 +106,6 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    static: true,
     output: {
       publicDir: 'dist',
     },
@@ -134,6 +134,16 @@ export default defineNuxtConfig({
     payloadExtraction: false,
     appManifest: false, // Explicitly disable to prevent #app-manifest import errors
     typedPages: true,
+  },
+
+  routeRules: {
+    '/_ipx/**': {
+      security: {
+        xssValidator: false,
+        headers: false,
+        rateLimiter: false,
+      },
+    },
   },
 
   typescript: {
