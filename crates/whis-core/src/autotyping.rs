@@ -263,9 +263,7 @@ fn autotype_via_wayland_tools(text: &str, delay_ms: Option<u32>) -> Result<()> {
         // wtype reads from argument
         cmd.arg("--").arg(text);
 
-        let output = cmd
-            .output()
-            .context("Failed to execute wtype")?;
+        let output = cmd.output().context("Failed to execute wtype")?;
 
         if output.status.success() {
             crate::verbose!("wtype succeeded");
@@ -274,7 +272,14 @@ fn autotype_via_wayland_tools(text: &str, delay_ms: Option<u32>) -> Result<()> {
 
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         crate::verbose!("wtype failed: {}", stderr);
-        errors.push(format!("wtype: {}", if stderr.is_empty() { "failed with no output".to_string() } else { stderr }));
+        errors.push(format!(
+            "wtype: {}",
+            if stderr.is_empty() {
+                "failed with no output".to_string()
+            } else {
+                stderr
+            }
+        ));
     }
 
     // Try dotool second
@@ -293,7 +298,9 @@ fn autotype_via_wayland_tools(text: &str, delay_ms: Option<u32>) -> Result<()> {
             writeln!(stdin, "type {}", text).context("Failed to write to dotool stdin")?;
         }
 
-        let output = child.wait_with_output().context("Failed to wait for dotool")?;
+        let output = child
+            .wait_with_output()
+            .context("Failed to wait for dotool")?;
 
         if output.status.success() {
             crate::verbose!("dotool succeeded");
@@ -302,7 +309,14 @@ fn autotype_via_wayland_tools(text: &str, delay_ms: Option<u32>) -> Result<()> {
 
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         crate::verbose!("dotool failed: {}", stderr);
-        errors.push(format!("dotool: {}", if stderr.is_empty() { "failed with no output".to_string() } else { stderr }));
+        errors.push(format!(
+            "dotool: {}",
+            if stderr.is_empty() {
+                "failed with no output".to_string()
+            } else {
+                stderr
+            }
+        ));
     }
 
     // Try ydotool last (works on all compositors via uinput, but requires daemon)
@@ -318,9 +332,7 @@ fn autotype_via_wayland_tools(text: &str, delay_ms: Option<u32>) -> Result<()> {
 
         cmd.arg("--").arg(text);
 
-        let output = cmd
-            .output()
-            .context("Failed to execute ydotool")?;
+        let output = cmd.output().context("Failed to execute ydotool")?;
 
         if output.status.success() {
             crate::verbose!("ydotool succeeded");
@@ -329,7 +341,14 @@ fn autotype_via_wayland_tools(text: &str, delay_ms: Option<u32>) -> Result<()> {
 
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         crate::verbose!("ydotool failed: {}", stderr);
-        errors.push(format!("ydotool: {}", if stderr.is_empty() { "failed with no output".to_string() } else { stderr }));
+        errors.push(format!(
+            "ydotool: {}",
+            if stderr.is_empty() {
+                "failed with no output".to_string()
+            } else {
+                stderr
+            }
+        ));
     }
 
     // Provide helpful error message based on what we found
@@ -370,9 +389,7 @@ fn autotype_via_x11_tools(text: &str, delay_ms: Option<u32>) -> Result<()> {
 
         cmd.arg("--").arg(text);
 
-        let output = cmd
-            .output()
-            .context("Failed to execute xdotool")?;
+        let output = cmd.output().context("Failed to execute xdotool")?;
 
         if output.status.success() {
             crate::verbose!("xdotool succeeded");
@@ -381,7 +398,14 @@ fn autotype_via_x11_tools(text: &str, delay_ms: Option<u32>) -> Result<()> {
 
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         crate::verbose!("xdotool failed: {}", stderr);
-        errors.push(format!("xdotool: {}", if stderr.is_empty() { "failed with no output".to_string() } else { stderr }));
+        errors.push(format!(
+            "xdotool: {}",
+            if stderr.is_empty() {
+                "failed with no output".to_string()
+            } else {
+                stderr
+            }
+        ));
     }
 
     // Try ydotool (works on X11 too via uinput)
@@ -396,9 +420,7 @@ fn autotype_via_x11_tools(text: &str, delay_ms: Option<u32>) -> Result<()> {
 
         cmd.arg("--").arg(text);
 
-        let output = cmd
-            .output()
-            .context("Failed to execute ydotool")?;
+        let output = cmd.output().context("Failed to execute ydotool")?;
 
         if output.status.success() {
             crate::verbose!("ydotool succeeded");
@@ -407,7 +429,14 @@ fn autotype_via_x11_tools(text: &str, delay_ms: Option<u32>) -> Result<()> {
 
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         crate::verbose!("ydotool failed: {}", stderr);
-        errors.push(format!("ydotool: {}", if stderr.is_empty() { "failed with no output".to_string() } else { stderr }));
+        errors.push(format!(
+            "ydotool: {}",
+            if stderr.is_empty() {
+                "failed with no output".to_string()
+            } else {
+                stderr
+            }
+        ));
     }
 
     // Provide helpful error message based on what we found
@@ -514,6 +543,9 @@ mod tests {
     fn test_output_method_display() {
         assert_eq!(OutputMethod::Clipboard.to_string(), "clipboard");
         assert_eq!(OutputMethod::Autotype.to_string(), "autotype to window");
-        assert_eq!(OutputMethod::Both.to_string(), "clipboard + autotype to window");
+        assert_eq!(
+            OutputMethod::Both.to_string(),
+            "clipboard + autotype to window"
+        );
     }
 }

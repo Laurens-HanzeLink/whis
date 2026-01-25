@@ -5,7 +5,9 @@
 
 use crate::state::AppState;
 use tauri::{AppHandle, State};
-use whis_core::{AutotypeToolStatus, Settings, WarmupConfig, get_autotype_tool_status, warmup_configured};
+use whis_core::{
+    AutotypeToolStatus, Settings, WarmupConfig, get_autotype_tool_status, warmup_configured,
+};
 
 /// Get the command to toggle recording from an external source (e.g., GNOME custom shortcut).
 /// Returns the actual executable path so users can copy-paste into their compositor settings.

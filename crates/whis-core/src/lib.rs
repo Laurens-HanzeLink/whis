@@ -9,6 +9,8 @@ pub mod transcription;
 pub mod model;
 
 // Utility modules (cross-cutting concerns)
+#[cfg(feature = "autotyping")]
+pub mod autotyping;
 #[cfg(feature = "clipboard")]
 pub mod clipboard;
 pub mod error;
@@ -18,8 +20,6 @@ pub mod http;
 pub mod platform;
 pub mod resample;
 pub mod state;
-#[cfg(feature = "autotyping")]
-pub mod autotyping;
 pub mod verbose;
 
 // Re-export audio types
@@ -69,14 +69,16 @@ pub use provider::{parakeet_set_keep_loaded, unload_parakeet};
 pub use provider::{whisper_preload_model, whisper_set_keep_loaded, whisper_unload_model};
 
 // Re-export other utility types
+#[cfg(feature = "autotyping")]
+pub use autotyping::{
+    AutotypeBackend, AutotypeToolStatus, OutputMethod, autotype_text, get_autotype_tool_status,
+};
 #[cfg(feature = "clipboard")]
 pub use clipboard::{ClipboardMethod, copy_to_clipboard};
 pub use error::{AudioError, ProviderError, Result, WhisError};
 pub use http::{get_http_client, is_http_client_ready, warmup_http_client};
 pub use settings::Settings;
 pub use state::RecordingState;
-#[cfg(feature = "autotyping")]
-pub use autotyping::{AutotypeBackend, AutotypeToolStatus, OutputMethod, autotype_text, get_autotype_tool_status};
 pub use verbose::set_verbose;
 
 #[cfg(feature = "hotkey")]
