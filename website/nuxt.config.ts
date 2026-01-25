@@ -9,7 +9,7 @@ export default defineNuxtConfig({
 
   ssr: true,
 
-  modules: ['@nuxtjs/seo', '@nuxtjs/i18n', 'nuxt-security'],
+  modules: ['@nuxtjs/seo', '@nuxtjs/i18n', 'nuxt-security', '@nuxt/image'],
 
   security: {
     headers: {
@@ -28,6 +28,12 @@ export default defineNuxtConfig({
       },
     },
     rateLimiter: false,
+  },
+
+  image: {
+    quality: 80,
+    format: ['webp', 'jpeg', 'png'],
+    domains: ['avatars.githubusercontent.com'],
   },
 
   site: {

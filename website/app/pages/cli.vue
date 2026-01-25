@@ -1,42 +1,47 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref } from "vue";
 
-const { t } = useI18n()
-const localePath = useLocalePath()
-const route = useRoute()
+const { t } = useI18n();
+const localePath = useLocalePath();
+const route = useRoute();
 
-const canonicalUrl = computed(() => `https://whis.ink${route.path}`)
+const canonicalUrl = computed(() => `https://whis.ink${route.path}`);
 
 useHead({
-  title: t('cli.title'),
-  link: [
-    { rel: 'canonical', href: canonicalUrl },
-  ],
+  title: t("cli.title"),
+  link: [{ rel: "canonical", href: canonicalUrl }],
   meta: [
-    { name: 'description', content: t('cli.metaDescription') },
-    { property: 'og:title', content: t('cli.title') },
-    { property: 'og:description', content: t('cli.metaDescription') },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
-    { property: 'og:type', content: 'website' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: t('cli.title') },
-    { name: 'twitter:description', content: t('cli.metaDescription') },
-    { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
+    { name: "description", content: t("cli.metaDescription") },
+    { property: "og:title", content: t("cli.title") },
+    { property: "og:description", content: t("cli.metaDescription") },
+    { property: "og:url", content: canonicalUrl },
+    { property: "og:image", content: "https://whis.ink/og-image.jpg" },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: t("cli.title") },
+    { name: "twitter:description", content: t("cli.metaDescription") },
+    { name: "twitter:image", content: "https://whis.ink/og-image.jpg" },
   ],
-})
+});
 
-const installTab = ref('cargo')
-const lightboxOpen = ref(false)
+const installTab = ref("cargo");
+const lightboxOpen = ref(false);
 
 const demoImage = computed(() => [
-  { src: '/demo.gif', alt: t('cli.demo.altText'), caption: t('cli.demo.caption') },
-])
+  {
+    src: "/demo.gif",
+    alt: t("cli.demo.altText"),
+    caption: t("cli.demo.caption"),
+  },
+]);
 </script>
 
 <template>
   <div class="cli-content">
-    <ViewHeader :title="$t('cli.title').replace(' - whis', '')" :subtitle="$t('cli.subtitle')" />
+    <ViewHeader
+      :title="$t('cli.title').replace(' - whis', '')"
+      :subtitle="$t('cli.subtitle')"
+    />
 
     <!-- Install -->
     <section id="install" class="install">
@@ -58,10 +63,7 @@ const demoImage = computed(() => [
         </div>
         <div v-else-if="installTab === 'aur'" class="panel">
           <CommandCopy
-            :segments="[
-              { text: 'yay -S ' },
-              { text: 'whis', highlight: true },
-            ]"
+            :segments="[{ text: 'yay -S ' }, { text: 'whis', highlight: true }]"
           />
         </div>
         <div v-else class="panel">
@@ -77,7 +79,7 @@ const demoImage = computed(() => [
       </TabPanel>
       <p class="install-note">
         <NuxtLink :to="localePath('downloads')">
-          {{ $t('cli.install.moreOptions') }}
+          {{ $t("cli.install.moreOptions") }}
         </NuxtLink>
       </p>
     </section>
@@ -85,33 +87,51 @@ const demoImage = computed(() => [
     <!-- Features -->
     <section class="features">
       <div class="section-header">
-        <h2>{{ $t('cli.features.title') }}</h2>
-        <p>{{ $t('cli.features.subtitle') }}</p>
+        <h2>{{ $t("cli.features.title") }}</h2>
+        <p>{{ $t("cli.features.subtitle") }}</p>
       </div>
       <ul>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>{{ $t('cli.features.items.oneCommand.title') }}</strong> {{ $t('cli.features.items.oneCommand.description') }}</div>
+          <div>
+            <strong>{{ $t("cli.features.items.oneCommand.title") }}</strong>
+            {{ $t("cli.features.items.oneCommand.description") }}
+          </div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>{{ $t('cli.features.items.providers.title') }}</strong> {{ $t('cli.features.items.providers.description') }}</div>
+          <div>
+            <strong>{{ $t("cli.features.items.providers.title") }}</strong>
+            {{ $t("cli.features.items.providers.description") }}
+          </div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>{{ $t('cli.features.items.runLocally.title') }}</strong> {{ $t('cli.features.items.runLocally.description') }}</div>
+          <div>
+            <strong>{{ $t("cli.features.items.runLocally.title") }}</strong>
+            {{ $t("cli.features.items.runLocally.description") }}
+          </div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>{{ $t('cli.features.items.postProcessing.title') }}</strong> {{ $t('cli.features.items.postProcessing.description') }}</div>
+          <div>
+            <strong>{{ $t("cli.features.items.postProcessing.title") }}</strong>
+            {{ $t("cli.features.items.postProcessing.description") }}
+          </div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>{{ $t('cli.features.items.presets.title') }}</strong> {{ $t('cli.features.items.presets.description') }}</div>
+          <div>
+            <strong>{{ $t("cli.features.items.presets.title") }}</strong>
+            {{ $t("cli.features.items.presets.description") }}
+          </div>
         </li>
         <li>
           <span class="marker">[*]</span>
-          <div><strong>{{ $t('cli.features.items.hotkey.title') }}</strong> {{ $t('cli.features.items.hotkey.description') }}</div>
+          <div>
+            <strong>{{ $t("cli.features.items.hotkey.title") }}</strong>
+            {{ $t("cli.features.items.hotkey.description") }}
+          </div>
         </li>
       </ul>
     </section>
@@ -119,23 +139,29 @@ const demoImage = computed(() => [
     <!-- Demo -->
     <section class="demo">
       <figure>
-        <img
+        <NuxtImg
           :src="demoImage[0]!.src"
           :alt="$t('cli.demo.altText')"
+          width="800"
+          format="webp"
           loading="lazy"
           class="clickable"
           @click="lightboxOpen = true"
-        >
-        <figcaption>{{ $t('cli.demo.caption') }}</figcaption>
+        />
+        <figcaption>{{ $t("cli.demo.caption") }}</figcaption>
       </figure>
     </section>
 
     <!-- Lightbox -->
-    <Lightbox v-model:open="lightboxOpen" :images="demoImage" :initial-index="0" />
+    <Lightbox
+      v-model:open="lightboxOpen"
+      :images="demoImage"
+      :initial-index="0"
+    />
 
     <!-- Quick Start -->
     <section class="quickstart">
-      <h2>{{ $t('cli.quickStart.title') }}</h2>
+      <h2>{{ $t("cli.quickStart.title") }}</h2>
       <pre><code><span class="comment">{{ $t('cli.quickStart.comments.cloudSetup') }}</span>
 <span class="highlight">whis setup cloud</span>
 

@@ -1,64 +1,61 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from "vue";
 
-const { t } = useI18n()
-const localePath = useLocalePath()
-const route = useRoute()
+const { t } = useI18n();
+const localePath = useLocalePath();
+const route = useRoute();
 
-const canonicalUrl = computed(() => `https://whis.ink${route.path}`)
+const canonicalUrl = computed(() => `https://whis.ink${route.path}`);
 
 useHead({
-  title: t('home.title'),
-  link: [
-    { rel: 'canonical', href: canonicalUrl },
-  ],
+  title: t("home.title"),
+  link: [{ rel: "canonical", href: canonicalUrl }],
   meta: [
-    { name: 'description', content: t('home.metaDescription') },
-    { property: 'og:title', content: t('home.title') },
-    { property: 'og:description', content: t('home.metaDescription') },
-    { property: 'og:url', content: canonicalUrl },
-    { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
-    { property: 'og:type', content: 'website' },
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: t('home.title') },
-    { name: 'twitter:description', content: t('home.metaDescription') },
-    { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
+    { name: "description", content: t("home.metaDescription") },
+    { property: "og:title", content: t("home.title") },
+    { property: "og:description", content: t("home.metaDescription") },
+    { property: "og:url", content: canonicalUrl },
+    { property: "og:image", content: "https://whis.ink/og-image.jpg" },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: t("home.title") },
+    { name: "twitter:description", content: t("home.metaDescription") },
+    { name: "twitter:image", content: "https://whis.ink/og-image.jpg" },
   ],
-})
+});
 
-const stars = ref<number | null>(null)
-const { total: downloads } = useDownloadStats()
-const contributors = ref<{ login: string, avatar_url: string }[]>([])
+const stars = ref<number | null>(null);
+const { total: downloads } = useDownloadStats();
+const contributors = ref<{ login: string; avatar_url: string }[]>([]);
 
 onMounted(async () => {
   // Fetch GitHub stars
   try {
-    const gh = await fetch('https://api.github.com/repos/frankdierolf/whis')
+    const gh = await fetch("https://api.github.com/repos/frankdierolf/whis");
     if (gh.ok) {
-      const data = await gh.json()
-      stars.value = data.stargazers_count
+      const data = await gh.json();
+      stars.value = data.stargazers_count;
     }
-  }
-  catch {
+  } catch {
     /* silent fail */
   }
 
   // Fetch contributors
   try {
-    const contribs = await fetch('https://api.github.com/repos/frankdierolf/whis/contributors')
+    const contribs = await fetch(
+      "https://api.github.com/repos/frankdierolf/whis/contributors",
+    );
     if (contribs.ok) {
-      contributors.value = await contribs.json()
+      contributors.value = await contribs.json();
     }
-  }
-  catch {
+  } catch {
     /* silent fail */
   }
-})
+});
 
 function formatNumber(n: number): string {
-  if (n >= 1000)
-    return `${(n / 1000).toFixed(1)}k`
-  return n.toString()
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return n.toString();
 }
 </script>
 
@@ -66,22 +63,22 @@ function formatNumber(n: number): string {
   <div class="home">
     <div class="hero">
       <h1 class="tagline">
-        <span>{{ $t('home.tagline.speak') }}</span>
-        <span>{{ $t('home.tagline.paste') }}</span>
-        <span>{{ $t('home.tagline.ship') }}</span>
+        <span>{{ $t("home.tagline.speak") }}</span>
+        <span>{{ $t("home.tagline.paste") }}</span>
+        <span>{{ $t("home.tagline.ship") }}</span>
       </h1>
       <p class="subtitle">
-        {{ $t('home.subtitle') }}
+        {{ $t("home.subtitle") }}
       </p>
       <p class="description">
-        {{ $t('home.description') }}
+        {{ $t("home.description") }}
       </p>
     </div>
 
     <div class="cta-group">
       <NuxtLink :to="localePath('downloads')" class="cta-primary">
         <span class="cta-icon">↓</span>
-        {{ $t('home.cta.download') }}
+        {{ $t("home.cta.download") }}
       </NuxtLink>
       <a
         href="https://github.com/frankdierolf/whis"
@@ -89,7 +86,7 @@ function formatNumber(n: number): string {
         rel="noopener"
         class="cta-secondary"
       >
-        {{ $t('home.cta.github') }}
+        {{ $t("home.cta.github") }}
       </a>
     </div>
 
@@ -100,7 +97,7 @@ function formatNumber(n: number): string {
         rel="noopener"
         class="stat stat-link"
       >
-        {{ $t('home.proof.stars', { count: stars ?? '—' }) }}
+        {{ $t("home.proof.stars", { count: stars ?? "—" }) }}
       </a>
       <span class="divider">·</span>
       <a
@@ -109,7 +106,11 @@ function formatNumber(n: number): string {
         rel="noopener"
         class="stat stat-link"
       >
-        {{ $t('home.proof.installs', { count: downloads ? formatNumber(downloads) : '—' }) }}
+        {{
+          $t("home.proof.installs", {
+            count: downloads ? formatNumber(downloads) : "—",
+          })
+        }}
       </a>
       <span class="divider">·</span>
       <a
@@ -120,17 +121,21 @@ function formatNumber(n: number): string {
         class="stat stat-link contributors"
       >
         <span class="avatars">
-          <img
+          <NuxtImg
             v-for="c in contributors"
             :key="c.login"
             :src="c.avatar_url"
             :alt="c.login"
-          >
+            width="20"
+            height="20"
+            format="webp"
+            loading="lazy"
+          />
         </span>
-        {{ $t('home.proof.contributors', { count: contributors.length }) }}
+        {{ $t("home.proof.contributors", { count: contributors.length }) }}
       </a>
       <span v-if="contributors.length" class="divider">·</span>
-      <span class="stat">{{ $t('home.proof.license') }}</span>
+      <span class="stat">{{ $t("home.proof.license") }}</span>
     </div>
 
     <ClientOnly>

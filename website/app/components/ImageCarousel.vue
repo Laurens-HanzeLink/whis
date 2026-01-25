@@ -1,45 +1,69 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import IconChevronLeft from './icons/IconChevronLeft.vue'
-import IconChevronRight from './icons/IconChevronRight.vue'
+import { ref } from "vue";
+import IconChevronLeft from "./icons/IconChevronLeft.vue";
+import IconChevronRight from "./icons/IconChevronRight.vue";
 
 defineProps<{
-  images: { src: string, alt: string, caption?: string }[]
-}>()
+  images: { src: string; alt: string; caption?: string }[];
+}>();
 
 const emit = defineEmits<{
-  select: [index: number]
-}>()
+  select: [index: number];
+}>();
 
-const carousel = ref<HTMLElement | null>(null)
+const carousel = ref<HTMLElement | null>(null);
 
 function scrollPrev() {
   if (carousel.value) {
-    carousel.value.scrollBy({ left: -carousel.value.offsetWidth, behavior: 'smooth' })
+    carousel.value.scrollBy({
+      left: -carousel.value.offsetWidth,
+      behavior: "smooth",
+    });
   }
 }
 
 function scrollNext() {
   if (carousel.value) {
-    carousel.value.scrollBy({ left: carousel.value.offsetWidth, behavior: 'smooth' })
+    carousel.value.scrollBy({
+      left: carousel.value.offsetWidth,
+      behavior: "smooth",
+    });
   }
 }
 </script>
 
 <template>
   <div class="carousel-wrapper">
-    <button class="carousel-btn prev" aria-label="Previous screenshot" @click="scrollPrev">
+    <button
+      class="carousel-btn prev"
+      aria-label="Previous screenshot"
+      @click="scrollPrev"
+    >
       <IconChevronLeft />
     </button>
     <div ref="carousel" class="carousel">
-      <figure v-for="(image, index) in images" :key="index" @click="emit('select', index)">
-        <img :src="image.src" :alt="image.alt" loading="lazy">
+      <figure
+        v-for="(image, index) in images"
+        :key="index"
+        @click="emit('select', index)"
+      >
+        <NuxtImg
+          :src="image.src"
+          :alt="image.alt"
+          width="800"
+          format="webp"
+          loading="lazy"
+        />
         <figcaption v-if="image.caption">
           {{ image.caption }}
         </figcaption>
       </figure>
     </div>
-    <button class="carousel-btn next" aria-label="Next screenshot" @click="scrollNext">
+    <button
+      class="carousel-btn next"
+      aria-label="Next screenshot"
+      @click="scrollNext"
+    >
       <IconChevronRight />
     </button>
   </div>
